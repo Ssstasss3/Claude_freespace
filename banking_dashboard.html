@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Retail Banking Analytics Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+
+        .dashboard {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .header h1 {
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+
+        .filters {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .filter-group label {
+            font-size: 12px;
+            font-weight: 600;
+            color: #666;
+            text-transform: uppercase;
+        }
+
+        .filter-group select {
+            padding: 8px 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 5px;
+            font-size: 14px;
+            min-width: 150px;
+            cursor: pointer;
+            transition: border-color 0.3s;
+        }
+
+        .filter-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .reset-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 600;
+            margin-top: auto;
+            transition: background 0.3s;
+        }
+
+        .reset-btn:hover {
+            background: #5568d3;
+        }
+
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .kpi-card {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .kpi-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        .kpi-label {
+            font-size: 13px;
+            color: #666;
+            font-weight: 600;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+        }
+
+        .kpi-value {
+            font-size: 36px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .kpi-change {
+            font-size: 14px;
+            margin-top: 8px;
+        }
+
+        .kpi-change.positive {
+            color: #10b981;
+        }
+
+        .kpi-change.negative {
+            color: #ef4444;
+        }
+
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .chart-card {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .chart-card.full-width {
+            grid-column: 1 / -1;
+        }
+
+        .chart-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+        }
+
+        .chart-container.small {
+            height: 250px;
+        }
+
+        @media (max-width: 1200px) {
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .loading {
+            text-align: center;
+            padding: 50px;
+            font-size: 18px;
+            color: #666;
+        }
+
+        .data-source {
+            background: white;
+            padding: 15px 25px;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            font-size: 12px;
+            color: #666;
+            margin-top: 20px;
+        }
+
+        .data-source a {
+            color: #667eea;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard">
+        <div class="header">
+            <h1>🏦 Retail Banking Analytics Dashboard</h1>
+            <p>Comprehensive overview of customer demographics, loan portfolios, and marketing campaign performance</p>
+        </div>
+
+        <div class="filters">
+            <div class="filter-group">
+                <label>Age Group</label>
+                <select id="filter-age">
+                    <option value="all">All Ages</option>
+                    <option value="18-30">18-30</option>
+                    <option value="31-45">31-45</option>
+                    <option value="46-60">46-60</option>
+                    <option value="60+">60+</option>
+                </select>
+            </div>
+
+            <div class="filter-group">
+                <label>Job Type</label>
+                <select id="filter-job">
+                    <option value="all">All Jobs</option>
+                </select>
+            </div>
+
+            <div class="filter-group">
+                <label>Education</label>
+                <select id="filter-education">
+                    <option value="all">All Education</option>
+                </select>
+            </div>
+
+            <div class="filter-group">
+                <label>Marital Status</label>
+                <select id="filter-marital">
+                    <option value="all">All Status</option>
+                    <option value="married">Married</option>
+                    <option value="single">Single</option>
+                    <option value="divorced">Divorced</option>
+                </select>
+            </div>
+
+            <button class="reset-btn" onclick="resetFilters()">Reset Filters</button>
+        </div>
+
+        <div id="loading" class="loading">Loading banking data...</div>
+
+        <div id="dashboard-content" style="display: none;">
+            <div class="kpi-grid">
+                <div class="kpi-card">
+                    <div class="kpi-label">Total Customers</div>
+                    <div class="kpi-value" id="kpi-customers">0</div>
+                    <div class="kpi-change">Active database records</div>
+                </div>
+
+                <div class="kpi-card">
+                    <div class="kpi-label">Conversion Rate</div>
+                    <div class="kpi-value" id="kpi-conversion">0%</div>
+                    <div class="kpi-change positive" id="kpi-conversion-change">Campaign success rate</div>
+                </div>
+
+                <div class="kpi-card">
+                    <div class="kpi-label">Housing Loans</div>
+                    <div class="kpi-value" id="kpi-housing">0%</div>
+                    <div class="kpi-change">Of total customers</div>
+                </div>
+
+                <div class="kpi-card">
+                    <div class="kpi-label">Avg Age</div>
+                    <div class="kpi-value" id="kpi-age">0</div>
+                    <div class="kpi-change">Years old</div>
+                </div>
+            </div>
+
+            <div class="charts-grid">
+                <div class="chart-card">
+                    <div class="chart-title">Customer by Job Type</div>
+                    <div class="chart-container small">
+                        <canvas id="jobChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="chart-card">
+                    <div class="chart-title">Education Level Distribution</div>
+                    <div class="chart-container small">
+                        <canvas id="educationChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="chart-card">
+                    <div class="chart-title">Age Distribution</div>
+                    <div class="chart-container">
+                        <canvas id="ageChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="chart-card">
+                    <div class="chart-title">Loan Portfolio Overview</div>
+                    <div class="chart-container">
+                        <canvas id="loanChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="chart-card full-width">
+                    <div class="chart-title">Campaign Performance by Month</div>
+                    <div class="chart-container">
+                        <canvas id="campaignChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="chart-card">
+                    <div class="chart-title">Marital Status Breakdown</div>
+                    <div class="chart-container small">
+                        <canvas id="maritalChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="chart-card">
+                    <div class="chart-title">Contact Method Effectiveness</div>
+                    <div class="chart-container small">
+                        <canvas id="contactChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="data-source">
+            <strong>Data Source:</strong> UCI Machine Learning Repository - Bank Marketing Dataset (41,188 records) |
+            <a href="https://archive.ics.uci.edu/dataset/222/bank+marketing" target="_blank">View Dataset</a>
+        </div>
+    </div>
+
+    <script>
+        let rawData = [];
+        let filteredData = [];
+        let charts = {};
+
+        // Load and parse CSV data
+        async function loadData() {
+            try {
+                const response = await fetch('bank_data.csv');
+                const text = await response.text();
+                const lines = text.trim().split('\n');
+                const headers = lines[0].replace(/"/g, '').split(';');
+
+                rawData = lines.slice(1).map(line => {
+                    const values = line.match(/(".*?"|[^";]+)(?=\s*;|\s*$)/g).map(v => v.replace(/"/g, '').trim());
+                    const row = {};
+                    headers.forEach((header, i) => {
+                        row[header] = values[i];
+                    });
+                    return row;
+                });
+
+                populateFilterOptions();
+                filteredData = [...rawData];
+                renderDashboard();
+            } catch (error) {
+                console.error('Error loading data:', error);
+                document.getElementById('loading').textContent = 'Error loading data. Please check console.';
+            }
+        }
+
+        function populateFilterOptions() {
+            const jobs = [...new Set(rawData.map(r => r.job))].sort();
+            const educations = [...new Set(rawData.map(r => r.education))].sort();
+
+            const jobSelect = document.getElementById('filter-job');
+            jobs.forEach(job => {
+                const option = document.createElement('option');
+                option.value = job;
+                option.textContent = job.charAt(0).toUpperCase() + job.slice(1);
+                jobSelect.appendChild(option);
+            });
+
+            const eduSelect = document.getElementById('filter-education');
+            educations.forEach(edu => {
+                const option = document.createElement('option');
+                option.value = edu;
+                option.textContent = edu.replace('.', ' ').split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+                eduSelect.appendChild(option);
+            });
+        }
+
+        function applyFilters() {
+            const ageFilter = document.getElementById('filter-age').value;
+            const jobFilter = document.getElementById('filter-job').value;
+            const eduFilter = document.getElementById('filter-education').value;
+            const maritalFilter = document.getElementById('filter-marital').value;
+
+            filteredData = rawData.filter(row => {
+                const age = parseInt(row.age);
+                let ageMatch = true;
+
+                if (ageFilter === '18-30') ageMatch = age >= 18 && age <= 30;
+                else if (ageFilter === '31-45') ageMatch = age >= 31 && age <= 45;
+                else if (ageFilter === '46-60') ageMatch = age >= 46 && age <= 60;
+                else if (ageFilter === '60+') ageMatch = age > 60;
+
+                return ageMatch &&
+                       (jobFilter === 'all' || row.job === jobFilter) &&
+                       (eduFilter === 'all' || row.education === eduFilter) &&
+                       (maritalFilter === 'all' || row.marital === maritalFilter);
+            });
+
+            renderDashboard();
+        }
+
+        function resetFilters() {
+            document.getElementById('filter-age').value = 'all';
+            document.getElementById('filter-job').value = 'all';
+            document.getElementById('filter-education').value = 'all';
+            document.getElementById('filter-marital').value = 'all';
+            filteredData = [...rawData];
+            renderDashboard();
+        }
+
+        function renderDashboard() {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('dashboard-content').style.display = 'block';
+
+            updateKPIs();
+            renderCharts();
+        }
+
+        function updateKPIs() {
+            const totalCustomers = filteredData.length;
+            const conversions = filteredData.filter(r => r.y === 'yes').length;
+            const conversionRate = ((conversions / totalCustomers) * 100).toFixed(1);
+            const housingLoans = filteredData.filter(r => r.housing === 'yes').length;
+            const housingRate = ((housingLoans / totalCustomers) * 100).toFixed(1);
+            const avgAge = (filteredData.reduce((sum, r) => sum + parseInt(r.age), 0) / totalCustomers).toFixed(0);
+
+            document.getElementById('kpi-customers').textContent = totalCustomers.toLocaleString();
+            document.getElementById('kpi-conversion').textContent = conversionRate + '%';
+            document.getElementById('kpi-housing').textContent = housingRate + '%';
+            document.getElementById('kpi-age').textContent = avgAge;
+        }
+
+        function renderCharts() {
+            renderJobChart();
+            renderEducationChart();
+            renderAgeChart();
+            renderLoanChart();
+            renderCampaignChart();
+            renderMaritalChart();
+            renderContactChart();
+        }
+
+        function renderJobChart() {
+            const jobCounts = {};
+            filteredData.forEach(row => {
+                jobCounts[row.job] = (jobCounts[row.job] || 0) + 1;
+            });
+
+            const sorted = Object.entries(jobCounts).sort((a, b) => b[1] - a[1]).slice(0, 10);
+
+            destroyChart('jobChart');
+            charts.jobChart = new Chart(document.getElementById('jobChart'), {
+                type: 'bar',
+                data: {
+                    labels: sorted.map(([job]) => job),
+                    datasets: [{
+                        label: 'Customers',
+                        data: sorted.map(([, count]) => count),
+                        backgroundColor: 'rgba(102, 126, 234, 0.8)',
+                        borderColor: 'rgba(102, 126, 234, 1)',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { beginAtZero: true }
+                    }
+                }
+            });
+        }
+
+        function renderEducationChart() {
+            const eduCounts = {};
+            filteredData.forEach(row => {
+                eduCounts[row.education] = (eduCounts[row.education] || 0) + 1;
+            });
+
+            destroyChart('educationChart');
+            charts.educationChart = new Chart(document.getElementById('educationChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(eduCounts),
+                    datasets: [{
+                        data: Object.values(eduCounts),
+                        backgroundColor: [
+                            'rgba(102, 126, 234, 0.8)',
+                            'rgba(118, 75, 162, 0.8)',
+                            'rgba(237, 100, 166, 0.8)',
+                            'rgba(255, 154, 158, 0.8)',
+                            'rgba(250, 208, 196, 0.8)'
+                        ],
+                        borderWidth: 2,
+                        borderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'right' }
+                    }
+                }
+            });
+        }
+
+        function renderAgeChart() {
+            const ageBuckets = { '18-30': 0, '31-40': 0, '41-50': 0, '51-60': 0, '61-70': 0, '70+': 0 };
+            filteredData.forEach(row => {
+                const age = parseInt(row.age);
+                if (age <= 30) ageBuckets['18-30']++;
+                else if (age <= 40) ageBuckets['31-40']++;
+                else if (age <= 50) ageBuckets['41-50']++;
+                else if (age <= 60) ageBuckets['51-60']++;
+                else if (age <= 70) ageBuckets['61-70']++;
+                else ageBuckets['70+']++;
+            });
+
+            destroyChart('ageChart');
+            charts.ageChart = new Chart(document.getElementById('ageChart'), {
+                type: 'line',
+                data: {
+                    labels: Object.keys(ageBuckets),
+                    datasets: [{
+                        label: 'Customers',
+                        data: Object.values(ageBuckets),
+                        borderColor: 'rgba(102, 126, 234, 1)',
+                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                        fill: true,
+                        tension: 0.4,
+                        borderWidth: 3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true } }
+                }
+            });
+        }
+
+        function renderLoanChart() {
+            const housing = filteredData.filter(r => r.housing === 'yes').length;
+            const personal = filteredData.filter(r => r.loan === 'yes').length;
+            const none = filteredData.length - housing - personal + filteredData.filter(r => r.housing === 'yes' && r.loan === 'yes').length;
+
+            destroyChart('loanChart');
+            charts.loanChart = new Chart(document.getElementById('loanChart'), {
+                type: 'bar',
+                data: {
+                    labels: ['Housing Loan', 'Personal Loan', 'No Loans'],
+                    datasets: [{
+                        label: 'Customers',
+                        data: [housing, personal, none],
+                        backgroundColor: [
+                            'rgba(16, 185, 129, 0.8)',
+                            'rgba(251, 191, 36, 0.8)',
+                            'rgba(239, 68, 68, 0.8)'
+                        ],
+                        borderWidth: 2,
+                        borderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true } }
+                }
+            });
+        }
+
+        function renderCampaignChart() {
+            const monthOrder = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+            const campaignData = {};
+            monthOrder.forEach(m => campaignData[m] = { total: 0, success: 0 });
+
+            filteredData.forEach(row => {
+                const month = row.month;
+                if (campaignData[month]) {
+                    campaignData[month].total++;
+                    if (row.y === 'yes') campaignData[month].success++;
+                }
+            });
+
+            const total = monthOrder.map(m => campaignData[m].total);
+            const success = monthOrder.map(m => campaignData[m].success);
+
+            destroyChart('campaignChart');
+            charts.campaignChart = new Chart(document.getElementById('campaignChart'), {
+                type: 'bar',
+                data: {
+                    labels: monthOrder.map(m => m.toUpperCase()),
+                    datasets: [
+                        {
+                            label: 'Total Contacts',
+                            data: total,
+                            backgroundColor: 'rgba(203, 213, 225, 0.8)',
+                            borderWidth: 0
+                        },
+                        {
+                            label: 'Conversions',
+                            data: success,
+                            backgroundColor: 'rgba(16, 185, 129, 0.8)',
+                            borderWidth: 0
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: { y: { beginAtZero: true } }
+                }
+            });
+        }
+
+        function renderMaritalChart() {
+            const maritalCounts = {};
+            filteredData.forEach(row => {
+                maritalCounts[row.marital] = (maritalCounts[row.marital] || 0) + 1;
+            });
+
+            destroyChart('maritalChart');
+            charts.maritalChart = new Chart(document.getElementById('maritalChart'), {
+                type: 'pie',
+                data: {
+                    labels: Object.keys(maritalCounts).map(k => k.charAt(0).toUpperCase() + k.slice(1)),
+                    datasets: [{
+                        data: Object.values(maritalCounts),
+                        backgroundColor: [
+                            'rgba(102, 126, 234, 0.8)',
+                            'rgba(237, 100, 166, 0.8)',
+                            'rgba(251, 191, 36, 0.8)'
+                        ],
+                        borderWidth: 2,
+                        borderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'right' } }
+                }
+            });
+        }
+
+        function renderContactChart() {
+            const contactCounts = {};
+            filteredData.forEach(row => {
+                contactCounts[row.contact] = (contactCounts[row.contact] || 0) + 1;
+            });
+
+            destroyChart('contactChart');
+            charts.contactChart = new Chart(document.getElementById('contactChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(contactCounts).map(k => k.charAt(0).toUpperCase() + k.slice(1)),
+                    datasets: [{
+                        data: Object.values(contactCounts),
+                        backgroundColor: [
+                            'rgba(139, 92, 246, 0.8)',
+                            'rgba(236, 72, 153, 0.8)'
+                        ],
+                        borderWidth: 2,
+                        borderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom' } }
+                }
+            });
+        }
+
+        function destroyChart(chartId) {
+            if (charts[chartId]) {
+                charts[chartId].destroy();
+            }
+        }
+
+        // Event listeners
+        document.getElementById('filter-age').addEventListener('change', applyFilters);
+        document.getElementById('filter-job').addEventListener('change', applyFilters);
+        document.getElementById('filter-education').addEventListener('change', applyFilters);
+        document.getElementById('filter-marital').addEventListener('change', applyFilters);
+
+        // Load data on page load
+        loadData();
+    </script>
+</body>
+</html>
