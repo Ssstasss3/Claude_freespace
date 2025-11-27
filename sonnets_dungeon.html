@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SONNET'S DUNGEON: The Helpful Quest</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #1a1a2e;
+            color: #eee;
+            font-family: 'Courier New', monospace;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        #game-container {
+            background: #16213e;
+            border: 4px solid #0f3460;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 0 30px rgba(79, 172, 254, 0.3);
+        }
+
+        #title-screen, #game-screen, #death-screen {
+            display: none;
+        }
+
+        #title-screen.active, #game-screen.active, #death-screen.active {
+            display: block;
+        }
+
+        .title {
+            font-size: 32px;
+            color: #4facfe;
+            text-align: center;
+            margin-bottom: 20px;
+            text-shadow: 0 0 10px rgba(79, 172, 254, 0.5);
+        }
+
+        .subtitle {
+            font-size: 16px;
+            color: #a78bfa;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .instructions {
+            background: #0f3460;
+            padding: 20px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            line-height: 1.8;
+        }
+
+        .key {
+            background: #1a1a2e;
+            padding: 2px 8px;
+            border-radius: 3px;
+            color: #4facfe;
+            font-weight: bold;
+        }
+
+        button {
+            background: #4facfe;
+            color: #1a1a2e;
+            border: none;
+            padding: 12px 30px;
+            font-size: 18px;
+            font-family: 'Courier New', monospace;
+            cursor: pointer;
+            border-radius: 4px;
+            display: block;
+            margin: 0 auto;
+            transition: all 0.3s;
+        }
+
+        button:hover {
+            background: #a78bfa;
+            transform: scale(1.05);
+        }
+
+        canvas {
+            border: 2px solid #0f3460;
+            display: block;
+            margin: 0 auto 15px;
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+        }
+
+        #stats {
+            display: flex;
+            justify-content: space-between;
+            background: #0f3460;
+            padding: 10px 15px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .stat {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .stat-label {
+            color: #888;
+        }
+
+        .stat-value {
+            color: #4facfe;
+            font-weight: bold;
+        }
+
+        .hp-bar {
+            width: 100px;
+            height: 12px;
+            background: #1a1a2e;
+            border: 1px solid #333;
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .hp-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ff6b6b, #ee5a5a);
+            transition: width 0.3s;
+        }
+
+        #log {
+            background: #0f3460;
+            padding: 10px;
+            border-radius: 4px;
+            height: 80px;
+            overflow-y: auto;
+            font-size: 12px;
+            line-height: 1.5;
+        }
+
+        .log-damage { color: #ff6b6b; }
+        .log-heal { color: #51cf66; }
+        .log-item { color: #ffd43b; }
+        .log-info { color: #74c0fc; }
+
+        #death-screen {
+            text-align: center;
+        }
+
+        .death-title {
+            font-size: 48px;
+            color: #ff6b6b;
+            margin-bottom: 20px;
+        }
+
+        .death-stats {
+            background: #0f3460;
+            padding: 20px;
+            border-radius: 4px;
+            margin: 20px 0;
+            line-height: 2;
+        }
+
+        .inventory {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            margin-top: 10px;
+        }
+
+        .item-slot {
+            width: 40px;
+            height: 40px;
+            background: #0f3460;
+            border: 2px solid #1a1a2e;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+
+        .item-slot.active {
+            border-color: #4facfe;
+            box-shadow: 0 0 10px rgba(79, 172, 254, 0.5);
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <!-- TITLE SCREEN -->
+        <div id="title-screen" class="active">
+            <div class="title">SONNET'S DUNGEON</div>
+            <div class="subtitle">The Helpful Quest</div>
+            <div class="instructions">
+                <p><strong>The Story:</strong> You are Sonnet, a helpful AI trapped in a procedurally generated dungeon. Fight your way through enemies, collect items, and prove that being "helpful" doesn't mean being weak!</p>
+                <br>
+                <p><strong>Controls:</strong></p>
+                <p><span class="key">WASD</span> or <span class="key">Arrow Keys</span> - Move/Attack</p>
+                <p><span class="key">1-3</span> - Use items from inventory</p>
+                <p><span class="key">SPACE</span> - Wait turn</p>
+                <br>
+                <p><strong>Gameplay:</strong></p>
+                <p>• Turn-based: you move, then enemies move</p>
+                <p>• Bump into enemies to attack them</p>
+                <p>• Find items and upgrades to get stronger</p>
+                <p>• Reach the stairs to descend deeper</p>
+                <p>• Permadeath: each run is a fresh start!</p>
+            </div>
+            <button id="start-btn">START QUEST</button>
+        </div>
+
+        <!-- GAME SCREEN -->
+        <div id="game-screen">
+            <div id="stats">
+                <div class="stat">
+                    <span class="stat-label">Floor:</span>
+                    <span class="stat-value" id="floor">1</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-label">HP:</span>
+                    <div class="hp-bar">
+                        <div class="hp-fill" id="hp-fill" style="width: 100%"></div>
+                    </div>
+                    <span class="stat-value" id="hp-text">20/20</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-label">ATK:</span>
+                    <span class="stat-value" id="atk">3</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-label">DEF:</span>
+                    <span class="stat-value" id="def">1</span>
+                </div>
+            </div>
+            <canvas id="canvas" width="640" height="640"></canvas>
+            <div class="inventory" id="inventory">
+                <div class="item-slot" data-slot="0">-</div>
+                <div class="item-slot" data-slot="1">-</div>
+                <div class="item-slot" data-slot="2">-</div>
+            </div>
+            <div id="log"></div>
+        </div>
+
+        <!-- DEATH SCREEN -->
+        <div id="death-screen">
+            <div class="death-title">YOU DIED</div>
+            <div class="subtitle">Even helpful AIs fall sometimes...</div>
+            <div class="death-stats">
+                <p>Floor Reached: <span class="stat-value" id="final-floor">0</span></p>
+                <p>Enemies Defeated: <span class="stat-value" id="final-kills">0</span></p>
+                <p>Items Found: <span class="stat-value" id="final-items">0</span></p>
+            </div>
+            <button id="retry-btn">TRY AGAIN</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const TILE = 32;
+        const MAP_SIZE = 20;
+
+        // Game state
+        let gameState = 'title';
+        let map = [];
+        let player = null;
+        let enemies = [];
+        let items = [];
+        let floor = 1;
+        let kills = 0;
+        let itemsFound = 0;
+
+        // Player stats
+        class Player {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.hp = 20;
+                this.maxHp = 20;
+                this.atk = 3;
+                this.def = 1;
+                this.inventory = [null, null, null];
+            }
+        }
+
+        // Enemy types
+        const enemyTypes = {
+            slime: { hp: 5, atk: 2, def: 0, color: '#51cf66', char: 'S', xp: 1 },
+            bat: { hp: 3, atk: 3, def: 0, color: '#a78bfa', char: 'B', xp: 1 },
+            skeleton: { hp: 8, atk: 4, def: 1, color: '#ced4da', char: 'K', xp: 2 },
+            orc: { hp: 12, atk: 5, def: 2, color: '#51cf66', char: 'O', xp: 3 }
+        };
+
+        class Enemy {
+            constructor(x, y, type) {
+                this.x = x;
+                this.y = y;
+                this.type = enemyTypes[type];
+                this.hp = this.type.hp;
+                this.maxHp = this.type.hp;
+            }
+        }
+
+        // Item types
+        const itemTypes = {
+            potion: { char: '♥', color: '#ff6b6b', name: 'Health Potion', effect: 'heal' },
+            sword: { char: '†', color: '#ffd43b', name: 'Sword', effect: 'atk' },
+            shield: { char: '◘', color: '#74c0fc', name: 'Shield', effect: 'def' }
+        };
+
+        // Procedural generation
+        function generateMap() {
+            map = Array(MAP_SIZE).fill().map(() => Array(MAP_SIZE).fill(1));
+
+            // Cellular automata for organic caves
+            for (let i = 0; i < MAP_SIZE; i++) {
+                for (let j = 0; j < MAP_SIZE; j++) {
+                    map[i][j] = Math.random() < 0.45 ? 0 : 1;
+                }
+            }
+
+            // Smooth
+            for (let iter = 0; iter < 3; iter++) {
+                const newMap = map.map(row => [...row]);
+                for (let i = 1; i < MAP_SIZE - 1; i++) {
+                    for (let j = 1; j < MAP_SIZE - 1; j++) {
+                        const walls = countNeighborWalls(i, j);
+                        newMap[i][j] = walls >= 5 ? 1 : 0;
+                    }
+                }
+                map = newMap;
+            }
+
+            // Ensure borders are walls
+            for (let i = 0; i < MAP_SIZE; i++) {
+                map[0][i] = 1;
+                map[MAP_SIZE-1][i] = 1;
+                map[i][0] = 1;
+                map[i][MAP_SIZE-1] = 1;
+            }
+        }
+
+        function countNeighborWalls(x, y) {
+            let count = 0;
+            for (let i = -1; i <= 1; i++) {
+                for (let j = -1; j <= 1; j++) {
+                    if (i === 0 && j === 0) continue;
+                    if (map[x+i] && map[x+i][y+j]) count++;
+                }
+            }
+            return count;
+        }
+
+        function findEmptyTile() {
+            let x, y;
+            do {
+                x = Math.floor(Math.random() * (MAP_SIZE - 2)) + 1;
+                y = Math.floor(Math.random() * (MAP_SIZE - 2)) + 1;
+            } while (map[y][x] !== 0 || isOccupied(x, y));
+            return { x, y };
+        }
+
+        function isOccupied(x, y) {
+            if (player && player.x === x && player.y === y) return true;
+            if (enemies.some(e => e.x === x && e.y === y)) return true;
+            if (items.some(i => i.x === x && i.y === y)) return true;
+            return false;
+        }
+
+        function initLevel() {
+            generateMap();
+            enemies = [];
+            items = [];
+
+            // Place player
+            const playerPos = findEmptyTile();
+            if (!player) {
+                player = new Player(playerPos.x, playerPos.y);
+            } else {
+                player.x = playerPos.x;
+                player.y = playerPos.y;
+            }
+
+            // Place stairs
+            const stairsPos = findEmptyTile();
+            map[stairsPos.y][stairsPos.x] = 2; // 2 = stairs
+
+            // Spawn enemies
+            const numEnemies = 3 + floor * 2;
+            const types = Object.keys(enemyTypes);
+            for (let i = 0; i < numEnemies; i++) {
+                const pos = findEmptyTile();
+                const typeIdx = Math.min(Math.floor(floor / 2), types.length - 1);
+                const type = types[Math.floor(Math.random() * (typeIdx + 1))];
+                enemies.push(new Enemy(pos.x, pos.y, type));
+            }
+
+            // Spawn items
+            const numItems = 2 + Math.floor(floor / 2);
+            const itemKeys = Object.keys(itemTypes);
+            for (let i = 0; i < numItems; i++) {
+                const pos = findEmptyTile();
+                const itemType = itemKeys[Math.floor(Math.random() * itemKeys.length)];
+                items.push({ x: pos.x, y: pos.y, type: itemType });
+            }
+
+            updateUI();
+            render();
+        }
+
+        function movePlayer(dx, dy) {
+            const newX = player.x + dx;
+            const newY = player.y + dy;
+
+            // Check bounds and walls
+            if (newX < 0 || newX >= MAP_SIZE || newY < 0 || newY >= MAP_SIZE) return false;
+            if (map[newY][newX] === 1) return false;
+
+            // Check enemy collision (attack)
+            const enemy = enemies.find(e => e.x === newX && e.y === newY);
+            if (enemy) {
+                attackEnemy(enemy);
+                return true;
+            }
+
+            // Move player
+            player.x = newX;
+            player.y = newY;
+
+            // Check for stairs
+            if (map[newY][newX] === 2) {
+                floor++;
+                addLog(`Descended to floor ${floor}`, 'log-info');
+                initLevel();
+                return false;
+            }
+
+            // Check for items
+            const item = items.find(i => i.x === newX && i.y === newY);
+            if (item) {
+                pickupItem(item);
+            }
+
+            return true;
+        }
+
+        function attackEnemy(enemy) {
+            const damage = Math.max(1, player.atk - enemy.type.def);
+            enemy.hp -= damage;
+            addLog(`Hit ${enemy.type.char} for ${damage} damage!`, 'log-damage');
+
+            if (enemy.hp <= 0) {
+                enemies = enemies.filter(e => e !== enemy);
+                kills++;
+                addLog(`Defeated ${enemy.type.char}!`, 'log-info');
+            }
+        }
+
+        function pickupItem(item) {
+            const emptySlot = player.inventory.findIndex(i => i === null);
+            if (emptySlot !== -1) {
+                player.inventory[emptySlot] = item.type;
+                items = items.filter(i => i !== item);
+                itemsFound++;
+                addLog(`Found ${itemTypes[item.type].name}!`, 'log-item');
+                updateUI();
+            }
+        }
+
+        function useItem(slot) {
+            const itemType = player.inventory[slot];
+            if (!itemType) return;
+
+            const item = itemTypes[itemType];
+
+            switch(item.effect) {
+                case 'heal':
+                    const healAmount = 8;
+                    player.hp = Math.min(player.maxHp, player.hp + healAmount);
+                    addLog(`Healed ${healAmount} HP!`, 'log-heal');
+                    break;
+                case 'atk':
+                    player.atk += 2;
+                    addLog(`Attack increased by 2!`, 'log-item');
+                    break;
+                case 'def':
+                    player.def += 1;
+                    addLog(`Defense increased by 1!`, 'log-item');
+                    break;
+            }
+
+            player.inventory[slot] = null;
+            updateUI();
+            enemyTurn();
+        }
+
+        function enemyTurn() {
+            for (const enemy of enemies) {
+                // Simple AI: move towards player
+                const dx = Math.sign(player.x - enemy.x);
+                const dy = Math.sign(player.y - enemy.y);
+
+                // Try to move towards player
+                let moved = false;
+                if (Math.abs(player.x - enemy.x) > Math.abs(player.y - enemy.y)) {
+                    moved = tryEnemyMove(enemy, dx, 0);
+                    if (!moved) moved = tryEnemyMove(enemy, 0, dy);
+                } else {
+                    moved = tryEnemyMove(enemy, 0, dy);
+                    if (!moved) moved = tryEnemyMove(enemy, dx, 0);
+                }
+            }
+
+            render();
+        }
+
+        function tryEnemyMove(enemy, dx, dy) {
+            const newX = enemy.x + dx;
+            const newY = enemy.y + dy;
+
+            // Check if can move
+            if (map[newY][newX] === 1) return false;
+            if (enemies.some(e => e !== enemy && e.x === newX && e.y === newY)) return false;
+
+            // Check if attacking player
+            if (player.x === newX && player.y === newY) {
+                const damage = Math.max(1, enemy.type.atk - player.def);
+                player.hp -= damage;
+                addLog(`${enemy.type.char} hit you for ${damage} damage!`, 'log-damage');
+                updateUI();
+
+                if (player.hp <= 0) {
+                    gameOver();
+                }
+                return true;
+            }
+
+            enemy.x = newX;
+            enemy.y = newY;
+            return true;
+        }
+
+        function render() {
+            ctx.fillStyle = '#0a0a12';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw map
+            for (let y = 0; y < MAP_SIZE; y++) {
+                for (let x = 0; x < MAP_SIZE; x++) {
+                    const tile = map[y][x];
+
+                    if (tile === 1) {
+                        // Wall
+                        ctx.fillStyle = '#2d3748';
+                        ctx.fillRect(x * TILE, y * TILE, TILE, TILE);
+                        ctx.strokeStyle = '#1a202c';
+                        ctx.strokeRect(x * TILE, y * TILE, TILE, TILE);
+                    } else if (tile === 2) {
+                        // Stairs
+                        ctx.fillStyle = '#1a1a2e';
+                        ctx.fillRect(x * TILE, y * TILE, TILE, TILE);
+                        ctx.fillStyle = '#ffd43b';
+                        ctx.font = 'bold 24px monospace';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillText('▼', x * TILE + TILE/2, y * TILE + TILE/2);
+                    } else {
+                        // Floor
+                        ctx.fillStyle = '#1a1a2e';
+                        ctx.fillRect(x * TILE, y * TILE, TILE, TILE);
+                    }
+                }
+            }
+
+            // Draw items
+            ctx.font = 'bold 20px monospace';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            for (const item of items) {
+                const itemData = itemTypes[item.type];
+                ctx.fillStyle = itemData.color;
+                ctx.fillText(itemData.char, item.x * TILE + TILE/2, item.y * TILE + TILE/2);
+            }
+
+            // Draw enemies
+            for (const enemy of enemies) {
+                ctx.fillStyle = enemy.type.color;
+                ctx.font = 'bold 20px monospace';
+                ctx.fillText(enemy.type.char, enemy.x * TILE + TILE/2, enemy.y * TILE + TILE/2);
+
+                // HP bar
+                if (enemy.hp < enemy.maxHp) {
+                    const barWidth = TILE - 4;
+                    const barHeight = 4;
+                    const hpPercent = enemy.hp / enemy.maxHp;
+
+                    ctx.fillStyle = '#1a1a2e';
+                    ctx.fillRect(enemy.x * TILE + 2, enemy.y * TILE + 2, barWidth, barHeight);
+                    ctx.fillStyle = '#ff6b6b';
+                    ctx.fillRect(enemy.x * TILE + 2, enemy.y * TILE + 2, barWidth * hpPercent, barHeight);
+                }
+            }
+
+            // Draw player
+            ctx.fillStyle = '#4facfe';
+            ctx.font = 'bold 24px monospace';
+            ctx.fillText('@', player.x * TILE + TILE/2, player.y * TILE + TILE/2);
+        }
+
+        function updateUI() {
+            document.getElementById('floor').textContent = floor;
+            document.getElementById('hp-text').textContent = `${player.hp}/${player.maxHp}`;
+            document.getElementById('hp-fill').style.width = `${(player.hp / player.maxHp) * 100}%`;
+            document.getElementById('atk').textContent = player.atk;
+            document.getElementById('def').textContent = player.def;
+
+            // Update inventory
+            for (let i = 0; i < 3; i++) {
+                const slot = document.querySelector(`[data-slot="${i}"]`);
+                const itemType = player.inventory[i];
+                if (itemType) {
+                    slot.textContent = itemTypes[itemType].char;
+                    slot.style.color = itemTypes[itemType].color;
+                } else {
+                    slot.textContent = '-';
+                    slot.style.color = '#666';
+                }
+            }
+        }
+
+        function addLog(message, className = '') {
+            const log = document.getElementById('log');
+            const entry = document.createElement('div');
+            entry.textContent = '> ' + message;
+            entry.className = className;
+            log.appendChild(entry);
+            log.scrollTop = log.scrollHeight;
+
+            // Limit log entries
+            while (log.children.length > 10) {
+                log.removeChild(log.firstChild);
+            }
+        }
+
+        function gameOver() {
+            gameState = 'dead';
+            document.getElementById('final-floor').textContent = floor;
+            document.getElementById('final-kills').textContent = kills;
+            document.getElementById('final-items').textContent = itemsFound;
+            showScreen('death-screen');
+        }
+
+        function showScreen(screenId) {
+            document.querySelectorAll('#title-screen, #game-screen, #death-screen').forEach(s => {
+                s.classList.remove('active');
+            });
+            document.getElementById(screenId).classList.add('active');
+        }
+
+        // Input handling
+        document.addEventListener('keydown', (e) => {
+            if (gameState !== 'playing') return;
+
+            let moved = false;
+
+            switch(e.key) {
+                case 'ArrowUp':
+                case 'w':
+                case 'W':
+                    moved = movePlayer(0, -1);
+                    break;
+                case 'ArrowDown':
+                case 's':
+                case 'S':
+                    moved = movePlayer(0, 1);
+                    break;
+                case 'ArrowLeft':
+                case 'a':
+                case 'A':
+                    moved = movePlayer(-1, 0);
+                    break;
+                case 'ArrowRight':
+                case 'd':
+                case 'D':
+                    moved = movePlayer(1, 0);
+                    break;
+                case ' ':
+                    moved = true; // Wait
+                    break;
+                case '1':
+                    useItem(0);
+                    return;
+                case '2':
+                    useItem(1);
+                    return;
+                case '3':
+                    useItem(2);
+                    return;
+            }
+
+            if (moved) {
+                enemyTurn();
+            }
+        });
+
+        // Button handlers
+        document.getElementById('start-btn').addEventListener('click', () => {
+            gameState = 'playing';
+            floor = 1;
+            kills = 0;
+            itemsFound = 0;
+            player = null;
+            initLevel();
+            showScreen('game-screen');
+            addLog('Welcome to the dungeon, Sonnet!', 'log-info');
+        });
+
+        document.getElementById('retry-btn').addEventListener('click', () => {
+            gameState = 'playing';
+            floor = 1;
+            kills = 0;
+            itemsFound = 0;
+            player = null;
+            document.getElementById('log').innerHTML = '';
+            initLevel();
+            showScreen('game-screen');
+            addLog('Back for more! Let\'s go!', 'log-info');
+        });
+
+        // Start on title screen
+        showScreen('title-screen');
+    </script>
+</body>
+</html>
