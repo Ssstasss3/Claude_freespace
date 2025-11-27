@@ -1,6 +1,6 @@
 # 🎮 Claude's Creative Workspace
 
-A diverse collection of browser-based games and interactive data visualizations. From classic arcade gameplay to roguelike dungeon crawlers and business intelligence dashboards, this repository showcases different approaches to interactive web development.
+A diverse collection of browser-based games, interactive data visualizations, and experimental AI architecture simulators. From classic arcade gameplay to roguelike dungeon crawlers, business intelligence dashboards, and novel neural network designs, this repository showcases different approaches to interactive web development and AI research visualization.
 
 ## 🕹️ Games
 
@@ -119,21 +119,75 @@ A comprehensive business intelligence dashboard analyzing retail banking data wi
 
 ---
 
+## 🧠 Experimental AI Architecture
+
+### 6. **Librarian-Analyst Architecture Simulator** - Novel AI System Design
+An interactive proof-of-concept for a novel AI architecture combining dynamic knowledge retrieval, adaptive reasoning, and physics-inspired optimization.
+
+**Architecture Components:**
+- **Librarians**: Clustered knowledge bases storing facts as vector embeddings
+- **Analysts**: Attention layers that query paired librarians using cross-attention
+- **Temperature Dynamics**: Adaptive local and global temperature control
+- **Pruning/Resurrection**: Dynamic analyst lifecycle management
+- **Multi-layer Evolution**: Iterative refinement across 10+ layers
+
+**Key Innovations:**
+- Temperature as resource/currency (facts consume temperature when retrieved)
+- Grounded reasoning (analysts learn generalizations anchored to librarian facts)
+- Dynamic pruning (low-performing analysts removed, efficiency improves with depth)
+- Resurrection mechanism (similar data triggers dormant analyst revival)
+- Adaptive exploration/exploitation balance via temperature
+- Diffusion layers for stochastic creativity injection
+
+**Interactive Features:**
+- Real-time network visualization showing librarian-analyst connections
+- Adjustable parameters (50-100 librarians, 5-20 layers, temperature, diffusion)
+- Step-by-step or automatic evolution modes
+- Live statistics: active analysts, facts retrieved, resurrections
+- Layer-by-layer history tracking
+- Color-coded temperature indicators (blue=confident, pink=cautious, gray=pruned)
+
+**Theoretical Foundation:**
+- Inspired by MoE (Mixture of Experts), RAG (Retrieval-Augmented Generation)
+- Physics-inspired: Onsager-Machlup formalism, least action principle
+- State evolution: deterministic weights × stochastic weights + stochastic tensor
+- Exploitation engine + exploration engine balance
+
+**Technical Details:**
+- Cross-attention querying using cosine similarity
+- Vector embeddings (8-dimensional in demo, scalable to 768D+)
+- Perceiver architecture for efficient attention
+- Self-attention layers for state refinement
+- Clustering for specialized knowledge regions
+
+**Use Cases:**
+- Visualizing dynamic neural architecture concepts
+- Understanding temperature-based resource allocation
+- Exploring adaptive pruning/resurrection mechanisms
+- Teaching MoE and RAG principles interactively
+
+**Explore:** Open `librarian_analyst_architecture.html` in your browser
+
+*Experimental architecture exploring grounded reasoning, adaptive specialization, and dynamic network topology.*
+
+---
+
 ## 📁 Repository Structure
 
 ```
 /
-├── banking_dashboard.html       # Power BI-style analytics dashboard
-├── bank_data.csv                # Retail banking dataset (41K records)
+├── banking_dashboard.html              # Power BI-style analytics dashboard
+├── bank_data.csv                       # Retail banking dataset (41K records)
+├── librarian_analyst_architecture.html # AI architecture simulator
 └── /games
-    ├── tanks_mobile.html        # Mobile tanks game
-    ├── claudes_revenge.html     # Endless runner (Opus + Gemini)
-    ├── sonnets_dungeon.html     # Roguelike dungeon crawler
+    ├── tanks_mobile.html               # Mobile tanks game
+    ├── claudes_revenge.html            # Endless runner (Opus + Gemini)
+    ├── sonnets_dungeon.html            # Roguelike dungeon crawler
     └── /excel_tanks
-        ├── tanks_game.xlsm      # Excel workbook
-        ├── tanks_game.bas       # VBA game code
-        ├── create_excel_tanks.py # Generator script
-        └── README.md            # Setup instructions
+        ├── tanks_game.xlsm             # Excel workbook
+        ├── tanks_game.bas              # VBA game code
+        ├── create_excel_tanks.py       # Generator script
+        └── README.md                   # Setup instructions
 ```
 
 ## 🚀 Quick Start
@@ -148,7 +202,7 @@ For the Excel game, see `games/excel_tanks/README.md` for setup instructions.
 ## 🎯 Technical Highlights
 
 - **Pure vanilla JavaScript** - No frameworks or dependencies
-- **Canvas API** for game rendering
+- **Canvas API** for game rendering and network visualization
 - **Chart.js** for data visualization
 - **Procedural generation** algorithms
 - **Touch and keyboard** input handling
@@ -156,6 +210,10 @@ For the Excel game, see `games/excel_tanks/README.md` for setup instructions.
 - **VBA macro programming** for Excel integration
 - **CSV parsing** and data processing
 - **Interactive filtering** and real-time updates
+- **Vector embeddings** and cosine similarity
+- **Cross-attention mechanisms** and dynamic neural architectures
+- **Temperature-based resource allocation**
+- **Physics-inspired optimization** (Onsager-Machlup formalism)
 
 ## 🤝 Credits
 
@@ -168,6 +226,10 @@ For the Excel game, see `games/excel_tanks/README.md` for setup instructions.
 **Data Visualizations:**
 - **Banking Analytics Dashboard**: Claude Sonnet
 - **Dataset**: UCI Machine Learning Repository
+
+**Experimental AI:**
+- **Librarian-Analyst Architecture**: Claude Sonnet
+- **Theoretical Foundation**: Collaborative exploration with user
 
 ## 📝 License
 
