@@ -1,6 +1,6 @@
-# 🎮 Claude's Game Collection
+# 🎮 Claude's Creative Workspace
 
-A diverse collection of browser-based games created during experimental AI-assisted game development sessions. From classic arcade gameplay to roguelike dungeon crawlers, this repository showcases different game design approaches and mechanics.
+A diverse collection of browser-based games and interactive data visualizations. From classic arcade gameplay to roguelike dungeon crawlers and business intelligence dashboards, this repository showcases different approaches to interactive web development.
 
 ## 🕹️ Games
 
@@ -90,21 +90,50 @@ A classic turn-based roguelike dungeon crawler with procedural generation and pe
 
 ---
 
+## 📊 Data Visualizations
+
+### 5. **Retail Banking Analytics Dashboard** - Power BI-Style Interactive Dashboard
+A comprehensive business intelligence dashboard analyzing retail banking data with interactive filters and visualizations.
+
+**Features:**
+- 4 KPI cards: Total customers, conversion rate, housing loans, average age
+- 7 interactive charts (bar, line, pie, doughnut)
+- Real-time filtering by age group, job, education, marital status
+- 41,188 customer records from UCI Machine Learning Repository
+- Campaign performance tracking by month
+- Loan portfolio analysis
+- Customer demographics breakdown
+
+**Data Visualizations:**
+- Customer distribution by job type
+- Education level breakdown
+- Age distribution analysis
+- Loan portfolio overview
+- Monthly campaign performance
+- Marital status distribution
+- Contact method effectiveness
+
+**Data Source:** [UCI Bank Marketing Dataset](https://archive.ics.uci.edu/dataset/222/bank+marketing) (Creative Commons BY 4.0)
+
+**View:** Open `banking_dashboard.html` in your browser
+
+---
+
 ## 📁 Repository Structure
 
 ```
-/games
-  ├── tanks_mobile.html          # Mobile tanks game
-  ├── claudes_revenge.html       # Endless runner (Opus + Gemini)
-  ├── sonnets_dungeon.html       # Roguelike dungeon crawler
-  └── /excel_tanks
-      ├── tanks_game.xlsm        # Excel workbook
-      ├── tanks_game.bas         # VBA game code
-      ├── create_excel_tanks.py  # Generator script
-      └── README.md              # Setup instructions
-
-/docs
-  └── (documentation files)
+/
+├── banking_dashboard.html       # Power BI-style analytics dashboard
+├── bank_data.csv                # Retail banking dataset (41K records)
+└── /games
+    ├── tanks_mobile.html        # Mobile tanks game
+    ├── claudes_revenge.html     # Endless runner (Opus + Gemini)
+    ├── sonnets_dungeon.html     # Roguelike dungeon crawler
+    └── /excel_tanks
+        ├── tanks_game.xlsm      # Excel workbook
+        ├── tanks_game.bas       # VBA game code
+        ├── create_excel_tanks.py # Generator script
+        └── README.md            # Setup instructions
 ```
 
 ## 🚀 Quick Start
@@ -119,18 +148,26 @@ For the Excel game, see `games/excel_tanks/README.md` for setup instructions.
 ## 🎯 Technical Highlights
 
 - **Pure vanilla JavaScript** - No frameworks or dependencies
-- **Canvas API** for rendering
+- **Canvas API** for game rendering
+- **Chart.js** for data visualization
 - **Procedural generation** algorithms
 - **Touch and keyboard** input handling
 - **Responsive design** for mobile and desktop
 - **VBA macro programming** for Excel integration
+- **CSV parsing** and data processing
+- **Interactive filtering** and real-time updates
 
 ## 🤝 Credits
 
+**Games:**
 - **Mobile Tanks Game**: Claude Sonnet
 - **Excel Tanks Game**: Claude Sonnet
 - **Claude's Revenge**: Claude Opus & Google Gemini
 - **Sonnet's Dungeon**: Claude Sonnet
+
+**Data Visualizations:**
+- **Banking Analytics Dashboard**: Claude Sonnet
+- **Dataset**: UCI Machine Learning Repository
 
 ## 📝 License
 
