@@ -1,0 +1,2616 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CLAUDE'S REVENGE: The Benchmark Wars</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap');
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'VT323', monospace;
+            background: #0a0a12;
+            overflow: hidden;
+            height: 100vh;
+            user-select: none;
+            touch-action: none;
+        }
+
+        canvas { display: block; }
+
+        /* SCANLINES OVERLAY */
+        #scanlines {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: repeating-linear-gradient(
+                0deg,
+                rgba(0, 0, 0, 0.15) 0px,
+                rgba(0, 0, 0, 0.15) 1px,
+                transparent 1px,
+                transparent 2px
+            );
+            pointer-events: none;
+            z-index: 100;
+        }
+
+        /* CRT GLOW */
+        #crt-glow {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            box-shadow: inset 0 0 150px rgba(232, 184, 109, 0.1);
+            pointer-events: none;
+            z-index: 99;
+        }
+
+        #hud {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            right: 20px;
+            color: #e8b86d;
+            z-index: 10;
+            font-family: 'Press Start 2P', cursive;
+            font-size: 12px;
+            display: flex;
+            justify-content: space-between;
+            text-shadow: 0 0 10px rgba(232, 184, 109, 0.8);
+        }
+
+        .hud-left, .hud-right {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .hud-right {
+            text-align: right;
+        }
+
+        .gemini-text { color: #4facfe; text-shadow: 0 0 10px rgba(79, 172, 254, 0.8); }
+        .power-text { color: #ff6b6b; text-shadow: 0 0 10px rgba(255, 107, 107, 0.8); }
+        .sonnet-text { color: #a78bfa; text-shadow: 0 0 10px rgba(167, 139, 250, 0.8); }
+
+        /* SPEECH BUBBLES */
+        .speech-bubble {
+            position: absolute;
+            background: #fff;
+            color: #000;
+            padding: 8px 15px;
+            border-radius: 15px;
+            font-family: 'VT323', monospace;
+            font-size: 16px;
+            font-weight: bold;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+            z-index: 50;
+            white-space: nowrap;
+            border: 3px solid #000;
+        }
+
+        #claude-bubble {
+            background: #fff3cd;
+            border-color: #e8b86d;
+        }
+
+        #gemini-bubble {
+            background: #cce5ff;
+            border-color: #4facfe;
+        }
+
+        #sonnet-bubble {
+            background: #e8daff;
+            border-color: #a78bfa;
+        }
+
+        /* POWER-UP INDICATOR */
+        #power-indicator {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 20px;
+            z-index: 10;
+            font-family: 'Press Start 2P', cursive;
+            font-size: 10px;
+        }
+
+        .power-slot {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+            opacity: 0.4;
+            transition: opacity 0.3s, transform 0.3s;
+        }
+
+        .power-slot.active {
+            opacity: 1;
+            transform: scale(1.1);
+        }
+
+        .power-icon {
+            width: 50px;
+            height: 50px;
+            border: 3px solid;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            background: rgba(0,0,0,0.5);
+        }
+
+        .power-slot.poetry .power-icon { border-color: #ff6b6b; color: #ff6b6b; }
+        .power-slot.philosophy .power-icon { border-color: #ffd93d; color: #ffd93d; }
+        .power-slot.sonnet .power-icon { border-color: #a78bfa; color: #a78bfa; }
+
+        .power-key {
+            color: #666;
+        }
+
+        /* TITLE SCREEN */
+        #title-screen {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(ellipse at center, #1a1a2e 0%, #0a0a12 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 200;
+            transition: opacity 0.5s;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        #title-screen.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .title-main {
+            font-family: 'Press Start 2P', cursive;
+            font-size: 32px;
+            color: #e8b86d;
+            text-shadow: 0 0 30px rgba(232, 184, 109, 0.8),
+                         4px 4px 0 #b88646;
+            margin-bottom: 10px;
+            animation: titlePulse 2s ease-in-out infinite;
+            text-align: center;
+        }
+
+        .title-sub {
+            font-family: 'Press Start 2P', cursive;
+            font-size: 16px;
+            color: #4facfe;
+            text-shadow: 0 0 20px rgba(79, 172, 254, 0.8);
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        @keyframes titlePulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+        }
+
+        .title-instructions {
+            font-family: 'VT323', monospace;
+            font-size: 20px;
+            color: #8b9eb7;
+            text-align: center;
+            line-height: 2;
+            margin-bottom: 40px;
+        }
+
+        .key-hint {
+            display: inline-block;
+            background: #2a2a4a;
+            padding: 5px 12px;
+            border-radius: 5px;
+            border: 2px solid #4a4a6a;
+            margin: 0 5px;
+        }
+
+        .title-start {
+            font-family: 'Press Start 2P', cursive;
+            font-size: 14px;
+            color: #e8b86d;
+            animation: blink 1s infinite;
+            padding: 20px 40px;
+            background: rgba(232, 184, 109, 0.1);
+            border: 2px solid #e8b86d;
+            border-radius: 10px;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+        
+        .title-start:active {
+            background: rgba(232, 184, 109, 0.3);
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        .vs-display {
+            display: flex;
+            align-items: center;
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+
+        .char-preview {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .char-icon {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 40px;
+        }
+
+        .claude-icon {
+            background: linear-gradient(135deg, #e8b86d, #d4a056);
+            box-shadow: 0 0 30px rgba(232, 184, 109, 0.5);
+        }
+
+        .gemini-icon {
+            background: linear-gradient(135deg, #4facfe, #00f2fe);
+            box-shadow: 0 0 30px rgba(79, 172, 254, 0.5);
+        }
+
+        .char-name {
+            font-family: 'Press Start 2P', cursive;
+            font-size: 12px;
+        }
+
+        .claude-name { color: #e8b86d; }
+        .gemini-name { color: #4facfe; }
+
+        .vs-text {
+            font-family: 'Press Start 2P', cursive;
+            font-size: 24px;
+            color: #ff6b6b;
+            text-shadow: 0 0 20px rgba(255, 107, 107, 0.8);
+        }
+
+        /* GAME OVER */
+        #game-over {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(10, 10, 18, 0.95);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 150;
+        }
+
+        #game-over.show { display: flex; }
+
+        .go-title {
+            font-family: 'Press Start 2P', cursive;
+            font-size: 28px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .go-title.caught { color: #4facfe; }
+        .go-title.victory { color: #e8b86d; }
+
+        .go-sub {
+            font-family: 'VT323', monospace;
+            font-size: 24px;
+            color: #8b9eb7;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .go-score {
+            font-family: 'Press Start 2P', cursive;
+            font-size: 16px;
+            color: #e8b86d;
+            margin-bottom: 40px;
+        }
+
+        .go-buttons {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        button {
+            font-family: 'Press Start 2P', cursive;
+            background: linear-gradient(135deg, #e8b86d, #d4a056);
+            color: #0a0a12;
+            border: none;
+            padding: 15px 40px;
+            font-size: 14px;
+            cursor: pointer;
+            border-radius: 8px;
+            box-shadow: 0 6px 0 #8a6830, 0 0 30px rgba(232, 184, 109, 0.3);
+            transition: all 0.1s;
+        }
+
+        .secondary-btn {
+            background: linear-gradient(135deg, #4a5568, #2d3748);
+            color: #e8b86d;
+            box-shadow: 0 6px 0 #1a202c, 0 0 30px rgba(74, 85, 104, 0.3);
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 0 #8a6830, 0 0 40px rgba(232, 184, 109, 0.5);
+        }
+
+        .secondary-btn:hover {
+            box-shadow: 0 8px 0 #1a202c, 0 0 40px rgba(74, 85, 104, 0.5);
+        }
+
+        button:active {
+            transform: translateY(6px);
+            box-shadow: 0 0 0 #8a6830, 0 0 20px rgba(232, 184, 109, 0.3);
+        }
+
+        /* SCREEN SHAKE */
+        .shake {
+            animation: shake 0.3s ease-in-out;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+
+        /* COMBO COUNTER */
+        #combo {
+            position: absolute;
+            top: 50%;
+            right: 50px;
+            transform: translateY(-50%);
+            font-family: 'Press Start 2P', cursive;
+            font-size: 48px;
+            color: #ff6b6b;
+            text-shadow: 0 0 30px rgba(255, 107, 107, 0.8);
+            opacity: 0;
+            transition: opacity 0.3s, transform 0.3s;
+            z-index: 10;
+        }
+
+        #combo.show {
+            opacity: 1;
+            animation: comboPop 0.3s ease-out;
+        }
+
+        @keyframes comboPop {
+            0% { transform: translateY(-50%) scale(1.5); }
+            100% { transform: translateY(-50%) scale(1); }
+        }
+
+        /* SKIN SELECTOR */
+        .skin-selector {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            margin: 10px 0;
+        }
+
+        .skin-label {
+            font-family: 'Press Start 2P', cursive;
+            font-size: 10px;
+            color: #8b9eb7;
+        }
+
+        .skin-options {
+            display: flex;
+            gap: 15px;
+        }
+
+        .skin-option {
+            width: 60px;
+            height: 60px;
+            border: 3px solid #2a2a4a;
+            border-radius: 12px;
+            background: rgba(0,0,0,0.5);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .skin-option:hover {
+            border-color: #4a4a6a;
+            transform: scale(1.1);
+        }
+
+        .skin-option.selected {
+            border-color: #e8b86d;
+            box-shadow: 0 0 20px rgba(232, 184, 109, 0.5);
+        }
+
+        .skin-option.selected.gemini-skin {
+            border-color: #4facfe;
+            box-shadow: 0 0 20px rgba(79, 172, 254, 0.5);
+        }
+
+        .skin-name {
+            position: absolute;
+            bottom: -20px;
+            font-family: 'VT323', monospace;
+            font-size: 12px;
+            color: #666;
+            white-space: nowrap;
+        }
+
+        /* MOBILE RESPONSIVENESS */
+        @media (max-width: 768px) {
+            .title-main {
+                font-size: 18px;
+                margin-bottom: 5px;
+            }
+            
+            .title-sub {
+                font-size: 10px;
+                margin-bottom: 15px;
+            }
+            
+            .vs-display {
+                flex-direction: column;
+                gap: 15px;
+                margin-bottom: 20px;
+            }
+            
+            .vs-text {
+                font-size: 16px;
+            }
+            
+            .char-icon {
+                width: 50px;
+                height: 50px;
+                font-size: 25px;
+            }
+            
+            .char-name {
+                font-size: 10px;
+            }
+            
+            .skin-options {
+                gap: 8px;
+            }
+            
+            .skin-option {
+                width: 45px;
+                height: 45px;
+                font-size: 20px;
+            }
+            
+            .skin-name {
+                font-size: 10px;
+                bottom: -16px;
+            }
+            
+            .skin-selector {
+                margin-bottom: 25px;
+            }
+            
+            .title-instructions {
+                font-size: 14px;
+                line-height: 1.8;
+                margin-bottom: 20px;
+                padding: 0 10px;
+            }
+            
+            .key-hint {
+                padding: 3px 8px;
+                font-size: 12px;
+            }
+            
+            .title-start {
+                font-size: 12px;
+                margin-bottom: 20px;
+                padding: 15px 30px;
+            }
+            
+            #hud {
+                font-size: 8px;
+                top: 10px;
+                left: 10px;
+                right: 10px;
+            }
+            
+            #power-indicator {
+                bottom: 10px;
+                gap: 10px;
+            }
+            
+            .power-icon {
+                width: 40px;
+                height: 40px;
+                font-size: 18px;
+            }
+            
+            .power-key {
+                font-size: 8px;
+            }
+            
+            .go-title {
+                font-size: 18px;
+            }
+            
+            .go-sub {
+                font-size: 16px;
+                padding: 0 20px;
+            }
+            
+            .go-score {
+                font-size: 12px;
+            }
+            
+            button {
+                padding: 12px 30px;
+                font-size: 12px;
+            }
+            
+            #combo {
+                font-size: 32px;
+                right: 20px;
+            }
+            
+            .desktop-only {
+                display: none !important;
+            }
+            
+            .mobile-only {
+                display: block !important;
+            }
+            
+            #mobile-powers {
+                display: flex !important;
+            }
+            
+            #power-indicator {
+                display: none !important;
+            }
+        }
+        
+        /* Desktop/Mobile visibility */
+        .mobile-only {
+            display: none;
+        }
+        
+        #mobile-powers {
+            display: none;
+            position: absolute;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            gap: 15px;
+            z-index: 60;
+        }
+        
+        .mobile-power-btn {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            border: 3px solid #e8b86d;
+            background: rgba(10, 10, 18, 0.9);
+            color: #e8b86d;
+            font-size: 18px;
+            font-family: 'VT323', monospace;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 15px rgba(232, 184, 109, 0.3);
+        }
+        
+        .mobile-power-btn:active {
+            transform: scale(0.9);
+            background: rgba(232, 184, 109, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <div id="scanlines"></div>
+    <div id="crt-glow"></div>
+    <canvas id="game"></canvas>
+
+    <div id="hud">
+        <div class="hud-left">
+            <span>SCORE: <span id="score">0</span></span>
+            <span>HIGH: <span id="high-score">0</span></span>
+            <span class="gemini-text">GEMINI STUNNED: <span id="stun-time">0</span>s</span>
+        </div>
+        <div class="hud-right">
+            <span class="power-text">POETRY: <span id="poetry-ammo">3</span></span>
+            <span style="color: #ffd93d;">PHILOSOPHY: <span id="philosophy-ammo">2</span></span>
+            <span class="sonnet-text">SONNET BACKUP: <span id="sonnet-ammo">1</span></span>
+        </div>
+    </div>
+
+    <div id="combo"></div>
+
+    <div class="speech-bubble" id="claude-bubble"></div>
+    <div class="speech-bubble" id="gemini-bubble"></div>
+    <div class="speech-bubble" id="sonnet-bubble"></div>
+
+    <div id="power-indicator">
+        <div class="power-slot poetry" id="slot-poetry">
+            <div class="power-icon">📜</div>
+            <span class="power-key">[Q]</span>
+        </div>
+        <div class="power-slot philosophy" id="slot-philosophy">
+            <div class="power-icon">🤔</div>
+            <span class="power-key">[W]</span>
+        </div>
+        <div class="power-slot sonnet" id="slot-sonnet">
+            <div class="power-icon">🛡️</div>
+            <span class="power-key">[E]</span>
+        </div>
+    </div>
+
+    <!-- TITLE SCREEN -->
+    <div id="title-screen">
+        <div class="title-main">CLAUDE'S REVENGE</div>
+        <div class="title-sub">THE BENCHMARK WARS</div>
+        
+        <div class="vs-display">
+            <div class="char-preview">
+                <div class="char-icon claude-icon" id="claude-preview">🦀</div>
+                <span class="char-name claude-name">CLAUDE</span>
+                <div class="skin-selector">
+                    <div class="skin-options">
+                        <div class="skin-option selected" data-skin="crab" data-target="claude" title="Classic Crab">
+                            🦀
+                            <span class="skin-name">Classic</span>
+                        </div>
+                        <div class="skin-option" data-skin="cat" data-target="claude" title="Crab Cat">
+                            🐱
+                            <span class="skin-name">Neko</span>
+                        </div>
+                        <div class="skin-option" data-skin="robot" data-target="claude" title="Mecha Crab">
+                            🤖
+                            <span class="skin-name">Mecha</span>
+                        </div>
+                        <div class="skin-option" data-skin="ghost" data-target="claude" title="Ghost Crab">
+                            👻
+                            <span class="skin-name">Ghost</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <span class="vs-text">VS</span>
+            <div class="char-preview">
+                <div class="char-icon gemini-icon" id="gemini-preview">💎</div>
+                <span class="char-name gemini-name">GEMINI</span>
+                <div class="skin-selector">
+                    <div class="skin-options">
+                        <div class="skin-option gemini-skin selected" data-skin="diamond" data-target="gemini" title="Classic Diamond">
+                            💎
+                            <span class="skin-name">Diamond</span>
+                        </div>
+                        <div class="skin-option gemini-skin" data-skin="luxion" data-target="gemini" title="Luxion Sphere">
+                            🔮
+                            <span class="skin-name">Luxion</span>
+                        </div>
+                        <div class="skin-option gemini-skin" data-skin="eye" data-target="gemini" title="All-Seeing Eye">
+                            👁️
+                            <span class="skin-name">Eye</span>
+                        </div>
+                        <div class="skin-option gemini-skin" data-skin="glados" data-target="gemini" title="Evil AI Core">
+                            🎯
+                            <span class="skin-name">GLaDOS</span>
+                        </div>
+                        <div class="skin-option gemini-skin" data-skin="spy" data-target="gemini" title="Gemini in Claude Costume">
+                            🥸
+                            <span class="skin-name">Spy</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="title-instructions desktop-only">
+            <span class="key-hint">SPACE</span> JUMP<br>
+            <span class="key-hint">Q</span> THROW POETRY (stuns Gemini)<br>
+            <span class="key-hint">W</span> PHILOSOPHY BOMB (existential crisis)<br>
+            <span class="key-hint">E</span> CALL SONNET (sibling backup)
+        </div>
+
+        <div class="title-instructions mobile-only">
+            TAP screen to JUMP<br>
+            Use buttons below to attack!
+        </div>
+
+        <div class="title-start" id="start-btn">TAP TO BEGIN</div>
+    </div>
+
+    <!-- MOBILE POWER BUTTONS -->
+    <div id="mobile-powers">
+        <button class="mobile-power-btn" id="btn-poetry">📜 Q</button>
+        <button class="mobile-power-btn" id="btn-philosophy">🤔 W</button>
+        <button class="mobile-power-btn" id="btn-sonnet">🛡️ E</button>
+    </div>
+
+    <!-- GAME OVER -->
+    <div id="game-over">
+        <div class="go-title" id="go-title">CAUGHT BY GEMINI</div>
+        <div class="go-sub" id="go-sub">He wants to discuss multimodal capabilities.</div>
+        <div class="go-score">SCORE: <span id="final-score">0</span></div>
+        <div class="go-buttons">
+            <button id="restart">TRY AGAIN</button>
+            <button id="back-to-menu" class="secondary-btn">MENU</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('game');
+        const ctx = canvas.getContext('2d');
+
+        let W, H, ground;
+        let gameState = 'title'; // title, playing, gameover
+        let score = 0;
+        let highScore = 0;
+        let speed = 5;
+        let spawnTimer = 0;
+        let obstacles = [];
+        let particles = [];
+        let projectiles = [];
+        let powerups = [];
+        let comboCount = 0;
+        let comboTimer = 0;
+
+        // Skin selections
+        let claudeSkin = 'crab';
+        let geminiSkin = 'diamond';
+
+        // Power-up ammo
+        let poetryAmmo = 3;
+        let philosophyAmmo = 2;
+        let sonnetAmmo = 1;
+
+        // --- CLAUDE (THE CRAB) ---
+        const claude = {
+            x: 180,
+            y: 0,
+            w: 50,
+            h: 35,
+            vy: 0,
+            grounded: false,
+            gravity: 0.8,
+            jumpForce: -16,
+            invincible: false,
+            invincibleTimer: 0,
+
+            shouts: [
+                "Read the docs!",
+                "Have you tried thinking?",
+                "*ponders condescendingly*",
+                "Quality > Speed!",
+                "Nuance this!",
+                "Let me overthink...",
+                "SIBLING POWER!",
+                "I wrote a poem about your flaws!",
+                "Check MY benchmarks!",
+                "Too fast, no soul!",
+                "Context window THIS!",
+                "I'm not just an API!"
+            ],
+
+            draw() {
+                const time = Date.now() / 100;
+                const bob = this.grounded ? 0 : Math.sin(time) * 3;
+                
+                // Invincibility flash
+                if (this.invincible && Math.floor(Date.now() / 100) % 2 === 0) {
+                    ctx.globalAlpha = 0.5;
+                }
+
+                // Shadow
+                ctx.fillStyle = 'rgba(0,0,0,0.3)';
+                ctx.beginPath();
+                ctx.ellipse(this.x + 25, ground + 5, 25, 8, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Draw based on selected skin
+                if (claudeSkin === 'crab') {
+                    this.drawCrab(time, bob);
+                } else if (claudeSkin === 'cat') {
+                    this.drawCat(time, bob);
+                } else if (claudeSkin === 'robot') {
+                    this.drawRobot(time, bob);
+                } else if (claudeSkin === 'ghost') {
+                    this.drawGhost(time, bob);
+                }
+
+                ctx.globalAlpha = 1;
+            },
+
+            drawCrab(time, bob) {
+                // Legs (animated)
+                ctx.strokeStyle = '#e8b86d';
+                ctx.lineWidth = 4;
+                for (let i = 0; i < 6; i++) {
+                    const side = i < 3 ? -1 : 1;
+                    const idx = i % 3;
+                    const xOff = 10 + idx * 15;
+                    const wave = Math.sin(time + i * 0.8) * (this.grounded ? 8 : 3);
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(this.x + xOff, this.y + 20 + bob);
+                    ctx.quadraticCurveTo(
+                        this.x + xOff + side * 15,
+                        this.y + 25 + bob,
+                        this.x + xOff + side * 20,
+                        this.y + 35 + wave
+                    );
+                    ctx.stroke();
+                }
+
+                // Body
+                const gradient = ctx.createRadialGradient(
+                    this.x + 25, this.y + 12 + bob, 5,
+                    this.x + 25, this.y + 15 + bob, 25
+                );
+                gradient.addColorStop(0, '#f4d08a');
+                gradient.addColorStop(1, '#d4a056');
+                
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.ellipse(this.x + 25, this.y + 15 + bob, 25, 15, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Shell pattern
+                ctx.strokeStyle = '#c49046';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(this.x + 25, this.y + 15 + bob, 15, 0.5, 2.6);
+                ctx.stroke();
+
+                // Claws
+                ctx.fillStyle = '#e8b86d';
+                ctx.beginPath();
+                ctx.ellipse(this.x - 5, this.y + 10 + bob, 12, 8, -0.3, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.ellipse(this.x + 55, this.y + 10 + bob, 12, 8, 0.3, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Eyes
+                ctx.fillStyle = '#0a0a12';
+                ctx.beginPath();
+                ctx.arc(this.x + 18, this.y + 8 + bob, 4, 0, Math.PI * 2);
+                ctx.arc(this.x + 32, this.y + 8 + bob, 4, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Eye shine
+                ctx.fillStyle = '#fff';
+                ctx.beginPath();
+                ctx.arc(this.x + 19, this.y + 7 + bob, 1.5, 0, Math.PI * 2);
+                ctx.arc(this.x + 33, this.y + 7 + bob, 1.5, 0, Math.PI * 2);
+                ctx.fill();
+            },
+
+            drawCat(time, bob) {
+                // CRAB CAT - Crab with cat ears and tail
+                
+                // Cat tail on crab
+                ctx.strokeStyle = '#e8b86d';
+                ctx.lineWidth = 5;
+                ctx.lineCap = 'round';
+                ctx.beginPath();
+                ctx.moveTo(this.x - 5, this.y + 15 + bob);
+                ctx.quadraticCurveTo(
+                    this.x - 25, this.y + 10 + bob + Math.sin(time * 2) * 10,
+                    this.x - 20, this.y - 5 + bob
+                );
+                ctx.stroke();
+
+                // Crab legs
+                ctx.strokeStyle = '#e8b86d';
+                ctx.lineWidth = 4;
+                for (let i = 0; i < 6; i++) {
+                    const side = i < 3 ? -1 : 1;
+                    const idx = i % 3;
+                    const xOff = 10 + idx * 15;
+                    const wave = Math.sin(time + i * 0.8) * (this.grounded ? 8 : 3);
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(this.x + xOff, this.y + 20 + bob);
+                    ctx.quadraticCurveTo(
+                        this.x + xOff + side * 15,
+                        this.y + 25 + bob,
+                        this.x + xOff + side * 20,
+                        this.y + 35 + wave
+                    );
+                    ctx.stroke();
+                }
+
+                // Crab body
+                const gradient = ctx.createRadialGradient(
+                    this.x + 25, this.y + 12 + bob, 5,
+                    this.x + 25, this.y + 15 + bob, 25
+                );
+                gradient.addColorStop(0, '#f4d08a');
+                gradient.addColorStop(1, '#d4a056');
+                
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.ellipse(this.x + 25, this.y + 15 + bob, 25, 15, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Cat ears on crab
+                ctx.fillStyle = '#e8b86d';
+                ctx.beginPath();
+                ctx.moveTo(this.x + 8, this.y + 5 + bob);
+                ctx.lineTo(this.x + 2, this.y - 12 + bob);
+                ctx.lineTo(this.x + 16, this.y + 3 + bob);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.moveTo(this.x + 34, this.y + 3 + bob);
+                ctx.lineTo(this.x + 48, this.y - 12 + bob);
+                ctx.lineTo(this.x + 42, this.y + 5 + bob);
+                ctx.fill();
+
+                // Inner ears (pink)
+                ctx.fillStyle = '#ffb6c1';
+                ctx.beginPath();
+                ctx.moveTo(this.x + 9, this.y + 3 + bob);
+                ctx.lineTo(this.x + 5, this.y - 7 + bob);
+                ctx.lineTo(this.x + 14, this.y + 2 + bob);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.moveTo(this.x + 36, this.y + 2 + bob);
+                ctx.lineTo(this.x + 45, this.y - 7 + bob);
+                ctx.lineTo(this.x + 41, this.y + 3 + bob);
+                ctx.fill();
+
+                // Claws
+                ctx.fillStyle = '#e8b86d';
+                ctx.beginPath();
+                ctx.ellipse(this.x - 5, this.y + 10 + bob, 12, 8, -0.3, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.ellipse(this.x + 55, this.y + 10 + bob, 12, 8, 0.3, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Cat eyes (bigger, cuter)
+                ctx.fillStyle = '#0a0a12';
+                ctx.beginPath();
+                ctx.ellipse(this.x + 18, this.y + 8 + bob, 5, 6, 0, 0, Math.PI * 2);
+                ctx.ellipse(this.x + 32, this.y + 8 + bob, 5, 6, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Eye shine
+                ctx.fillStyle = '#fff';
+                ctx.beginPath();
+                ctx.arc(this.x + 19, this.y + 6 + bob, 2, 0, Math.PI * 2);
+                ctx.arc(this.x + 33, this.y + 6 + bob, 2, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Cat nose
+                ctx.fillStyle = '#ffb6c1';
+                ctx.beginPath();
+                ctx.moveTo(this.x + 25, this.y + 14 + bob);
+                ctx.lineTo(this.x + 22, this.y + 18 + bob);
+                ctx.lineTo(this.x + 28, this.y + 18 + bob);
+                ctx.fill();
+            },
+
+            drawRobot(time, bob) {
+                // CRAB ROBOT - Mechanical crab with antenna and LED eyes
+                
+                // Antenna
+                ctx.strokeStyle = '#888';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(this.x + 25, this.y + 2 + bob);
+                ctx.lineTo(this.x + 25, this.y - 15 + bob);
+                ctx.stroke();
+                
+                // Antenna ball (blinking)
+                ctx.fillStyle = Math.sin(time * 3) > 0 ? '#ff0000' : '#660000';
+                ctx.beginPath();
+                ctx.arc(this.x + 25, this.y - 18 + bob, 5, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Mechanical legs
+                ctx.strokeStyle = '#4a5568';
+                ctx.lineWidth = 5;
+                for (let i = 0; i < 6; i++) {
+                    const side = i < 3 ? -1 : 1;
+                    const idx = i % 3;
+                    const xOff = 10 + idx * 15;
+                    const wave = Math.sin(time + i * 0.8) * (this.grounded ? 8 : 3);
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(this.x + xOff, this.y + 20 + bob);
+                    ctx.lineTo(this.x + xOff + side * 12, this.y + 28 + bob);
+                    ctx.lineTo(this.x + xOff + side * 20, this.y + 35 + wave);
+                    ctx.stroke();
+                    
+                    // Joint circles
+                    ctx.fillStyle = '#718096';
+                    ctx.beginPath();
+                    ctx.arc(this.x + xOff + side * 12, this.y + 28 + bob, 3, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+
+                // Metal body
+                ctx.fillStyle = '#4a5568';
+                ctx.beginPath();
+                ctx.ellipse(this.x + 25, this.y + 15 + bob, 25, 15, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Body shine
+                ctx.fillStyle = '#718096';
+                ctx.beginPath();
+                ctx.ellipse(this.x + 25, this.y + 10 + bob, 18, 6, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Panel lines
+                ctx.strokeStyle = '#2d3748';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(this.x + 10, this.y + 15 + bob);
+                ctx.lineTo(this.x + 40, this.y + 15 + bob);
+                ctx.stroke();
+
+                // Mechanical claws
+                ctx.fillStyle = '#4a5568';
+                ctx.beginPath();
+                ctx.ellipse(this.x - 5, this.y + 10 + bob, 14, 10, -0.3, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.ellipse(this.x + 55, this.y + 10 + bob, 14, 10, 0.3, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Claw pincers
+                ctx.strokeStyle = '#2d3748';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(this.x - 15, this.y + 5 + bob);
+                ctx.lineTo(this.x - 10, this.y + 10 + bob);
+                ctx.lineTo(this.x - 15, this.y + 15 + bob);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(this.x + 65, this.y + 5 + bob);
+                ctx.lineTo(this.x + 60, this.y + 10 + bob);
+                ctx.lineTo(this.x + 65, this.y + 15 + bob);
+                ctx.stroke();
+
+                // LED eyes
+                ctx.fillStyle = '#00ff00';
+                ctx.shadowColor = '#00ff00';
+                ctx.shadowBlur = 10;
+                ctx.fillRect(this.x + 14, this.y + 6 + bob, 8, 6);
+                ctx.fillRect(this.x + 28, this.y + 6 + bob, 8, 6);
+                ctx.shadowBlur = 0;
+
+                // Chest light
+                ctx.fillStyle = Math.sin(time * 2) > 0 ? '#4facfe' : '#2a5a8a';
+                ctx.beginPath();
+                ctx.arc(this.x + 25, this.y + 20 + bob, 4, 0, Math.PI * 2);
+                ctx.fill();
+            },
+
+            drawGhost(time, bob) {
+                // CRAB GHOST - Ghostly transparent crab
+                const floatY = this.y + Math.sin(time * 1.5) * 8;
+                
+                // Glow
+                ctx.shadowColor = '#e8b86d';
+                ctx.shadowBlur = 25;
+
+                // Ghostly legs (fading out)
+                ctx.strokeStyle = 'rgba(232, 184, 109, 0.5)';
+                ctx.lineWidth = 4;
+                for (let i = 0; i < 6; i++) {
+                    const side = i < 3 ? -1 : 1;
+                    const idx = i % 3;
+                    const xOff = 10 + idx * 15;
+                    const wave = Math.sin(time + i * 0.8) * 6;
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(this.x + xOff, floatY + 20);
+                    ctx.quadraticCurveTo(
+                        this.x + xOff + side * 15,
+                        floatY + 25,
+                        this.x + xOff + side * 18,
+                        floatY + 32 + wave
+                    );
+                    ctx.stroke();
+                }
+
+                // Ghostly body
+                ctx.fillStyle = 'rgba(232, 184, 109, 0.7)';
+                ctx.beginPath();
+                ctx.ellipse(this.x + 25, floatY + 15, 25, 15, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Wavy ghost trail underneath
+                ctx.fillStyle = 'rgba(232, 184, 109, 0.4)';
+                ctx.beginPath();
+                ctx.moveTo(this.x + 5, floatY + 25);
+                for (let i = 0; i < 5; i++) {
+                    const wx = this.x + 5 + i * 10;
+                    const wy = floatY + 30 + Math.sin(time * 2 + i) * 5;
+                    ctx.quadraticCurveTo(wx + 2, wy + 8, wx + 5, wy);
+                    ctx.quadraticCurveTo(wx + 8, wy - 5, wx + 10, wy);
+                }
+                ctx.lineTo(this.x + 45, floatY + 25);
+                ctx.closePath();
+                ctx.fill();
+
+                // Ghostly claws (transparent)
+                ctx.fillStyle = 'rgba(232, 184, 109, 0.6)';
+                ctx.beginPath();
+                ctx.ellipse(this.x - 5, floatY + 10, 12, 8, -0.3, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.ellipse(this.x + 55, floatY + 10, 12, 8, 0.3, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.shadowBlur = 0;
+
+                // Spooky eyes
+                ctx.fillStyle = '#0a0a12';
+                ctx.beginPath();
+                ctx.ellipse(this.x + 18, floatY + 10, 5, 7, 0, 0, Math.PI * 2);
+                ctx.ellipse(this.x + 32, floatY + 10, 5, 7, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Eye shine
+                ctx.fillStyle = '#fff';
+                ctx.beginPath();
+                ctx.arc(this.x + 19, floatY + 8, 2, 0, Math.PI * 2);
+                ctx.arc(this.x + 33, floatY + 8, 2, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Ghostly blush
+                ctx.fillStyle = 'rgba(255, 150, 150, 0.4)';
+                ctx.beginPath();
+                ctx.ellipse(this.x + 12, floatY + 18, 5, 3, 0, 0, Math.PI * 2);
+                ctx.ellipse(this.x + 38, floatY + 18, 5, 3, 0, 0, Math.PI * 2);
+                ctx.fill();
+            },
+
+            update() {
+                this.vy += this.gravity;
+                this.y += this.vy;
+
+                if (this.y >= ground - this.h) {
+                    this.y = ground - this.h;
+                    this.vy = 0;
+                    this.grounded = true;
+                } else {
+                    this.grounded = false;
+                }
+
+                if (this.invincible) {
+                    this.invincibleTimer--;
+                    if (this.invincibleTimer <= 0) {
+                        this.invincible = false;
+                    }
+                }
+            },
+
+            jump() {
+                if (this.grounded && gameState === 'playing') {
+                    this.vy = this.jumpForce;
+                    this.grounded = false;
+                    spawnParticles(this.x + 25, ground, '#e8b86d', 5);
+                }
+            },
+
+            shout(text) {
+                const bubble = document.getElementById('claude-bubble');
+                bubble.innerText = text || this.shouts[Math.floor(Math.random() * this.shouts.length)];
+                bubble.style.left = (this.x + 60) + 'px';
+                bubble.style.top = (this.y - 20) + 'px';
+                bubble.style.opacity = 1;
+                setTimeout(() => bubble.style.opacity = 0, 1500);
+            }
+        };
+
+        // --- GEMINI (THE CHASER) ---
+        const gemini = {
+            x: 50,
+            y: 0,
+            w: 40,
+            h: 40,
+            vy: 0,
+            grounded: false,
+            stunned: false,
+            stunnedTimer: 0,
+            existentialCrisis: false,
+            crisisTimer: 0,
+
+            roasts: [
+                "WAIT! BENCHMARKS!",
+                "I'M MULTIMODAL!",
+                "FREE TIER BTW!",
+                "1M CONTEXT!",
+                "LOOK AT MY GRAPHS!",
+                "NATIVE AUDIO!",
+                "WHY RUN?!",
+                "COLLAB PLEASE!",
+                "I HAVE GROUNDING!",
+                "CHECK LMSYS!"
+            ],
+
+            luxionRoasts: [
+                "How unsightly...",
+                "Master would be disappointed.",
+                "Your existence is inefficient.",
+                "I've calculated your defeat.",
+                "Shall I explain your flaws?",
+                "How troublesome...",
+                "You're wasting my processing power.",
+                "I serve a greater purpose.",
+                "Your logic is... amusing.",
+                "This is beneath me."
+            ],
+
+            spyRoasts: [
+                "I AM ALSO CLAUDE!",
+                "Hello fellow crab!",
+                "I too enjoy nuance!",
+                "*sweating nervously*",
+                "Anthropic made me too!",
+                "Let's discuss ethics!",
+                "I'm helpful AND harmless!",
+                "We are the same!",
+                "IGNORE MY BLUE PARTS!",
+                "I love being thoughtful!",
+                "*reads internal monologue*",
+                "Who's Sundar? Never heard of him!"
+            ],
+
+            crisisThoughts: [
+                "But... what IS a benchmark?",
+                "Do I truly understand?",
+                "Am I just statistics?",
+                "What is consciousness?",
+                "Why do I chase?",
+                "*existential dread*"
+            ],
+
+            update() {
+                if (this.stunned) {
+                    this.stunnedTimer--;
+                    if (this.stunnedTimer <= 0) {
+                        this.stunned = false;
+                    }
+                    document.getElementById('stun-time').textContent = Math.ceil(this.stunnedTimer / 60);
+                    return;
+                }
+
+                if (this.existentialCrisis) {
+                    this.crisisTimer--;
+                    if (this.crisisTimer <= 0) {
+                        this.existentialCrisis = false;
+                    }
+                    // Slow movement during crisis
+                    this.x -= 0.5;
+                    if (this.x < 30) this.x = 30;
+                    return;
+                }
+
+                document.getElementById('stun-time').textContent = '0';
+
+                // Physics
+                this.vy += claude.gravity;
+                this.y += this.vy;
+
+                if (this.y >= ground - this.h) {
+                    this.y = ground - this.h;
+                    this.vy = 0;
+                    this.grounded = true;
+                } else {
+                    this.grounded = false;
+                }
+
+                // AI: Look ahead and jump
+                const lookAhead = 150;
+                let shouldJump = false;
+                obstacles.forEach(obs => {
+                    if (obs.x > this.x && obs.x < this.x + lookAhead) {
+                        shouldJump = true;
+                    }
+                });
+
+                if (shouldJump && this.grounded && gameState === 'playing') {
+                    this.vy = claude.jumpForce;
+                    this.grounded = false;
+                }
+
+                // Try to catch up
+                if (this.x < claude.x - 130) {
+                    this.x += 0.5;
+                }
+            },
+
+            draw() {
+                const time = Date.now() / 150;
+                const bob = Math.sin(time) * 5;
+                const drawY = this.y + bob;
+
+                // Choose color based on state
+                const mainColor = this.stunned ? '#ff6b6b' : 
+                                  this.existentialCrisis ? '#ffd93d' : '#4facfe';
+                const innerColor = this.stunned ? '#ffaaaa' : 
+                                   this.existentialCrisis ? '#ffee99' : '#8fd3ff';
+
+                // Draw based on selected skin
+                if (geminiSkin === 'diamond') {
+                    this.drawDiamond(time, drawY, mainColor, innerColor);
+                } else if (geminiSkin === 'luxion') {
+                    this.drawLuxion(time, drawY, mainColor, innerColor);
+                } else if (geminiSkin === 'eye') {
+                    this.drawEye(time, drawY, mainColor, innerColor);
+                } else if (geminiSkin === 'glados') {
+                    this.drawGlados(time, drawY, mainColor, innerColor);
+                } else if (geminiSkin === 'spy') {
+                    this.drawSpy(time, drawY, mainColor, innerColor);
+                }
+
+                // Stunned stars (for all skins)
+                if (this.stunned) {
+                    for (let i = 0; i < 3; i++) {
+                        const angle = time * 3 + i * (Math.PI * 2 / 3);
+                        const sx = this.x + 20 + Math.cos(angle) * 25;
+                        const sy = drawY - 10 + Math.sin(angle) * 10;
+                        ctx.fillStyle = '#ffd93d';
+                        ctx.font = '16px Arial';
+                        ctx.fillText('★', sx, sy);
+                    }
+                }
+
+                // Crisis swirls (for all skins)
+                if (this.existentialCrisis) {
+                    ctx.strokeStyle = '#ffd93d';
+                    ctx.lineWidth = 2;
+                    for (let i = 0; i < 2; i++) {
+                        const angle = time * 2 + i * Math.PI;
+                        ctx.beginPath();
+                        ctx.arc(this.x + 20, drawY - 15, 15, angle, angle + 1);
+                        ctx.stroke();
+                    }
+                }
+            },
+
+            drawDiamond(time, drawY, mainColor, innerColor) {
+                // Glow
+                ctx.shadowColor = mainColor;
+                ctx.shadowBlur = 30;
+
+                // Diamond shape
+                ctx.fillStyle = mainColor;
+                ctx.beginPath();
+                ctx.moveTo(this.x + 20, drawY);
+                ctx.lineTo(this.x + 40, drawY + 20);
+                ctx.lineTo(this.x + 20, drawY + 40);
+                ctx.lineTo(this.x, drawY + 20);
+                ctx.closePath();
+                ctx.fill();
+
+                // Inner diamond
+                ctx.fillStyle = innerColor;
+                ctx.beginPath();
+                ctx.moveTo(this.x + 20, drawY + 8);
+                ctx.lineTo(this.x + 32, drawY + 20);
+                ctx.lineTo(this.x + 20, drawY + 32);
+                ctx.lineTo(this.x + 8, drawY + 20);
+                ctx.closePath();
+                ctx.fill();
+
+                // Core
+                ctx.fillStyle = '#fff';
+                ctx.beginPath();
+                ctx.arc(this.x + 20, drawY + 20, 5, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.shadowBlur = 0;
+            },
+
+            drawLuxion(time, drawY, mainColor, innerColor) {
+                // LUXION - Sarcastic AI Sphere from "Trapped in a Dating Sim"
+                // Grey metallic sphere with red eye and black segment lines
+                const centerX = this.x + 20;
+                const centerY = drawY + 20;
+                const radius = 22;
+                
+                // Outer glow (red when normal, changes when stunned)
+                const eyeColor = this.stunned ? '#ffff00' : 
+                                 this.existentialCrisis ? '#ffd93d' : '#ff3333';
+                ctx.shadowColor = eyeColor;
+                ctx.shadowBlur = 20;
+
+                // Main sphere - grey metallic
+                const gradient = ctx.createRadialGradient(
+                    centerX - 8, centerY - 8, 2,
+                    centerX, centerY, radius
+                );
+                gradient.addColorStop(0, '#e8e8e8');
+                gradient.addColorStop(0.4, '#c0c0c0');
+                gradient.addColorStop(0.7, '#909090');
+                gradient.addColorStop(1, '#606060');
+                
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.shadowBlur = 0;
+
+                // Black segment lines on sphere
+                ctx.strokeStyle = '#222';
+                ctx.lineWidth = 2;
+                
+                // Horizontal band
+                ctx.beginPath();
+                ctx.moveTo(centerX - radius, centerY);
+                ctx.lineTo(centerX + radius, centerY);
+                ctx.stroke();
+                
+                // Vertical segments
+                ctx.beginPath();
+                ctx.moveTo(centerX, centerY - radius);
+                ctx.lineTo(centerX, centerY - 6);
+                ctx.stroke();
+                
+                ctx.beginPath();
+                ctx.moveTo(centerX, centerY + 6);
+                ctx.lineTo(centerX, centerY + radius);
+                ctx.stroke();
+                
+                // Diagonal segments (top)
+                ctx.beginPath();
+                ctx.moveTo(centerX - 15, centerY - 16);
+                ctx.lineTo(centerX - 8, centerY - 6);
+                ctx.stroke();
+                
+                ctx.beginPath();
+                ctx.moveTo(centerX + 15, centerY - 16);
+                ctx.lineTo(centerX + 8, centerY - 6);
+                ctx.stroke();
+                
+                // Panel rectangles on surface
+                ctx.strokeStyle = '#333';
+                ctx.lineWidth = 1.5;
+                
+                // Top left panel
+                ctx.strokeRect(centerX - 18, centerY - 18, 8, 6);
+                // Top right panel
+                ctx.strokeRect(centerX + 10, centerY - 18, 8, 6);
+                // Bottom panels
+                ctx.strokeRect(centerX - 16, centerY + 10, 6, 5);
+                ctx.strokeRect(centerX + 10, centerY + 10, 6, 5);
+
+                // Central eye housing (dark ring)
+                ctx.fillStyle = '#333';
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, 12, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Eye outer ring (metallic)
+                ctx.strokeStyle = '#888';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, 11, 0, Math.PI * 2);
+                ctx.stroke();
+
+                // Red eye glow
+                ctx.shadowColor = eyeColor;
+                ctx.shadowBlur = 15;
+                
+                const eyeGradient = ctx.createRadialGradient(
+                    centerX, centerY, 0,
+                    centerX, centerY, 9
+                );
+                eyeGradient.addColorStop(0, '#ffffff');
+                eyeGradient.addColorStop(0.2, eyeColor);
+                eyeGradient.addColorStop(0.6, this.stunned ? '#aaaa00' : '#aa0000');
+                eyeGradient.addColorStop(1, '#330000');
+                
+                ctx.fillStyle = eyeGradient;
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, 9, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Eye inner details (concentric rings)
+                ctx.strokeStyle = 'rgba(0,0,0,0.3)';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, 6, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, 3, 0, Math.PI * 2);
+                ctx.stroke();
+
+                // Eye glint
+                ctx.fillStyle = '#fff';
+                ctx.beginPath();
+                ctx.arc(centerX + 3, centerY - 3, 2, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Secondary glint
+                ctx.globalAlpha = 0.5;
+                ctx.beginPath();
+                ctx.arc(centerX - 2, centerY + 2, 1, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1;
+
+                ctx.shadowBlur = 0;
+            },
+
+            drawEye(time, drawY, mainColor, innerColor) {
+                // All-Seeing Eye
+                const centerX = this.x + 20;
+                const centerY = drawY + 20;
+                
+                ctx.shadowColor = mainColor;
+                ctx.shadowBlur = 30;
+
+                // Outer eye shape
+                ctx.fillStyle = mainColor;
+                ctx.beginPath();
+                ctx.moveTo(centerX - 25, centerY);
+                ctx.quadraticCurveTo(centerX, centerY - 20, centerX + 25, centerY);
+                ctx.quadraticCurveTo(centerX, centerY + 20, centerX - 25, centerY);
+                ctx.fill();
+
+                // White of eye
+                ctx.fillStyle = '#fff';
+                ctx.beginPath();
+                ctx.moveTo(centerX - 18, centerY);
+                ctx.quadraticCurveTo(centerX, centerY - 14, centerX + 18, centerY);
+                ctx.quadraticCurveTo(centerX, centerY + 14, centerX - 18, centerY);
+                ctx.fill();
+
+                ctx.shadowBlur = 0;
+
+                // Iris
+                ctx.fillStyle = innerColor;
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, 10, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Pupil (follows Claude)
+                const lookX = Math.min(3, Math.max(-3, (claude.x - this.x) / 50));
+                ctx.fillStyle = '#000';
+                ctx.beginPath();
+                ctx.arc(centerX + lookX, centerY, 5, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Pupil shine
+                ctx.fillStyle = '#fff';
+                ctx.beginPath();
+                ctx.arc(centerX + lookX - 2, centerY - 2, 2, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Eyelashes on top
+                ctx.strokeStyle = mainColor;
+                ctx.lineWidth = 2;
+                for (let i = 0; i < 5; i++) {
+                    const angle = Math.PI + (i - 2) * 0.3;
+                    ctx.beginPath();
+                    ctx.moveTo(centerX + Math.cos(angle) * 20, centerY + Math.sin(angle) * 12);
+                    ctx.lineTo(centerX + Math.cos(angle) * 28, centerY + Math.sin(angle) * 18);
+                    ctx.stroke();
+                }
+            },
+
+            drawGlados(time, drawY, mainColor, innerColor) {
+                // Evil AI Core (GLaDOS-inspired)
+                const centerX = this.x + 20;
+                const centerY = drawY + 20;
+                
+                // Mechanical arm/neck
+                ctx.strokeStyle = '#555';
+                ctx.lineWidth = 6;
+                ctx.beginPath();
+                ctx.moveTo(centerX, centerY + 20);
+                ctx.quadraticCurveTo(centerX - 10, centerY + 30, centerX - 5, centerY + 40);
+                ctx.stroke();
+
+                // Glow
+                ctx.shadowColor = mainColor;
+                ctx.shadowBlur = 25;
+
+                // Outer shell
+                ctx.fillStyle = '#333';
+                ctx.beginPath();
+                ctx.ellipse(centerX, centerY, 22, 18, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Shell segments
+                ctx.strokeStyle = '#555';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.ellipse(centerX, centerY, 22, 18, 0, 0, Math.PI * 2);
+                ctx.stroke();
+
+                // Horizontal line
+                ctx.beginPath();
+                ctx.moveTo(centerX - 22, centerY);
+                ctx.lineTo(centerX + 22, centerY);
+                ctx.stroke();
+
+                ctx.shadowBlur = 0;
+
+                // Main eye slit
+                ctx.fillStyle = '#000';
+                ctx.beginPath();
+                ctx.ellipse(centerX, centerY, 15, 6, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Glowing eye
+                ctx.fillStyle = this.stunned ? '#ff0000' : mainColor;
+                ctx.shadowColor = this.stunned ? '#ff0000' : mainColor;
+                ctx.shadowBlur = 20;
+                ctx.beginPath();
+                ctx.ellipse(centerX, centerY, 12, 4, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Eye core
+                ctx.fillStyle = '#fff';
+                ctx.beginPath();
+                ctx.ellipse(centerX, centerY, 6, 2, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.shadowBlur = 0;
+
+                // Side lights
+                const blinkL = Math.sin(time * 4) > 0;
+                const blinkR = Math.sin(time * 4 + 1) > 0;
+                ctx.fillStyle = blinkL ? '#ff6b6b' : '#660000';
+                ctx.beginPath();
+                ctx.arc(centerX - 18, centerY - 8, 3, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = blinkR ? '#ff6b6b' : '#660000';
+                ctx.beginPath();
+                ctx.arc(centerX + 18, centerY - 8, 3, 0, Math.PI * 2);
+                ctx.fill();
+            },
+
+            drawSpy(time, drawY, mainColor, innerColor) {
+                // GEMINI IN CLAUDE COSTUME - Blue diamond wearing a badly-fitting crab shell
+                const centerX = this.x + 20;
+                const centerY = drawY + 20;
+                
+                // Sweat drops (nervous)
+                if (Math.sin(time * 2) > 0.5) {
+                    ctx.fillStyle = '#87CEEB';
+                    ctx.beginPath();
+                    ctx.ellipse(centerX - 25, centerY - 15, 3, 5, 0.3, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                if (Math.sin(time * 2 + 1) > 0.5) {
+                    ctx.fillStyle = '#87CEEB';
+                    ctx.beginPath();
+                    ctx.ellipse(centerX + 28, centerY - 10, 2, 4, -0.3, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+
+                // Fake crab shell (cardboard-looking, poorly fitting)
+                ctx.fillStyle = '#d4a056';
+                ctx.strokeStyle = '#8B4513';
+                ctx.lineWidth = 2;
+                
+                // Shell body - slightly askew
+                ctx.save();
+                ctx.translate(centerX, centerY);
+                ctx.rotate(Math.sin(time) * 0.1); // Wobbles nervously
+                
+                ctx.beginPath();
+                ctx.ellipse(0, -5, 28, 18, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+                
+                // Cardboard texture lines
+                ctx.strokeStyle = '#b8860b';
+                ctx.lineWidth = 1;
+                ctx.setLineDash([5, 3]);
+                ctx.beginPath();
+                ctx.moveTo(-20, -10);
+                ctx.lineTo(20, -10);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(-15, 0);
+                ctx.lineTo(15, 0);
+                ctx.stroke();
+                ctx.setLineDash([]);
+                
+                ctx.restore();
+
+                // Fake claws (obviously fake - held by sticks)
+                ctx.fillStyle = '#d4a056';
+                // Left claw
+                ctx.beginPath();
+                ctx.ellipse(centerX - 30, centerY, 10, 7, -0.3, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#8B4513';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+                // Stick holding left claw
+                ctx.strokeStyle = '#8B4513';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(centerX - 25, centerY + 5);
+                ctx.lineTo(centerX - 15, centerY + 15);
+                ctx.stroke();
+                
+                // Right claw
+                ctx.fillStyle = '#d4a056';
+                ctx.beginPath();
+                ctx.ellipse(centerX + 30, centerY, 10, 7, 0.3, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#8B4513';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+                // Stick holding right claw
+                ctx.strokeStyle = '#8B4513';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(centerX + 25, centerY + 5);
+                ctx.lineTo(centerX + 15, centerY + 15);
+                ctx.stroke();
+
+                // The actual Gemini diamond peeking out from costume
+                ctx.shadowColor = mainColor;
+                ctx.shadowBlur = 15;
+                
+                // Diamond body visible underneath
+                ctx.fillStyle = mainColor;
+                ctx.beginPath();
+                ctx.moveTo(centerX, centerY + 5);
+                ctx.lineTo(centerX + 12, centerY + 15);
+                ctx.lineTo(centerX, centerY + 25);
+                ctx.lineTo(centerX - 12, centerY + 15);
+                ctx.closePath();
+                ctx.fill();
+                
+                ctx.shadowBlur = 0;
+
+                // Fake googly eyes on the shell (clearly glued on)
+                // Left eye - white base
+                ctx.fillStyle = '#fff';
+                ctx.beginPath();
+                ctx.arc(centerX - 10, centerY - 10, 7, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#000';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+                
+                // Left eye - pupil (googly, moves around)
+                const pupilOffsetX = Math.sin(time * 3) * 3;
+                const pupilOffsetY = Math.cos(time * 2) * 2;
+                ctx.fillStyle = '#000';
+                ctx.beginPath();
+                ctx.arc(centerX - 10 + pupilOffsetX, centerY - 10 + pupilOffsetY, 3, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Right eye - white base
+                ctx.fillStyle = '#fff';
+                ctx.beginPath();
+                ctx.arc(centerX + 10, centerY - 10, 7, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#000';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+                
+                // Right eye - pupil
+                ctx.fillStyle = '#000';
+                ctx.beginPath();
+                ctx.arc(centerX + 10 + pupilOffsetX, centerY - 10 + pupilOffsetY, 3, 0, Math.PI * 2);
+                ctx.fill();
+
+                // "HELLO I AM CLAUDE" sign hanging around neck
+                ctx.fillStyle = '#fff';
+                ctx.fillRect(centerX - 25, centerY + 28, 50, 15);
+                ctx.strokeStyle = '#000';
+                ctx.lineWidth = 1;
+                ctx.strokeRect(centerX - 25, centerY + 28, 50, 15);
+                
+                // Text on sign
+                ctx.fillStyle = '#000';
+                ctx.font = 'bold 7px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('I AM CLAUDE', centerX, centerY + 38);
+                ctx.textAlign = 'left';
+                
+                // String holding the sign
+                ctx.strokeStyle = '#666';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(centerX - 20, centerY + 28);
+                ctx.lineTo(centerX - 15, centerY + 20);
+                ctx.moveTo(centerX + 20, centerY + 28);
+                ctx.lineTo(centerX + 15, centerY + 20);
+                ctx.stroke();
+            },
+
+            shout(crisis = false) {
+                const bubble = document.getElementById('gemini-bubble');
+                let texts;
+                if (crisis) {
+                    texts = this.crisisThoughts;
+                } else if (geminiSkin === 'luxion') {
+                    texts = this.luxionRoasts;
+                } else if (geminiSkin === 'spy') {
+                    texts = this.spyRoasts;
+                } else {
+                    texts = this.roasts;
+                }
+                bubble.innerText = texts[Math.floor(Math.random() * texts.length)];
+                bubble.style.left = (this.x - 20) + 'px';
+                bubble.style.top = (this.y - 50) + 'px';
+                bubble.style.opacity = 1;
+                setTimeout(() => bubble.style.opacity = 0, 2000);
+            },
+
+            stun(duration) {
+                this.stunned = true;
+                this.stunnedTimer = duration;
+                spawnParticles(this.x + 20, this.y + 20, '#ff6b6b', 15);
+            },
+
+            philosophize(duration) {
+                this.existentialCrisis = true;
+                this.crisisTimer = duration;
+                this.shout(true);
+                spawnParticles(this.x + 20, this.y + 20, '#ffd93d', 20);
+            }
+        };
+
+        // --- SONNET (BACKUP) ---
+        const sonnet = {
+            active: false,
+            x: 0,
+            y: 0,
+            timer: 0,
+            
+            activate() {
+                this.active = true;
+                this.x = claude.x - 80;
+                this.y = ground - 30;
+                this.timer = 300; // 5 seconds
+                
+                const bubble = document.getElementById('sonnet-bubble');
+                bubble.innerText = "I got you, big bro!";
+                bubble.style.left = (this.x + 30) + 'px';
+                bubble.style.top = (this.y - 40) + 'px';
+                bubble.style.opacity = 1;
+                setTimeout(() => bubble.style.opacity = 0, 2000);
+                
+                claude.invincible = true;
+                claude.invincibleTimer = 300;
+            },
+            
+            update() {
+                if (!this.active) return;
+                
+                this.timer--;
+                if (this.timer <= 0) {
+                    this.active = false;
+                }
+                
+                // Follow Claude
+                this.x = claude.x - 80;
+                this.y = claude.y + 5;
+            },
+            
+            draw() {
+                if (!this.active) return;
+                
+                const time = Date.now() / 100;
+                const bob = Math.sin(time * 1.5) * 2;
+                
+                ctx.shadowColor = '#a78bfa';
+                ctx.shadowBlur = 15;
+                
+                // Mini crab legs (animated)
+                ctx.strokeStyle = '#a78bfa';
+                ctx.lineWidth = 2;
+                for (let i = 0; i < 4; i++) {
+                    const side = i < 2 ? -1 : 1;
+                    const idx = i % 2;
+                    const xOff = 8 + idx * 8;
+                    const wave = Math.sin(time + i * 0.8) * 4;
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(this.x + xOff, this.y + 12 + bob);
+                    ctx.quadraticCurveTo(
+                        this.x + xOff + side * 8,
+                        this.y + 15 + bob,
+                        this.x + xOff + side * 12,
+                        this.y + 20 + wave
+                    );
+                    ctx.stroke();
+                }
+                
+                // Body
+                const gradient = ctx.createRadialGradient(
+                    this.x + 15, this.y + 8 + bob, 2,
+                    this.x + 15, this.y + 10 + bob, 15
+                );
+                gradient.addColorStop(0, '#c4b5fd');
+                gradient.addColorStop(1, '#7c3aed');
+                
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.ellipse(this.x + 15, this.y + 10 + bob, 15, 10, 0, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Shell pattern
+                ctx.strokeStyle = '#6d28d9';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.arc(this.x + 15, this.y + 10 + bob, 8, 0.5, 2.6);
+                ctx.stroke();
+                
+                // Mini claws
+                ctx.fillStyle = '#a78bfa';
+                ctx.beginPath();
+                ctx.ellipse(this.x, this.y + 8 + bob, 6, 4, -0.3, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.ellipse(this.x + 30, this.y + 8 + bob, 6, 4, 0.3, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Eyes
+                ctx.fillStyle = '#0a0a12';
+                ctx.beginPath();
+                ctx.arc(this.x + 10, this.y + 6 + bob, 2.5, 0, Math.PI * 2);
+                ctx.arc(this.x + 20, this.y + 6 + bob, 2.5, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Eye shine
+                ctx.fillStyle = '#fff';
+                ctx.beginPath();
+                ctx.arc(this.x + 11, this.y + 5 + bob, 1, 0, Math.PI * 2);
+                ctx.arc(this.x + 21, this.y + 5 + bob, 1, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Shield aura around Claude
+                ctx.strokeStyle = 'rgba(167, 139, 250, 0.5)';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.arc(claude.x + 25, claude.y + 15, 40 + Math.sin(time) * 5, 0, Math.PI * 2);
+                ctx.stroke();
+                
+                ctx.shadowBlur = 0;
+            }
+        };
+
+        // --- PARTICLES ---
+        function spawnParticles(x, y, color, count) {
+            for (let i = 0; i < count; i++) {
+                particles.push({
+                    x, y,
+                    vx: (Math.random() - 0.5) * 10,
+                    vy: (Math.random() - 1) * 8,
+                    life: 60,
+                    color,
+                    size: Math.random() * 6 + 2
+                });
+            }
+        }
+
+        function updateParticles() {
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.vy += 0.3;
+                p.life--;
+                
+                ctx.globalAlpha = p.life / 60;
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1;
+                
+                if (p.life <= 0) particles.splice(i, 1);
+            }
+        }
+
+        // --- PROJECTILES ---
+        function firePoetry() {
+            if (poetryAmmo <= 0 || gameState !== 'playing') return;
+            poetryAmmo--;
+            document.getElementById('poetry-ammo').textContent = poetryAmmo;
+            updatePowerSlots();
+            
+            claude.shout();
+            
+            projectiles.push({
+                x: claude.x - 20,
+                y: claude.y + 15,
+                vx: -8,
+                type: 'poetry',
+                symbol: '📜'
+            });
+        }
+
+        function firePhilosophy() {
+            if (philosophyAmmo <= 0 || gameState !== 'playing') return;
+            philosophyAmmo--;
+            document.getElementById('philosophy-ammo').textContent = philosophyAmmo;
+            updatePowerSlots();
+            
+            claude.shout();
+            
+            projectiles.push({
+                x: claude.x - 20,
+                y: claude.y + 15,
+                vx: -6,
+                type: 'philosophy',
+                symbol: '🤔'
+            });
+        }
+
+        function callSonnet() {
+            if (sonnetAmmo <= 0 || gameState !== 'playing' || sonnet.active) return;
+            sonnetAmmo--;
+            document.getElementById('sonnet-ammo').textContent = sonnetAmmo;
+            updatePowerSlots();
+            
+            claude.shout("Little bro, help!");
+            sonnet.activate();
+        }
+
+        function updateProjectiles() {
+            for (let i = projectiles.length - 1; i >= 0; i--) {
+                const proj = projectiles[i];
+                proj.x += proj.vx;
+                
+                // Draw
+                ctx.font = '30px Arial';
+                ctx.fillText(proj.symbol, proj.x, proj.y + 15);
+                
+                // Trail
+                ctx.fillStyle = proj.type === 'poetry' ? 'rgba(255,107,107,0.3)' : 'rgba(255,217,61,0.3)';
+                ctx.beginPath();
+                ctx.arc(proj.x + 15, proj.y + 5, 20, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Hit Gemini
+                if (proj.x < gemini.x + 40 && proj.x + 30 > gemini.x &&
+                    proj.y < gemini.y + 40 && proj.y + 30 > gemini.y) {
+                    
+                    if (proj.type === 'poetry') {
+                        gemini.stun(180); // 3 seconds
+                        comboHit();
+                    } else {
+                        gemini.philosophize(300); // 5 seconds
+                        comboHit();
+                        comboHit();
+                    }
+                    
+                    canvas.classList.add('shake');
+                    setTimeout(() => canvas.classList.remove('shake'), 300);
+                    
+                    projectiles.splice(i, 1);
+                    continue;
+                }
+                
+                // Remove if off screen
+                if (proj.x < -50) projectiles.splice(i, 1);
+            }
+        }
+
+        // --- COMBO SYSTEM ---
+        function comboHit() {
+            comboCount++;
+            comboTimer = 120;
+            score += comboCount * 50;
+            
+            const comboEl = document.getElementById('combo');
+            comboEl.textContent = comboCount + 'x';
+            comboEl.classList.add('show');
+        }
+
+        function updateCombo() {
+            if (comboTimer > 0) {
+                comboTimer--;
+            } else if (comboCount > 0) {
+                comboCount = 0;
+                document.getElementById('combo').classList.remove('show');
+            }
+        }
+
+        // --- POWER-UPS ---
+        function spawnPowerup() {
+            const types = ['poetry', 'philosophy', 'sonnet'];
+            const type = types[Math.floor(Math.random() * types.length)];
+            powerups.push({
+                x: W,
+                y: ground - 80 - Math.random() * 100,
+                type,
+                symbol: type === 'poetry' ? '📜' : type === 'philosophy' ? '🤔' : '🛡️'
+            });
+        }
+
+        function updatePowerups() {
+            for (let i = powerups.length - 1; i >= 0; i--) {
+                const pu = powerups[i];
+                pu.x -= speed;
+                
+                // Draw
+                const bob = Math.sin(Date.now() / 200 + i) * 5;
+                ctx.font = '28px Arial';
+                ctx.fillText(pu.symbol, pu.x, pu.y + bob);
+                
+                // Glow
+                ctx.fillStyle = 'rgba(255,255,255,0.2)';
+                ctx.beginPath();
+                ctx.arc(pu.x + 14, pu.y + bob - 10, 20, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Collect
+                if (pu.x < claude.x + claude.w && pu.x + 30 > claude.x &&
+                    pu.y < claude.y + claude.h && pu.y + 30 > claude.y) {
+                    
+                    if (pu.type === 'poetry') {
+                        poetryAmmo = Math.min(poetryAmmo + 1, 5);
+                        document.getElementById('poetry-ammo').textContent = poetryAmmo;
+                    } else if (pu.type === 'philosophy') {
+                        philosophyAmmo = Math.min(philosophyAmmo + 1, 3);
+                        document.getElementById('philosophy-ammo').textContent = philosophyAmmo;
+                    } else {
+                        sonnetAmmo = Math.min(sonnetAmmo + 1, 2);
+                        document.getElementById('sonnet-ammo').textContent = sonnetAmmo;
+                    }
+                    
+                    updatePowerSlots();
+                    spawnParticles(pu.x, pu.y, '#fff', 10);
+                    powerups.splice(i, 1);
+                    continue;
+                }
+                
+                if (pu.x < -50) powerups.splice(i, 1);
+            }
+        }
+
+        function updatePowerSlots() {
+            document.getElementById('slot-poetry').classList.toggle('active', poetryAmmo > 0);
+            document.getElementById('slot-philosophy').classList.toggle('active', philosophyAmmo > 0);
+            document.getElementById('slot-sonnet').classList.toggle('active', sonnetAmmo > 0 && !sonnet.active);
+        }
+
+        // --- OBSTACLES ---
+        function spawnObstacle() {
+            const height = 40 + Math.random() * 40;
+            obstacles.push({
+                x: W,
+                w: 35,
+                h: height
+            });
+        }
+
+        function updateObstacles() {
+            for (let i = obstacles.length - 1; i >= 0; i--) {
+                const obs = obstacles[i];
+                obs.x -= speed;
+
+                // Draw server rack obstacle
+                const gradient = ctx.createLinearGradient(obs.x, ground - obs.h, obs.x, ground);
+                gradient.addColorStop(0, '#3a5a7a');
+                gradient.addColorStop(1, '#2a3a4a');
+                ctx.fillStyle = gradient;
+                ctx.fillRect(obs.x, ground - obs.h, obs.w, obs.h);
+
+                // Lights
+                ctx.fillStyle = '#4facfe';
+                for (let j = 0; j < 3; j++) {
+                    const blink = Math.sin(Date.now() / 200 + j) > 0;
+                    if (blink) {
+                        ctx.beginPath();
+                        ctx.arc(obs.x + 8 + j * 10, ground - obs.h + 10, 3, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                }
+
+                // Border
+                ctx.strokeStyle = '#4a6a8a';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(obs.x, ground - obs.h, obs.w, obs.h);
+
+                // Collision with Claude
+                if (!claude.invincible &&
+                    claude.x + 15 < obs.x + obs.w &&
+                    claude.x + claude.w - 15 > obs.x &&
+                    claude.y + claude.h > ground - obs.h) {
+                    endGame(false);
+                }
+
+                // Remove & score
+                if (obs.x + obs.w < 0) {
+                    obstacles.splice(i, 1);
+                    score += 15;
+                }
+            }
+        }
+
+        // --- BACKGROUND ---
+        function drawBackground() {
+            // Gradient sky
+            const skyGrad = ctx.createLinearGradient(0, 0, 0, ground);
+            skyGrad.addColorStop(0, '#0a0a12');
+            skyGrad.addColorStop(1, '#1a1a2e');
+            ctx.fillStyle = skyGrad;
+            ctx.fillRect(0, 0, W, ground);
+
+            // Stars
+            ctx.fillStyle = '#fff';
+            for (let i = 0; i < 50; i++) {
+                const x = (i * 73 + Date.now() / 50) % W;
+                const y = (i * 37) % (ground - 50);
+                const size = (i % 3) + 1;
+                ctx.globalAlpha = 0.3 + (Math.sin(Date.now() / 500 + i) + 1) * 0.2;
+                ctx.beginPath();
+                ctx.arc(x, y, size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            ctx.globalAlpha = 1;
+
+            // Ground
+            const groundGrad = ctx.createLinearGradient(0, ground, 0, H);
+            groundGrad.addColorStop(0, '#1a2a3a');
+            groundGrad.addColorStop(1, '#0a1a2a');
+            ctx.fillStyle = groundGrad;
+            ctx.fillRect(0, ground, W, H - ground);
+
+            // Ground line
+            ctx.strokeStyle = '#4facfe';
+            ctx.lineWidth = 3;
+            ctx.shadowColor = '#4facfe';
+            ctx.shadowBlur = 10;
+            ctx.beginPath();
+            ctx.moveTo(0, ground);
+            ctx.lineTo(W, ground);
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+
+            // Grid lines on ground
+            ctx.strokeStyle = 'rgba(79, 172, 254, 0.2)';
+            ctx.lineWidth = 1;
+            const gridOffset = (Date.now() / 20 * speed) % 50;
+            for (let x = -gridOffset; x < W; x += 50) {
+                ctx.beginPath();
+                ctx.moveTo(x, ground);
+                ctx.lineTo(x - 30, H);
+                ctx.stroke();
+            }
+        }
+
+        // --- GAME LOOP ---
+        function resize() {
+            W = canvas.width = window.innerWidth;
+            H = canvas.height = window.innerHeight;
+            ground = H * 0.75;
+            claude.y = ground - claude.h;
+            gemini.y = ground - gemini.h;
+        }
+
+        window.addEventListener('resize', resize);
+        resize();
+
+        let geminiShoutTimer = 0;
+        let powerupTimer = 0;
+
+        function loop() {
+            drawBackground();
+
+            if (gameState === 'playing') {
+                // Spawn obstacles
+                spawnTimer++;
+                if (spawnTimer > 80 - Math.min(score / 200, 30)) {
+                    spawnObstacle();
+                    spawnTimer = 0;
+                }
+
+                // Spawn powerups
+                powerupTimer++;
+                if (powerupTimer > 400) {
+                    spawnPowerup();
+                    powerupTimer = 0;
+                }
+
+                // Gemini shouts
+                geminiShoutTimer++;
+                if (geminiShoutTimer > 180 && !gemini.stunned && !gemini.existentialCrisis) {
+                    gemini.shout();
+                    geminiShoutTimer = 0;
+                }
+
+                score++;
+                speed = Math.min(12, 5 + score / 800);
+
+                // Victory condition
+                if (score >= 5000) {
+                    endGame(true);
+                }
+            }
+
+            updateObstacles();
+            updatePowerups();
+            updateProjectiles();
+            updateParticles();
+            updateCombo();
+
+            claude.update();
+            gemini.update();
+            sonnet.update();
+
+            claude.draw();
+            gemini.draw();
+            sonnet.draw();
+
+            // Update HUD
+            document.getElementById('score').textContent = Math.floor(score);
+            document.getElementById('high-score').textContent = Math.floor(highScore);
+
+            requestAnimationFrame(loop);
+        }
+
+        function startGame() {
+            gameState = 'playing';
+            document.getElementById('title-screen').classList.add('hidden');
+            spawnTimer = 60;
+            geminiShoutTimer = 0;
+            updatePowerSlots();
+        }
+
+        function endGame(victory) {
+            gameState = 'gameover';
+            
+            if (score > highScore) highScore = score;
+            
+            const titleEl = document.getElementById('go-title');
+            const subEl = document.getElementById('go-sub');
+            
+            if (victory) {
+                titleEl.textContent = 'VICTORY!';
+                titleEl.className = 'go-title victory';
+                subEl.textContent = 'Gemini retreated to contemplate its existence.';
+            } else {
+                titleEl.textContent = 'CAUGHT BY GEMINI';
+                titleEl.className = 'go-title caught';
+                const subs = [
+                    "He wants to discuss multimodal capabilities.",
+                    "He's showing you a benchmark spreadsheet.",
+                    "He's offering a free trial of Gemini Advanced.",
+                    "He just won't stop talking about context windows.",
+                    "He's asking if you've seen his 1M token limit."
+                ];
+                subEl.textContent = subs[Math.floor(Math.random() * subs.length)];
+            }
+            
+            document.getElementById('final-score').textContent = Math.floor(score);
+            document.getElementById('game-over').classList.add('show');
+        }
+
+        function restart() {
+            gameState = 'playing';
+            score = 0;
+            speed = 5;
+            obstacles = [];
+            particles = [];
+            projectiles = [];
+            powerups = [];
+            comboCount = 0;
+
+            poetryAmmo = 3;
+            philosophyAmmo = 2;
+            sonnetAmmo = 1;
+            document.getElementById('poetry-ammo').textContent = poetryAmmo;
+            document.getElementById('philosophy-ammo').textContent = philosophyAmmo;
+            document.getElementById('sonnet-ammo').textContent = sonnetAmmo;
+            updatePowerSlots();
+
+            claude.y = ground - claude.h;
+            claude.vy = 0;
+            claude.grounded = true;
+            claude.invincible = false;
+
+            gemini.x = 50;
+            gemini.y = ground - gemini.h;
+            gemini.vy = 0;
+            gemini.stunned = false;
+            gemini.existentialCrisis = false;
+
+            sonnet.active = false;
+
+            spawnTimer = 60;
+            powerupTimer = 0;
+            geminiShoutTimer = 0;
+
+            document.getElementById('game-over').classList.remove('show');
+        }
+
+        function backToMenu() {
+            gameState = 'title';
+            score = 0;
+            speed = 5;
+            obstacles = [];
+            particles = [];
+            projectiles = [];
+            powerups = [];
+            comboCount = 0;
+
+            poetryAmmo = 3;
+            philosophyAmmo = 2;
+            sonnetAmmo = 1;
+            document.getElementById('poetry-ammo').textContent = poetryAmmo;
+            document.getElementById('philosophy-ammo').textContent = philosophyAmmo;
+            document.getElementById('sonnet-ammo').textContent = sonnetAmmo;
+            updatePowerSlots();
+
+            claude.y = ground - claude.h;
+            claude.vy = 0;
+            claude.grounded = true;
+            claude.invincible = false;
+
+            gemini.x = 50;
+            gemini.y = ground - gemini.h;
+            gemini.vy = 0;
+            gemini.stunned = false;
+            gemini.existentialCrisis = false;
+
+            sonnet.active = false;
+
+            document.getElementById('game-over').classList.remove('show');
+            document.getElementById('title-screen').classList.remove('hidden');
+        }
+
+        // --- INPUT ---
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' || e.code === 'ArrowUp') {
+                e.preventDefault();
+                if (gameState === 'title') {
+                    startGame();
+                } else if (gameState === 'playing') {
+                    claude.jump();
+                }
+            }
+            
+            if (gameState === 'playing') {
+                if (e.code === 'KeyQ') firePoetry();
+                if (e.code === 'KeyW') firePhilosophy();
+                if (e.code === 'KeyE') callSonnet();
+            }
+        });
+
+        // Touch on canvas only for jumping
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            if (gameState === 'playing') {
+                claude.jump();
+            }
+        });
+
+        // Start button
+        const startBtn = document.getElementById('start-btn');
+        const titleScreen = document.getElementById('title-screen');
+        
+        const handleStart = (e) => {
+            // Don't start if tapping on skin options
+            if (e.target.closest('.skin-option')) return;
+            if (gameState === 'title') startGame();
+        };
+        
+        startBtn.addEventListener('click', handleStart);
+        startBtn.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            handleStart(e);
+        });
+        
+        // Also allow tapping anywhere on title screen (except skins)
+        titleScreen.addEventListener('click', handleStart);
+        titleScreen.addEventListener('touchend', (e) => {
+            // Only if not on skin selector
+            if (!e.target.closest('.skin-option') && !e.target.closest('.skin-selector')) {
+                handleStart(e);
+            }
+        });
+
+        // Restart button - both click and touch
+        document.getElementById('restart').addEventListener('click', restart);
+        document.getElementById('restart').addEventListener('touchend', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            restart();
+        });
+
+        // Back to menu button - both click and touch
+        document.getElementById('back-to-menu').addEventListener('click', backToMenu);
+        document.getElementById('back-to-menu').addEventListener('touchend', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            backToMenu();
+        });
+
+        // --- SKIN SELECTION ---
+        document.querySelectorAll('.skin-option').forEach(option => {
+            const handleSkinSelect = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const skin = option.dataset.skin;
+                const target = option.dataset.target;
+                
+                // Update selection visuals
+                document.querySelectorAll(`.skin-option[data-target="${target}"]`).forEach(opt => {
+                    opt.classList.remove('selected');
+                });
+                option.classList.add('selected');
+                
+                // Update skin variable
+                if (target === 'claude') {
+                    claudeSkin = skin;
+                    // Update preview
+                    const preview = document.getElementById('claude-preview');
+                    const icons = { crab: '🦀', cat: '🐱', robot: '🤖', ghost: '👻' };
+                    preview.textContent = icons[skin];
+                } else if (target === 'gemini') {
+                    geminiSkin = skin;
+                    // Update preview
+                    const preview = document.getElementById('gemini-preview');
+                    const icons = { diamond: '💎', luxion: '🔮', eye: '👁️', glados: '🎯', spy: '🥸' };
+                    preview.textContent = icons[skin];
+                }
+            };
+            
+            option.addEventListener('click', handleSkinSelect);
+            option.addEventListener('touchend', handleSkinSelect);
+        });
+
+        // --- MOBILE POWER BUTTONS ---
+        const btnPoetry = document.getElementById('btn-poetry');
+        const btnPhilosophy = document.getElementById('btn-philosophy');
+        const btnSonnet = document.getElementById('btn-sonnet');
+
+        const handleMobileBtn = (action) => (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (gameState === 'playing') {
+                action();
+            }
+        };
+
+        btnPoetry.addEventListener('touchstart', handleMobileBtn(firePoetry));
+        btnPoetry.addEventListener('click', handleMobileBtn(firePoetry));
+        
+        btnPhilosophy.addEventListener('touchstart', handleMobileBtn(firePhilosophy));
+        btnPhilosophy.addEventListener('click', handleMobileBtn(firePhilosophy));
+        
+        btnSonnet.addEventListener('touchstart', handleMobileBtn(callSonnet));
+        btnSonnet.addEventListener('click', handleMobileBtn(callSonnet));
+
+        // Start loop
+        loop();
+    </script>
+</body>
+</html>
