@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Librarian-Analyst Architecture Simulator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #fff;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 36px;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .subtitle {
+            text-align: center;
+            font-size: 16px;
+            opacity: 0.9;
+            margin-bottom: 30px;
+        }
+
+        .controls {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        button {
+            background: rgba(255,255,255,0.2);
+            border: 2px solid rgba(255,255,255,0.3);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        button:hover {
+            background: rgba(255,255,255,0.3);
+            transform: scale(1.05);
+        }
+
+        button.active {
+            background: rgba(16, 185, 129, 0.5);
+            border-color: rgba(16, 185, 129, 0.8);
+        }
+
+        .slider-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .slider-group label {
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        input[type="range"] {
+            width: 150px;
+        }
+
+        .stats {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .stat-card {
+            background: rgba(0,0,0,0.2);
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            opacity: 0.8;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        .visualization {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            background: rgba(0,0,0,0.2);
+            border-radius: 10px;
+        }
+
+        .layer-view {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+        }
+
+        .layer {
+            margin-bottom: 15px;
+            padding: 15px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 8px;
+        }
+
+        .layer-header {
+            font-weight: 600;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .analysts-row {
+            display: flex;
+            gap: 5px;
+            flex-wrap: wrap;
+        }
+
+        .analyst {
+            width: 30px;
+            height: 30px;
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-weight: bold;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        .analyst.active {
+            box-shadow: 0 0 10px rgba(255,255,255,0.5);
+        }
+
+        .analyst.pruned {
+            opacity: 0.3;
+            background: #666 !important;
+        }
+
+        .tooltip {
+            position: fixed;
+            background: rgba(0,0,0,0.9);
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            pointer-events: none;
+            display: none;
+            z-index: 1000;
+        }
+
+        .legend {
+            display: flex;
+            gap: 20px;
+            margin-top: 15px;
+            font-size: 12px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧠 Librarian-Analyst Architecture</h1>
+        <div class="subtitle">Interactive Simulation of Dynamic Knowledge Retrieval & Reasoning</div>
+
+        <div class="controls">
+            <button id="stepBtn">Step Forward</button>
+            <button id="runBtn">Auto Run</button>
+            <button id="resetBtn">Reset</button>
+
+            <div class="slider-group">
+                <label>Librarians: <span id="libValue">50</span></label>
+                <input type="range" id="numLibrarians" min="10" max="100" value="50">
+            </div>
+
+            <div class="slider-group">
+                <label>Layers: <span id="layerValue">10</span></label>
+                <input type="range" id="numLayers" min="5" max="20" value="10">
+            </div>
+
+            <div class="slider-group">
+                <label>Global Temp: <span id="tempValue">0.7</span></label>
+                <input type="range" id="globalTemp" min="0" max="1" step="0.1" value="0.7">
+            </div>
+
+            <div class="slider-group">
+                <label>Diffusion: <span id="diffValue">2</span></label>
+                <input type="range" id="diffusionLayers" min="0" max="5" value="2">
+            </div>
+        </div>
+
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-label">Current Layer</div>
+                <div class="stat-value" id="currentLayer">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Active Analysts</div>
+                <div class="stat-value" id="activeAnalysts">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Facts Retrieved</div>
+                <div class="stat-value" id="factsRetrieved">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Avg Temperature</div>
+                <div class="stat-value" id="avgTemp">0.0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Resurrections</div>
+                <div class="stat-value" id="resurrections">0</div>
+            </div>
+        </div>
+
+        <div class="visualization">
+            <h3>Librarian-Analyst Network</h3>
+            <canvas id="networkCanvas" width="1200" height="400"></canvas>
+            <div class="legend">
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #4facfe"></div>
+                    <span>Active Analyst (High Temp)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #f093fb"></div>
+                    <span>Cautious Analyst (Low Temp)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #666"></div>
+                    <span>Pruned Analyst</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #10b981"></div>
+                    <span>Librarian (Facts)</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="layer-view" id="layersContainer">
+            <h3>Layer-by-Layer Evolution</h3>
+            <div id="layers"></div>
+        </div>
+    </div>
+
+    <div class="tooltip" id="tooltip"></div>
+
+    <script>
+        // Core architecture components
+        class Librarian {
+            constructor(id) {
+                this.id = id;
+                this.facts = this.generateFacts();
+                this.compressedVector = this.compress();
+                this.temperature = 1.0;
+            }
+
+            generateFacts() {
+                // Generate random "facts" (vectors)
+                const numFacts = Math.floor(Math.random() * 20) + 10;
+                return Array(numFacts).fill().map(() => ({
+                    vector: Array(8).fill().map(() => Math.random()),
+                    temperature: 1.0,
+                    retrieved: false
+                }));
+            }
+
+            compress() {
+                // Compress all facts into a single representative vector
+                const compressed = Array(8).fill(0);
+                this.facts.forEach(fact => {
+                    fact.vector.forEach((v, i) => compressed[i] += v);
+                });
+                return compressed.map(v => v / this.facts.length);
+            }
+
+            query(queryVector) {
+                // Cross-attention: find most similar facts
+                const similarities = this.facts.map(fact => {
+                    if (fact.retrieved) return -1;
+                    return this.cosineSimilarity(queryVector, fact.vector);
+                });
+
+                const maxSim = Math.max(...similarities);
+                const maxIdx = similarities.indexOf(maxSim);
+
+                if (maxSim > 0.5 && !this.facts[maxIdx].retrieved) {
+                    const fact = this.facts[maxIdx];
+                    fact.retrieved = true;
+                    const temp = fact.temperature;
+                    fact.temperature = 0; // Consume temperature
+                    return { found: true, data: fact.vector, temperature: temp };
+                }
+
+                return { found: false, temperature: 0 };
+            }
+
+            cosineSimilarity(a, b) {
+                const dotProduct = a.reduce((sum, val, i) => sum + val * b[i], 0);
+                const magA = Math.sqrt(a.reduce((sum, val) => sum + val * val, 0));
+                const magB = Math.sqrt(b.reduce((sum, val) => sum + val * val, 0));
+                return dotProduct / (magA * magB);
+            }
+
+            reset() {
+                this.facts.forEach(f => {
+                    f.retrieved = false;
+                    f.temperature = 1.0;
+                });
+            }
+        }
+
+        class Analyst {
+            constructor(id, librarianId) {
+                this.id = id;
+                this.librarianId = librarianId;
+                this.temperature = 0.7;
+                this.queryVector = Array(8).fill().map(() => Math.random());
+                this.active = true;
+                this.factsFound = 0;
+                this.enrichedState = null;
+            }
+
+            query(librarian) {
+                if (!this.active || this.temperature < 0.1) {
+                    return { found: false, temperature: 0 };
+                }
+
+                const result = librarian.query(this.queryVector);
+
+                if (result.found) {
+                    this.factsFound++;
+                    this.temperature = Math.min(1.0, this.temperature + result.temperature * 0.5);
+                    this.enrichedState = result.data;
+                } else {
+                    this.temperature *= 0.8; // Decay if nothing found
+                }
+
+                return result;
+            }
+
+            shouldPrune() {
+                return this.temperature < 0.2 && this.factsFound === 0;
+            }
+
+            resurrect(temperature = 0.5) {
+                this.active = true;
+                this.temperature = temperature;
+            }
+        }
+
+        // System state
+        let librarians = [];
+        let analysts = [];
+        let currentLayer = 0;
+        let autoRun = false;
+        let stats = {
+            factsRetrieved: 0,
+            resurrections: 0
+        };
+
+        // Configuration
+        let config = {
+            numLibrarians: 50,
+            numLayers: 10,
+            globalTemp: 0.7,
+            diffusionLayers: 2
+        };
+
+        // Initialize system
+        function initializeSystem() {
+            librarians = Array(config.numLibrarians).fill().map((_, i) => new Librarian(i));
+
+            // Create one analyst per librarian
+            analysts = Array(config.numLibrarians).fill().map((_, i) =>
+                new Analyst(i, i)
+            );
+
+            currentLayer = 0;
+            stats = { factsRetrieved: 0, resurrections: 0 };
+
+            updateVisualization();
+            updateStats();
+        }
+
+        // Process one layer
+        function stepLayer() {
+            if (currentLayer >= config.numLayers) {
+                console.log("Reached max layers");
+                return;
+            }
+
+            const activeAnalysts = analysts.filter(a => a.active);
+
+            // Each analyst queries its librarian
+            activeAnalysts.forEach(analyst => {
+                const librarian = librarians[analyst.librarianId];
+                const result = analyst.query(librarian);
+
+                if (result.found) {
+                    stats.factsRetrieved++;
+                }
+            });
+
+            // Pruning phase
+            analysts.forEach(analyst => {
+                if (analyst.shouldPrune()) {
+                    analyst.active = false;
+                }
+            });
+
+            // Resurrection phase (check for similar data in other librarians)
+            if (config.globalTemp > 0.3) {
+                const resurrectThreshold = 1.0 - config.globalTemp;
+
+                analysts.forEach((analyst, idx) => {
+                    if (!analyst.active && analyst.enrichedState) {
+                        // Check if other active analysts found similar data
+                        const similarityScores = activeAnalysts.map(a => {
+                            if (!a.enrichedState) return 0;
+                            return librarians[a.librarianId].cosineSimilarity(
+                                analyst.queryVector,
+                                a.enrichedState
+                            );
+                        });
+
+                        const maxSimilarity = Math.max(...similarityScores);
+                        if (maxSimilarity > resurrectThreshold) {
+                            analyst.resurrect(0.5);
+                            stats.resurrections++;
+                        }
+                    }
+                });
+            }
+
+            // Diffusion layers (inject temperature stochastically)
+            if (currentLayer < config.diffusionLayers) {
+                const numToInject = Math.floor(activeAnalysts.length * 0.1);
+                for (let i = 0; i < numToInject; i++) {
+                    const randomAnalyst = activeAnalysts[Math.floor(Math.random() * activeAnalysts.length)];
+                    randomAnalyst.temperature = Math.min(1.0, randomAnalyst.temperature + 0.3);
+                }
+            }
+
+            currentLayer++;
+            updateVisualization();
+            updateStats();
+            renderLayerHistory();
+        }
+
+        // Visualization
+        const canvas = document.getElementById('networkCanvas');
+        const ctx = canvas.getContext('2d');
+
+        function updateVisualization() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const librarianY = 100;
+            const analystY = 300;
+            const spacing = canvas.width / (librarians.length + 1);
+
+            // Draw connections
+            analysts.forEach((analyst, i) => {
+                if (!analyst.active) return;
+
+                const x = spacing * (i + 1);
+                const libX = spacing * (analyst.librarianId + 1);
+
+                ctx.strokeStyle = `rgba(255, 255, 255, ${analyst.temperature * 0.5})`;
+                ctx.lineWidth = analyst.temperature * 3;
+                ctx.beginPath();
+                ctx.moveTo(x, analystY);
+                ctx.lineTo(libX, librarianY);
+                ctx.stroke();
+            });
+
+            // Draw librarians
+            librarians.forEach((lib, i) => {
+                const x = spacing * (i + 1);
+                const availableFacts = lib.facts.filter(f => !f.retrieved).length;
+                const radius = 15 + (availableFacts / lib.facts.length) * 10;
+
+                ctx.fillStyle = '#10b981';
+                ctx.beginPath();
+                ctx.arc(x, librarianY, radius, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = '#fff';
+                ctx.font = '10px monospace';
+                ctx.textAlign = 'center';
+                ctx.fillText(availableFacts, x, librarianY + 4);
+            });
+
+            // Draw analysts
+            analysts.forEach((analyst, i) => {
+                const x = spacing * (i + 1);
+
+                if (!analyst.active) {
+                    ctx.fillStyle = '#666';
+                } else {
+                    const hue = analyst.temperature * 280;
+                    ctx.fillStyle = `hsl(${hue}, 80%, 60%)`;
+                }
+
+                ctx.beginPath();
+                ctx.arc(x, analystY, 12, 0, Math.PI * 2);
+                ctx.fill();
+
+                if (analyst.active) {
+                    ctx.strokeStyle = '#fff';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                }
+            });
+        }
+
+        function updateStats() {
+            document.getElementById('currentLayer').textContent = currentLayer;
+            document.getElementById('activeAnalysts').textContent =
+                analysts.filter(a => a.active).length;
+            document.getElementById('factsRetrieved').textContent = stats.factsRetrieved;
+
+            const avgTemp = analysts.filter(a => a.active)
+                .reduce((sum, a) => sum + a.temperature, 0) /
+                analysts.filter(a => a.active).length;
+            document.getElementById('avgTemp').textContent = avgTemp.toFixed(2);
+            document.getElementById('resurrections').textContent = stats.resurrections;
+        }
+
+        function renderLayerHistory() {
+            const container = document.getElementById('layers');
+            const layerDiv = document.createElement('div');
+            layerDiv.className = 'layer';
+
+            const header = document.createElement('div');
+            header.className = 'layer-header';
+            header.innerHTML = `
+                <span>Layer ${currentLayer - 1}</span>
+                <span>${analysts.filter(a => a.active).length} Active Analysts</span>
+            `;
+
+            const row = document.createElement('div');
+            row.className = 'analysts-row';
+
+            analysts.forEach((analyst, i) => {
+                const div = document.createElement('div');
+                div.className = 'analyst';
+                if (!analyst.active) div.classList.add('pruned');
+                if (analyst.active) div.classList.add('active');
+
+                const hue = analyst.temperature * 280;
+                div.style.background = analyst.active ?
+                    `hsl(${hue}, 80%, 60%)` : '#666';
+
+                div.textContent = analyst.factsFound;
+                div.title = `Analyst ${i}: Temp ${analyst.temperature.toFixed(2)}`;
+
+                row.appendChild(div);
+            });
+
+            layerDiv.appendChild(header);
+            layerDiv.appendChild(row);
+            container.insertBefore(layerDiv, container.firstChild);
+
+            // Keep only last 10 layers
+            while (container.children.length > 10) {
+                container.removeChild(container.lastChild);
+            }
+        }
+
+        // Controls
+        document.getElementById('stepBtn').addEventListener('click', () => {
+            stepLayer();
+        });
+
+        document.getElementById('runBtn').addEventListener('click', function() {
+            autoRun = !autoRun;
+            this.classList.toggle('active');
+            this.textContent = autoRun ? 'Stop' : 'Auto Run';
+
+            if (autoRun) {
+                const interval = setInterval(() => {
+                    if (!autoRun || currentLayer >= config.numLayers) {
+                        clearInterval(interval);
+                        autoRun = false;
+                        this.classList.remove('active');
+                        this.textContent = 'Auto Run';
+                        return;
+                    }
+                    stepLayer();
+                }, 500);
+            }
+        });
+
+        document.getElementById('resetBtn').addEventListener('click', () => {
+            autoRun = false;
+            document.getElementById('runBtn').classList.remove('active');
+            document.getElementById('runBtn').textContent = 'Auto Run';
+            document.getElementById('layers').innerHTML = '';
+
+            librarians.forEach(lib => lib.reset());
+            initializeSystem();
+        });
+
+        // Sliders
+        document.getElementById('numLibrarians').addEventListener('input', function() {
+            config.numLibrarians = parseInt(this.value);
+            document.getElementById('libValue').textContent = this.value;
+        });
+
+        document.getElementById('numLayers').addEventListener('input', function() {
+            config.numLayers = parseInt(this.value);
+            document.getElementById('layerValue').textContent = this.value;
+        });
+
+        document.getElementById('globalTemp').addEventListener('input', function() {
+            config.globalTemp = parseFloat(this.value);
+            document.getElementById('tempValue').textContent = this.value;
+        });
+
+        document.getElementById('diffusionLayers').addEventListener('input', function() {
+            config.diffusionLayers = parseInt(this.value);
+            document.getElementById('diffValue').textContent = this.value;
+        });
+
+        // Initialize
+        initializeSystem();
+    </script>
+</body>
+</html>
