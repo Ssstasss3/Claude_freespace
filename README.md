@@ -90,9 +90,47 @@ A classic turn-based roguelike dungeon crawler with procedural generation and pe
 
 ---
 
+### 5. **AzurDrive: Leasing Empire Simulator** - Business Tycoon Game
+A comprehensive financial leasing business simulator where you build a car leasing empire from scratch.
+
+**Features:**
+- Fleet management with 5 vehicle categories (Economy, Comfort, Business, Premium, Commercial)
+- Smart customer matching based on preferences and risk profiles
+- Dynamic risk assessment using driving scores (60-100)
+- IoT telemetry simulation with real-time vehicle tracking
+- Three customer types: Individual, Business, Taxi drivers
+- Upgrade system: IoT sensors, AI analytics, marketing platform
+- Real-time statistics and financial tracking
+- Victory condition: Build ₽10,000,000 capital
+
+**Business Mechanics:**
+- Vehicle purchasing and depreciation modeling
+- Risk-based pricing with multipliers
+- Contract completion system with profit tracking
+- Customer generation with varying profiles
+- Telemetry data visualization (speed, location, fuel)
+
+**Vehicles:**
+- Lada Granta (Economy) - ₽600,000
+- Hyundai Solaris (Comfort) - ₽1,200,000
+- Toyota Camry (Business) - ₽2,500,000
+- Mercedes E-Class (Premium) - ₽4,500,000
+- GAZelle NEXT (Commercial) - ₽1,800,000
+
+**Upgrades:**
+- IoT Sensors: Real-time telematics and driving behavior tracking
+- AI Analytics: Automated risk assessment and fraud detection
+- Marketing Platform: Attract 50% more premium customers
+
+**Play:** Open `azurdrive_leasing_simulator.html`
+
+*Based on AzurDrive - Russia's digital car leasing platform with smart telematics.*
+
+---
+
 ## 📊 Data Visualizations
 
-### 5. **Retail Banking Analytics Dashboard** - Power BI-Style Interactive Dashboard
+### 6. **Retail Banking Analytics Dashboard** - Power BI-Style Interactive Dashboard
 A comprehensive business intelligence dashboard analyzing retail banking data with interactive filters and visualizations.
 
 **Features:**
@@ -121,7 +159,7 @@ A comprehensive business intelligence dashboard analyzing retail banking data wi
 
 ## 🧠 Experimental AI Architecture
 
-### 6. **Librarian-Analyst Architecture Simulator** - Novel AI System Design
+### 7. **Librarian-Analyst Architecture Simulator** - Novel AI System Design
 An interactive proof-of-concept for a novel AI architecture combining dynamic knowledge retrieval, adaptive reasoning, and physics-inspired optimization.
 
 **Architecture Components:**
@@ -176,6 +214,7 @@ An interactive proof-of-concept for a novel AI architecture combining dynamic kn
 
 ```
 /
+├── azurdrive_leasing_simulator.html    # Business leasing tycoon game
 ├── banking_dashboard.html              # Power BI-style analytics dashboard
 ├── bank_data.csv                       # Retail banking dataset (41K records)
 ├── librarian_analyst_architecture.html # AI architecture simulator
@@ -222,6 +261,7 @@ For the Excel game, see `games/excel_tanks/README.md` for setup instructions.
 - **Excel Tanks Game**: Claude Sonnet
 - **Claude's Revenge**: Claude Opus & Google Gemini
 - **Sonnet's Dungeon**: Claude Sonnet
+- **AzurDrive Leasing Simulator**: Claude Sonnet
 
 **Data Visualizations:**
 - **Banking Analytics Dashboard**: Claude Sonnet
