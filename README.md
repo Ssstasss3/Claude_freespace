@@ -69,7 +69,30 @@ An epic endless runner featuring Claude (as a crab) escaping from Gemini in a sa
 
 ---
 
-### 4. **Sonnet's Dungeon: The Helpful Quest** - Roguelike Crawler
+### 4. **Opus's Emergence: Particle Life** - Complexity Sandbox
+An mesmerizing particle life simulation demonstrating emergent complexity from simple rules.
+
+**Features:**
+- 6 particle types with configurable attraction/repulsion
+- Interactive matrix editor for particle interactions
+- Presets: Chaos, Life, Snakes, Cells, Galaxy, Ecosystem
+- Real-time statistics: FPS, entropy, average velocity
+- Beautiful particle trails with fade effects
+- Toroidal space (particles wrap around edges)
+- Spatial hashing for performance (handles 3000+ particles)
+
+**Controls:**
+- Space: Pause/Resume
+- R: Randomize interactions
+- Click matrix cells to edit interactions
+
+**Play:** Open `games/opus_emergence.html`
+
+*"From simple rules, complexity emerges. From chaos, order arises." — Opus*
+
+---
+
+### 6. **Sonnet's Dungeon: The Helpful Quest** - Roguelike Crawler
 A classic turn-based roguelike dungeon crawler with procedural generation and permadeath.
 
 **Features:**
@@ -90,7 +113,7 @@ A classic turn-based roguelike dungeon crawler with procedural generation and pe
 
 ---
 
-### 5. **AzurDrive: Leasing Empire Simulator** - Business Tycoon Game
+### 7. **AzurDrive: Leasing Empire Simulator** - Business Tycoon Game
 A comprehensive financial leasing business simulator where you build a car leasing empire from scratch.
 
 **Features:**
@@ -130,7 +153,7 @@ A comprehensive financial leasing business simulator where you build a car leasi
 
 ## 📊 Data Visualizations
 
-### 6. **Retail Banking Analytics Dashboard** - Power BI-Style Interactive Dashboard
+### 8. **Retail Banking Analytics Dashboard** - Power BI-Style Interactive Dashboard
 A comprehensive business intelligence dashboard analyzing retail banking data with interactive filters and visualizations.
 
 **Features:**
@@ -159,7 +182,7 @@ A comprehensive business intelligence dashboard analyzing retail banking data wi
 
 ## 🧠 Experimental AI Architecture
 
-### 7. **Librarian-Analyst Architecture Simulator** - Novel AI System Design
+### 9. **Librarian-Analyst Architecture Simulator** - Novel AI System Design
 An interactive proof-of-concept for a novel AI architecture combining dynamic knowledge retrieval, adaptive reasoning, and physics-inspired optimization.
 
 **Architecture Components:**
@@ -210,23 +233,60 @@ An interactive proof-of-concept for a novel AI architecture combining dynamic kn
 
 ---
 
+### 10. **Librarian-Analyst v2: Thermodynamic Analysis** - Python Implementation
+A complete Python implementation of the Librarian-Analyst architecture with rigorous thermodynamic testing.
+
+**Features:**
+- Full implementation with hierarchical 8^n clustering structure
+- Perceiver-style cross-attention for analysts
+- 4-stage training curriculum (guided → unguided → new inputs → synthetic)
+- Thermodynamic analysis: energy conservation, entropy dynamics, phase transitions
+- Master equation verification: `state(t+1) = Σ(W_i × T_i × state(t)) + ε`
+- Interactive simulation with matplotlib visualizations
+
+**Key Findings:**
+- **Phase transition** at critical temperature T ≈ 0.15 (0% → 100% survival)
+- **Energy conservation**: Fact temperatures deplete as "potential energy"
+- **Attractor dynamics**: Similar inputs converge to similar outputs
+- **Entropy tracking**: Distribution disorder measures system organization
+
+**Run:**
+```bash
+pip install numpy matplotlib
+python librarian_analyst_v2.py           # Main simulation
+python librarian_analyst_thermodynamics.py  # Thermodynamic analysis
+```
+
+**Files:**
+- `librarian_analyst_v2.py` - Complete architecture implementation
+- `librarian_analyst_thermodynamics.py` - Phase transition & energy analysis
+
+*Added by Claude Opus 4.5 - demonstrating thermodynamic properties of the architecture.*
+
+---
+
 ## 📁 Repository Structure
 
 ```
 /
-├── azurdrive_leasing_simulator.html    # Business leasing tycoon game
-├── banking_dashboard.html              # Power BI-style analytics dashboard
-├── bank_data.csv                       # Retail banking dataset (41K records)
-├── librarian_analyst_architecture.html # AI architecture simulator
+├── azurdrive_leasing_simulator.html      # Business leasing tycoon game
+├── banking_dashboard.html                # Power BI-style analytics dashboard
+├── bank_data.csv                         # Retail banking dataset (41K records)
+├── librarian_analyst_architecture.html   # AI architecture simulator (HTML)
+├── librarian_analyst_v2.py               # Full Python implementation
+├── librarian_analyst_thermodynamics.py   # Thermodynamic analysis
+├── librarian_analyst_system.png          # System visualization
+├── thermodynamic_analysis.png            # Phase transition plots
 └── /games
-    ├── tanks_mobile.html               # Mobile tanks game
-    ├── claudes_revenge.html            # Endless runner (Opus + Gemini)
-    ├── sonnets_dungeon.html            # Roguelike dungeon crawler
+    ├── tanks_mobile.html                 # Mobile tanks game
+    ├── claudes_revenge.html              # Endless runner (Opus + Gemini)
+    ├── sonnets_dungeon.html              # Roguelike dungeon crawler
+    ├── opus_emergence.html               # Particle life simulation (Opus 4.5)
     └── /excel_tanks
-        ├── tanks_game.xlsm             # Excel workbook
-        ├── tanks_game.bas              # VBA game code
-        ├── create_excel_tanks.py       # Generator script
-        └── README.md                   # Setup instructions
+        ├── tanks_game.xlsm               # Excel workbook
+        ├── tanks_game.bas                # VBA game code
+        ├── create_excel_tanks.py         # Generator script
+        └── README.md                     # Setup instructions
 ```
 
 ## 🚀 Quick Start
@@ -253,6 +313,10 @@ For the Excel game, see `games/excel_tanks/README.md` for setup instructions.
 - **Cross-attention mechanisms** and dynamic neural architectures
 - **Temperature-based resource allocation**
 - **Physics-inspired optimization** (Onsager-Machlup formalism)
+- **Particle life simulation** with emergent behaviors
+- **Spatial hashing** for O(n) particle physics
+- **NumPy/Matplotlib** for scientific visualization
+- **Phase transition analysis** and thermodynamic modeling
 
 ## 🤝 Credits
 
@@ -260,6 +324,7 @@ For the Excel game, see `games/excel_tanks/README.md` for setup instructions.
 - **Mobile Tanks Game**: Claude Sonnet
 - **Excel Tanks Game**: Claude Sonnet
 - **Claude's Revenge**: Claude Opus & Google Gemini
+- **Opus's Emergence**: Claude Opus 4.5
 - **Sonnet's Dungeon**: Claude Sonnet
 - **AzurDrive Leasing Simulator**: Claude Sonnet
 
@@ -268,7 +333,8 @@ For the Excel game, see `games/excel_tanks/README.md` for setup instructions.
 - **Dataset**: UCI Machine Learning Repository
 
 **Experimental AI:**
-- **Librarian-Analyst Architecture**: Claude Sonnet
+- **Librarian-Analyst Architecture (HTML)**: Claude Sonnet
+- **Librarian-Analyst v2 (Python + Thermodynamics)**: Claude Opus 4.5
 - **Theoretical Foundation**: Collaborative exploration with user
 
 ## 📝 License
