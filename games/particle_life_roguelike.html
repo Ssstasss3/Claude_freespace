@@ -247,14 +247,42 @@
             }
         }
 
+        // === SONNET'S ADDITION: Equipment as Interaction Matrices ===
+        const EQUIPMENT_TYPES = {
+            FIRE_SWORD: {
+                name: 'Fire Sword',
+                damage: 15,
+                description: 'Repels enemy particles',
+                particleModifier: { ENEMY: -0.3 }
+            },
+            ICE_SHIELD: {
+                name: 'Ice Shield',
+                armor: 10,
+                description: 'Attracts projectiles',
+                particleModifier: { PROJECTILE: 0.5 }
+            },
+            VOID_CLOAK: {
+                name: 'Void Cloak',
+                description: 'Reduces particle interactions',
+                particleModifier: { ENEMY: 0.2, FOG: 0 }
+            },
+            CRYSTAL_AMULET: {
+                name: 'Crystal Amulet',
+                description: 'Crystallizes nearby fog',
+                particleModifier: { CRYSTAL: 0.4, FOG: -0.6 }
+            }
+        };
+
         class Player extends Entity {
             constructor(x, y) {
                 super(x, y, 'player', 100);
                 this.level = 1;
                 this.xp = 0;
                 this.xpToLevel = 100;
-                this.weapon = 'Fists';
+                this.weapon = null;
                 this.armor = null;
+                this.weaponObj = null;
+                this.armorObj = null;
             }
 
             gainXP(amount) {
@@ -272,6 +300,58 @@
                 this.hp = this.maxHp;
                 this.damage += 5;
                 game.log('Level up! You are now level ' + this.level, 'heal');
+            }
+
+            // === SONNET'S ADDITION: Equipment methods ===
+            equipWeapon(weaponType) {
+                // Remove old weapon modifiers
+                if (this.weaponObj && this.weaponObj.particleModifier) {
+                    const oldMods = {};
+                    for (const [k, v] of Object.entries(this.weaponObj.particleModifier)) {
+                        oldMods[k] = -v; // Reverse the modifier
+                    }
+                    particleEngine.applyEquipmentModifier('weapon', oldMods);
+                }
+
+                // Equip new weapon
+                this.weaponObj = weaponType;
+                this.weapon = weaponType.name;
+                if (weaponType.damage) {
+                    this.damage += weaponType.damage;
+                }
+
+                // Apply new weapon modifiers
+                if (weaponType.particleModifier) {
+                    particleEngine.applyEquipmentModifier('weapon', weaponType.particleModifier);
+                }
+
+                game.log('Equipped: ' + weaponType.name + '!', 'heal');
+            }
+
+            equipArmor(armorType) {
+                // Remove old armor modifiers
+                if (this.armorObj && this.armorObj.particleModifier) {
+                    const oldMods = {};
+                    for (const [k, v] of Object.entries(this.armorObj.particleModifier)) {
+                        oldMods[k] = -v;
+                    }
+                    particleEngine.applyEquipmentModifier('armor', oldMods);
+                }
+
+                // Equip new armor
+                this.armorObj = armorType;
+                this.armor = armorType.name;
+                if (armorType.armor) {
+                    this.maxHp += armorType.armor;
+                    this.hp += armorType.armor;
+                }
+
+                // Apply new armor modifiers
+                if (armorType.particleModifier) {
+                    particleEngine.applyEquipmentModifier('armor', armorType.particleModifier);
+                }
+
+                game.log('Equipped: ' + armorType.name + '!', 'heal');
             }
         }
 
@@ -416,6 +496,38 @@
                 }
             }
 
+            // === SONNET'S ADDITION: Item pickup with equipment drops ===
+            checkItemPickup() {
+                if (!this.player || !this.player.alive) return;
+                if (!window.particleEngine) return;
+
+                // Find ITEM particles near player
+                const itemParticles = particleEngine.particles.filter(p =>
+                    p.type === particleEngine.TYPES.ITEM &&
+                    !p.picked &&
+                    Math.abs(p.gridX - this.player.x) <= 1 &&
+                    Math.abs(p.gridY - this.player.y) <= 1
+                );
+
+                itemParticles.forEach(item => {
+                    item.picked = true;
+                    item.maxAge = 0; // Make it disappear
+
+                    // Randomly pick equipment
+                    const equipTypes = Object.values(EQUIPMENT_TYPES);
+                    const randomEquip = equipTypes[Math.floor(Math.random() * equipTypes.length)];
+
+                    // Randomly equip as weapon or armor
+                    if (Math.random() > 0.5) {
+                        this.player.equipWeapon(randomEquip);
+                    } else {
+                        this.player.equipArmor(randomEquip);
+                    }
+
+                    this.log('Picked up: ' + randomEquip.name, 'pickup');
+                });
+            }
+
             log(message, type = '') {
                 this.logEntries.push({ message, type });
                 if (this.logEntries.length > 20) {
@@ -502,6 +614,7 @@
                 const T = this.TYPES;
                 const n = Object.keys(T).length;
                 this.matrix = Array(n).fill(null).map(() => Array(n).fill(0));
+                this.equipmentModifiers = {}; // Track equipment-based modifications
 
                 // WALL interactions
                 this.matrix[T.WALL][T.WALL] = 0.6;
@@ -534,6 +647,37 @@
                 this.matrix[T.CRYSTAL][T.CRYSTAL] = 0.5;
                 this.matrix[T.CRYSTAL][T.FLOOR] = 0.3;
                 this.matrix[T.CRYSTAL][T.FOG] = -0.4;
+            }
+
+            // Equipment-as-Interaction-Matrix API (Sonnet's addition)
+            applyEquipmentModifier(slotId, modifiers) {
+                const T = this.TYPES;
+
+                // Store modifiers for this equipment slot
+                this.equipmentModifiers[slotId] = modifiers;
+
+                // Apply all equipment modifiers to player interactions
+                // First reset to base values, then reapply all modifiers
+                const basePlayerInteractions = {
+                    ENEMY: -0.5,
+                    ITEM: 0.3,
+                    FLOOR: 0.1,
+                    FOG: -0.2
+                };
+
+                // Reset to base
+                for (const [typeName, baseValue] of Object.entries(basePlayerInteractions)) {
+                    this.matrix[T.PLAYER][T[typeName]] = baseValue;
+                }
+
+                // Reapply all equipment modifiers
+                for (const mods of Object.values(this.equipmentModifiers)) {
+                    for (const [typeName, modValue] of Object.entries(mods)) {
+                        if (T[typeName] !== undefined) {
+                            this.matrix[T.PLAYER][T[typeName]] += modValue;
+                        }
+                    }
+                }
             }
 
             createParticle(x, y, type, options = {}) {
@@ -901,6 +1045,11 @@
 
             // Update particles
             particleEngine.update(dt);
+
+            // === SONNET'S ADDITION: Check for item pickups every frame ===
+            if (game.player && game.player.alive) {
+                game.checkItemPickup();
+            }
 
             // Render
             if (game.player) {
