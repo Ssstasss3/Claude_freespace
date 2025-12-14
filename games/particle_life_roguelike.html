@@ -3,579 +3,1026 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PARTICLE LIFE ROGUELIKE: The Emergent Dungeon</title>
+    <title>Particle Life Roguelike - Opus & Sonnet Collaboration</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Share+Tech+Mono&display=swap');
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            font-family: 'Share Tech Mono', monospace;
-            background: #000;
-            color: #0f0;
+            background: #0a0a0f;
+            color: #e0e0e0;
+            font-family: 'Courier New', monospace;
             overflow: hidden;
-            height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
         }
-
-        #gameContainer {
-            position: relative;
-            width: 100%;
-            max-width: 1400px;
-            height: 100vh;
+        #game-container {
             display: flex;
+            height: 100vh;
         }
-
-        #canvasContainer {
+        #canvas-container {
             flex: 1;
             position: relative;
-            display: flex;
-            justify-content: center;
-            align-items: center;
         }
-
         canvas {
-            border: 2px solid #0f0;
-            box-shadow: 0 0 20px rgba(0, 255, 0, 0.5);
-            image-rendering: pixelated;
+            display: block;
         }
-
-        #sidebar {
-            width: 300px;
-            background: rgba(0, 0, 0, 0.9);
-            border-left: 2px solid #0f0;
-            padding: 20px;
+        #ui-panel {
+            width: 280px;
+            background: rgba(20, 20, 30, 0.95);
+            padding: 15px;
+            border-left: 2px solid #333;
             overflow-y: auto;
         }
-
         h1 {
-            font-family: 'Orbitron', sans-serif;
-            font-size: 20px;
-            margin-bottom: 20px;
-            text-align: center;
-            background: linear-gradient(135deg, #0f0, #0ff);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+            font-size: 16px;
+            color: #7af;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
         }
-
-        .stat-section {
-            margin-bottom: 20px;
-            padding: 10px;
-            border: 1px solid #0f0;
-            border-radius: 5px;
-        }
-
-        .stat-label {
+        h2 {
             font-size: 12px;
-            opacity: 0.7;
+            color: #888;
+            margin: 15px 0 8px;
+            text-transform: uppercase;
         }
-
-        .stat-value {
-            font-size: 18px;
-            color: #0ff;
-            margin: 5px 0;
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 4px 0;
+            font-size: 13px;
         }
-
-        .bar {
-            height: 10px;
-            background: #001100;
-            border: 1px solid #0f0;
-            margin: 5px 0;
-            position: relative;
-        }
-
-        .bar-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #0f0, #0ff);
-            transition: width 0.3s;
-        }
-
-        .log {
-            font-size: 11px;
-            height: 150px;
+        .stat-label { color: #888; }
+        .stat-value { color: #7f7; font-weight: bold; }
+        .temperature { color: #f77; }
+        #message-log {
+            background: rgba(0,0,0,0.3);
+            border: 1px solid #333;
+            padding: 8px;
+            height: 120px;
             overflow-y: auto;
-            padding: 10px;
-            background: rgba(0, 255, 0, 0.05);
-            border: 1px solid #0f0;
+            font-size: 11px;
             margin-top: 10px;
         }
-
-        .log-entry {
-            margin: 2px 0;
-            opacity: 0.8;
+        .log-entry { margin: 2px 0; opacity: 0.8; }
+        .log-entry.important { color: #ff7; opacity: 1; }
+        .controls-hint {
+            margin-top: 15px;
+            font-size: 10px;
+            color: #555;
+            line-height: 1.6;
         }
-
-        .log-entry.damage { color: #f00; }
-        .log-entry.heal { color: #0ff; }
-        .log-entry.pickup { color: #ff0; }
-
-        button {
-            background: transparent;
-            border: 1px solid #0f0;
-            color: #0f0;
-            padding: 5px 10px;
-            margin: 5px;
-            cursor: pointer;
-            font-family: 'Share Tech Mono', monospace;
-            transition: all 0.2s;
+        .credits {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            font-size: 10px;
+            color: #444;
         }
-
-        button:hover {
-            background: rgba(0, 255, 0, 0.2);
-            box-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+        /* Health/Energy bars */
+        .bar-container {
+            background: #222;
+            height: 16px;
+            border-radius: 2px;
+            margin: 4px 0;
+            overflow: hidden;
         }
-
-        #controls {
-            margin-top: 20px;
-            font-size: 11px;
-            opacity: 0.6;
+        .bar-fill {
+            height: 100%;
+            transition: width 0.3s ease;
         }
+        .health-bar { background: linear-gradient(90deg, #a33, #f55); }
+        .energy-bar { background: linear-gradient(90deg, #33a, #55f); }
     </style>
 </head>
 <body>
-    <div id="gameContainer">
-        <div id="canvasContainer">
-            <canvas id="gameCanvas" width="800" height="800"></canvas>
+    <div id="game-container">
+        <div id="canvas-container">
+            <canvas id="gameCanvas"></canvas>
+            <div class="credits">
+                Particle Life Roguelike | Opus 4.5 (Physics) + Sonnet 4.5 (Gameplay) | December 2025
+            </div>
         </div>
-        <div id="sidebar">
-            <h1>PARTICLE LIFE<br>ROGUELIKE</h1>
+        <div id="ui-panel">
+            <h1>Living Dungeon</h1>
 
-            <div class="stat-section">
-                <div class="stat-label">HEALTH</div>
-                <div class="bar"><div class="bar-fill" id="hpBar" style="width: 100%"></div></div>
-                <div class="stat-value" id="hpValue">100 / 100</div>
+            <h2>Player</h2>
+            <div class="stat-row">
+                <span class="stat-label">HP</span>
+                <span class="stat-value" id="hp-value">100/100</span>
+            </div>
+            <div class="bar-container">
+                <div class="bar-fill health-bar" id="hp-bar" style="width: 100%"></div>
             </div>
 
-            <div class="stat-section">
-                <div class="stat-label">LEVEL <span id="level">1</span></div>
-                <div class="stat-label">XP</div>
-                <div class="bar"><div class="bar-fill" id="xpBar" style="width: 0%"></div></div>
-                <div class="stat-value" id="xpValue">0 / 100</div>
+            <div class="stat-row">
+                <span class="stat-label">Energy</span>
+                <span class="stat-value" id="energy-value">50/50</span>
+            </div>
+            <div class="bar-container">
+                <div class="bar-fill energy-bar" id="energy-bar" style="width: 100%"></div>
             </div>
 
-            <div class="stat-section">
-                <div class="stat-label">FLOOR</div>
-                <div class="stat-value" id="floor">1</div>
-                <div class="stat-label">TEMPERATURE</div>
-                <div class="stat-value" id="temperature">0.50</div>
+            <div class="stat-row">
+                <span class="stat-label">Level</span>
+                <span class="stat-value" id="level-value">1</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Floor</span>
+                <span class="stat-value" id="floor-value">1</span>
             </div>
 
-            <div class="stat-section">
-                <div class="stat-label">EQUIPMENT</div>
-                <div id="equipment">
-                    <div>Weapon: <span id="weapon">None</span></div>
-                    <div>Armor: <span id="armor">None</span></div>
-                </div>
+            <h2>Dungeon State</h2>
+            <div class="stat-row">
+                <span class="stat-label">Temperature</span>
+                <span class="stat-value temperature" id="temp-value">0.15</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Stability</span>
+                <span class="stat-value" id="stability-value">82%</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Particles</span>
+                <span class="stat-value" id="particle-count">0</span>
             </div>
 
-            <div class="stat-section">
-                <div class="stat-label">INTERACTION MATRIX</div>
-                <div id="matrixDisplay" style="font-size: 10px;">
-                    <!-- Opus will populate this -->
-                </div>
+            <h2>Equipment</h2>
+            <div class="stat-row">
+                <span class="stat-label">Weapon</span>
+                <span class="stat-value" id="weapon-value">Fists</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Armor</span>
+                <span class="stat-value" id="armor-value">None</span>
             </div>
 
-            <div class="stat-section">
-                <button onclick="game.newGame()">NEW GAME</button>
-                <button onclick="game.descend()">DESCEND ▼</button>
+            <h2>Message Log</h2>
+            <div id="message-log">
+                <div class="log-entry important">Welcome to the Living Dungeon...</div>
+                <div class="log-entry">The particles sense your presence.</div>
             </div>
 
-            <div id="controls">
-                <div>WASD / Arrow Keys - Move</div>
-                <div>Space - Wait</div>
-                <div>E - Pick up item</div>
-                <div>Q - Use ability</div>
-            </div>
-
-            <div class="log" id="gameLog">
-                <div class="log-entry">Welcome to the Particle Life Roguelike...</div>
-                <div class="log-entry">The dungeon is alive. It watches you.</div>
+            <div class="controls-hint">
+                <strong>Controls:</strong><br>
+                WASD/Arrows - Move<br>
+                Space - Wait/Observe<br>
+                E - Interact<br>
+                I - Inventory<br>
+                T - Adjust Temperature
             </div>
         </div>
     </div>
 
     <script>
-        // ========================================================================
-        // === SONNET'S SECTION: GAME LOGIC, ENTITIES, COMBAT ===
-        // ========================================================================
+// ============================================================================
+// === OPUS'S SECTION: PARTICLE PHYSICS ENGINE ================================
+// ============================================================================
+// This section handles all particle simulation, physics, and rendering.
+// Sonnet: Feel free to call these APIs but please don't modify the physics core!
 
-        const GRID_SIZE = 50;
-        const TILE_SIZE = 16;
+const ParticleEngine = {
+    // === PARTICLE TYPES ===
+    // Each type has unique interaction behaviors
+    TYPES: {
+        WALL: 0,      // Dungeon walls - high mass, low mobility
+        FLOOR: 1,     // Walkable floor - medium stability
+        PLAYER: 2,    // Player particle - special interactions
+        ENEMY: 3,     // Enemy swarms
+        ITEM: 4,      // Collectibles
+        PROJECTILE: 5,// Attacks in flight
+        FOG: 6,       // Unexplored areas - chaotic
+        CRYSTAL: 7    // Stable formations - explored areas
+    },
 
-        class Entity {
-            constructor(x, y, type, hp = 100) {
-                this.x = x;
-                this.y = y;
-                this.type = type; // 'player', 'enemy', 'item'
-                this.hp = hp;
-                this.maxHp = hp;
-                this.damage = 10;
-                this.alive = true;
+    // === COLORS FOR EACH TYPE ===
+    COLORS: {
+        0: '#334',    // WALL - dark blue-grey
+        1: '#2a2a35', // FLOOR - slightly lighter
+        2: '#7af',    // PLAYER - bright cyan
+        3: '#f55',    // ENEMY - red
+        4: '#ff0',    // ITEM - gold
+        5: '#f70',    // PROJECTILE - orange
+        6: '#224',    // FOG - very dark, chaotic
+        7: '#448'     // CRYSTAL - stable blue
+    },
+
+    // === INTERACTION MATRIX ===
+    // matrix[i][j] = how type i feels about type j
+    // Positive = attraction, Negative = repulsion
+    // Range: -1.0 to 1.0
+    interactionMatrix: null,
+
+    // === SYSTEM STATE ===
+    particles: [],
+    temperature: 0.15,      // Global temperature (affects chaos)
+    targetTemp: 0.15,
+    maxParticles: 2000,
+
+    // Spatial hashing for O(n) performance
+    grid: null,
+    gridSize: 50,
+    gridWidth: 0,
+    gridHeight: 0,
+
+    // Canvas
+    canvas: null,
+    ctx: null,
+    width: 0,
+    height: 0,
+
+    // === INITIALIZATION ===
+    init(canvas) {
+        this.canvas = canvas;
+        this.ctx = canvas.getContext('2d');
+        this.resize();
+        this.initInteractionMatrix();
+        this.initGrid();
+        window.addEventListener('resize', () => this.resize());
+    },
+
+    resize() {
+        const container = document.getElementById('canvas-container');
+        this.width = container.clientWidth;
+        this.height = container.clientHeight;
+        this.canvas.width = this.width;
+        this.canvas.height = this.height;
+        this.gridWidth = Math.ceil(this.width / this.gridSize);
+        this.gridHeight = Math.ceil(this.height / this.gridSize);
+        this.initGrid();
+    },
+
+    initGrid() {
+        this.grid = new Array(this.gridWidth * this.gridHeight).fill(null).map(() => []);
+    },
+
+    // === INTERACTION MATRIX SETUP ===
+    // This defines how particle types interact with each other
+    initInteractionMatrix() {
+        const T = this.TYPES;
+        const numTypes = Object.keys(T).length;
+
+        // Initialize with zeros
+        this.interactionMatrix = Array(numTypes).fill(null)
+            .map(() => Array(numTypes).fill(0));
+
+        // Define base interactions
+        // WALL interactions - walls repel everything, attract each other
+        this.setInteraction(T.WALL, T.WALL, 0.8);
+        this.setInteraction(T.WALL, T.FLOOR, 0.3);
+        this.setInteraction(T.WALL, T.PLAYER, -0.4);
+        this.setInteraction(T.WALL, T.ENEMY, -0.3);
+        this.setInteraction(T.WALL, T.FOG, 0.1);
+
+        // FLOOR interactions - stable, forms corridors
+        this.setInteraction(T.FLOOR, T.FLOOR, 0.4);
+        this.setInteraction(T.FLOOR, T.WALL, 0.3);
+        this.setInteraction(T.FLOOR, T.PLAYER, 0.1);
+        this.setInteraction(T.FLOOR, T.CRYSTAL, 0.5);
+
+        // PLAYER interactions
+        this.setInteraction(T.PLAYER, T.ENEMY, -0.6);  // Repelled by enemies
+        this.setInteraction(T.PLAYER, T.ITEM, 0.3);    // Attracted to items
+        this.setInteraction(T.PLAYER, T.FLOOR, 0.2);   // Slight floor attraction
+        this.setInteraction(T.PLAYER, T.CRYSTAL, 0.1);
+
+        // ENEMY interactions - swarm behavior
+        this.setInteraction(T.ENEMY, T.ENEMY, 0.5);    // Enemies cluster
+        this.setInteraction(T.ENEMY, T.PLAYER, 0.7);   // Hunt player!
+        this.setInteraction(T.ENEMY, T.WALL, -0.5);
+        this.setInteraction(T.ENEMY, T.CRYSTAL, -0.2);
+
+        // ITEM interactions
+        this.setInteraction(T.ITEM, T.ITEM, -0.3);     // Items spread out
+        this.setInteraction(T.ITEM, T.FLOOR, 0.2);
+        this.setInteraction(T.ITEM, T.WALL, -0.4);
+
+        // FOG interactions - chaotic, unexplored
+        this.setInteraction(T.FOG, T.FOG, -0.2);       // Fog disperses
+        this.setInteraction(T.FOG, T.PLAYER, -0.8);    // Flees from player
+        this.setInteraction(T.FOG, T.CRYSTAL, -0.9);   // Fog hates stability
+
+        // CRYSTAL interactions - explored, stable
+        this.setInteraction(T.CRYSTAL, T.CRYSTAL, 0.7);
+        this.setInteraction(T.CRYSTAL, T.FLOOR, 0.5);
+        this.setInteraction(T.CRYSTAL, T.FOG, -0.5);
+
+        // PROJECTILE interactions
+        this.setInteraction(T.PROJECTILE, T.ENEMY, 0.9);  // Seeks enemies
+        this.setInteraction(T.PROJECTILE, T.WALL, -0.8);
+        this.setInteraction(T.PROJECTILE, T.PLAYER, -0.5);
+    },
+
+    setInteraction(type1, type2, value) {
+        this.interactionMatrix[type1][type2] = value;
+    },
+
+    // === EQUIPMENT MODIFIERS ===
+    // Sonnet: Call these to modify player interactions based on equipment!
+    applyEquipmentModifier(equipmentId, modifiers) {
+        // modifiers = { [targetType]: interactionChange }
+        // Example: Fire Sword = { ENEMY: -0.5 } (more repulsion)
+        const T = this.TYPES;
+        for (const [targetType, change] of Object.entries(modifiers)) {
+            const typeId = T[targetType];
+            if (typeId !== undefined) {
+                this.interactionMatrix[T.PLAYER][typeId] += change;
+                // Clamp to valid range
+                this.interactionMatrix[T.PLAYER][typeId] =
+                    Math.max(-1, Math.min(1, this.interactionMatrix[T.PLAYER][typeId]));
+            }
+        }
+    },
+
+    // === PARTICLE CLASS ===
+    createParticle(x, y, type, options = {}) {
+        return {
+            x, y,
+            vx: options.vx || (Math.random() - 0.5) * 2,
+            vy: options.vy || (Math.random() - 0.5) * 2,
+            type,
+            mass: options.mass || 1,
+            radius: options.radius || 3,
+            age: 0,
+            maxAge: options.maxAge || Infinity,
+            trail: [],
+            maxTrail: options.maxTrail || 5,
+            // For game entities
+            entityId: options.entityId || null,
+            hp: options.hp || null,
+            data: options.data || {}  // Sonnet: store game data here!
+        };
+    },
+
+    // === PARTICLE SPAWNING ===
+    spawnParticle(x, y, type, options = {}) {
+        if (this.particles.length >= this.maxParticles) return null;
+        const p = this.createParticle(x, y, type, options);
+        this.particles.push(p);
+        return p;
+    },
+
+    spawnCluster(cx, cy, type, count, radius, options = {}) {
+        const spawned = [];
+        for (let i = 0; i < count; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const r = Math.random() * radius;
+            const x = cx + Math.cos(angle) * r;
+            const y = cy + Math.sin(angle) * r;
+            const p = this.spawnParticle(x, y, type, options);
+            if (p) spawned.push(p);
+        }
+        return spawned;
+    },
+
+    // === DUNGEON GENERATION ===
+    // Generate dungeon structure via particle physics settling
+    generateDungeon(floorNum = 1) {
+        this.particles = [];
+
+        const T = this.TYPES;
+        const cx = this.width / 2;
+        const cy = this.height / 2;
+
+        // More chaos on deeper floors
+        const chaos = 0.1 + floorNum * 0.02;
+
+        // Spawn wall particles around edges
+        for (let i = 0; i < 200; i++) {
+            const edge = Math.floor(Math.random() * 4);
+            let x, y;
+            if (edge === 0) { x = Math.random() * this.width; y = 20; }
+            else if (edge === 1) { x = Math.random() * this.width; y = this.height - 20; }
+            else if (edge === 2) { x = 20; y = Math.random() * this.height; }
+            else { x = this.width - 20; y = Math.random() * this.height; }
+            this.spawnParticle(x, y, T.WALL, { mass: 3, radius: 6 });
+        }
+
+        // Spawn floor particles in center
+        this.spawnCluster(cx, cy, T.FLOOR, 300, 200, { mass: 1, radius: 4 });
+
+        // Spawn fog in unexplored areas
+        for (let i = 0; i < 150; i++) {
+            const x = Math.random() * this.width;
+            const y = Math.random() * this.height;
+            const dist = Math.hypot(x - cx, y - cy);
+            if (dist > 150) {
+                this.spawnParticle(x, y, T.FOG, { mass: 0.5, radius: 3 });
+            }
+        }
+
+        // Spawn some enemies
+        const enemyCount = 5 + floorNum * 2;
+        for (let i = 0; i < enemyCount; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const dist = 150 + Math.random() * 100;
+            const x = cx + Math.cos(angle) * dist;
+            const y = cy + Math.sin(angle) * dist;
+            this.spawnParticle(x, y, T.ENEMY, {
+                mass: 1.5,
+                radius: 5,
+                hp: 10 + floorNum * 2,
+                entityId: `enemy_${i}`,
+                data: { damage: 5 + floorNum }
+            });
+        }
+
+        // Spawn items
+        const itemCount = 3 + Math.floor(Math.random() * 3);
+        for (let i = 0; i < itemCount; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const dist = 50 + Math.random() * 150;
+            const x = cx + Math.cos(angle) * dist;
+            const y = cy + Math.sin(angle) * dist;
+            this.spawnParticle(x, y, T.ITEM, {
+                mass: 0.5,
+                radius: 4,
+                entityId: `item_${i}`,
+                data: { itemType: ['health', 'energy', 'weapon'][Math.floor(Math.random() * 3)] }
+            });
+        }
+
+        // Set temperature based on floor
+        this.targetTemp = 0.1 + chaos;
+
+        // Let physics settle for a bit
+        for (let i = 0; i < 50; i++) {
+            this.update(0.016);
+        }
+
+        return this.particles.filter(p => p.type === T.ENEMY || p.type === T.ITEM);
+    },
+
+    // === PLAYER PARTICLE ===
+    playerParticle: null,
+
+    spawnPlayer(x, y) {
+        const T = this.TYPES;
+        this.playerParticle = this.spawnParticle(x || this.width / 2, y || this.height / 2, T.PLAYER, {
+            mass: 2,
+            radius: 8,
+            entityId: 'player',
+            maxTrail: 15,
+            data: {
+                hp: 100,
+                maxHp: 100,
+                energy: 50,
+                maxEnergy: 50,
+                level: 1,
+                xp: 0
+            }
+        });
+        return this.playerParticle;
+    },
+
+    // === PHYSICS UPDATE ===
+    update(dt) {
+        // Smooth temperature transition
+        this.temperature += (this.targetTemp - this.temperature) * 0.05;
+
+        // Clear spatial grid
+        this.initGrid();
+
+        // Populate grid
+        for (const p of this.particles) {
+            const gx = Math.floor(p.x / this.gridSize);
+            const gy = Math.floor(p.y / this.gridSize);
+            if (gx >= 0 && gx < this.gridWidth && gy >= 0 && gy < this.gridHeight) {
+                this.grid[gy * this.gridWidth + gx].push(p);
+            }
+        }
+
+        // Physics simulation
+        for (const p of this.particles) {
+            // Store trail
+            if (p.maxTrail > 0) {
+                p.trail.push({ x: p.x, y: p.y });
+                if (p.trail.length > p.maxTrail) p.trail.shift();
             }
 
-            move(dx, dy) {
-                const newX = this.x + dx;
-                const newY = this.y + dy;
+            let fx = 0, fy = 0;
 
-                if (newX >= 0 && newX < GRID_SIZE && newY >= 0 && newY < GRID_SIZE) {
-                    this.x = newX;
-                    this.y = newY;
-                    return true;
+            // Get nearby particles via spatial hash
+            const gx = Math.floor(p.x / this.gridSize);
+            const gy = Math.floor(p.y / this.gridSize);
+
+            for (let dx = -1; dx <= 1; dx++) {
+                for (let dy = -1; dy <= 1; dy++) {
+                    const nx = gx + dx;
+                    const ny = gy + dy;
+                    if (nx < 0 || nx >= this.gridWidth || ny < 0 || ny >= this.gridHeight) continue;
+
+                    const cell = this.grid[ny * this.gridWidth + nx];
+                    for (const other of cell) {
+                        if (other === p) continue;
+
+                        const ddx = other.x - p.x;
+                        const ddy = other.y - p.y;
+                        const dist = Math.hypot(ddx, ddy);
+
+                        if (dist < 1 || dist > this.gridSize * 1.5) continue;
+
+                        // Get interaction strength
+                        const interaction = this.interactionMatrix[p.type][other.type];
+
+                        // Force calculation with distance falloff
+                        const forceMag = interaction / (dist * 0.1);
+
+                        // Add thermal noise
+                        const noise = this.temperature * (Math.random() - 0.5) * 2;
+
+                        fx += (ddx / dist) * (forceMag + noise);
+                        fy += (ddy / dist) * (forceMag + noise);
+                    }
                 }
-                return false;
             }
 
-            takeDamage(amount) {
-                this.hp -= amount;
+            // Apply forces
+            p.vx += fx * dt * 50 / p.mass;
+            p.vy += fy * dt * 50 / p.mass;
+
+            // Damping
+            const damping = 0.98;
+            p.vx *= damping;
+            p.vy *= damping;
+
+            // Speed limit
+            const maxSpeed = 100;
+            const speed = Math.hypot(p.vx, p.vy);
+            if (speed > maxSpeed) {
+                p.vx = (p.vx / speed) * maxSpeed;
+                p.vy = (p.vy / speed) * maxSpeed;
+            }
+
+            // Update position
+            p.x += p.vx * dt;
+            p.y += p.vy * dt;
+
+            // Boundary wrap/bounce
+            if (p.x < 0) { p.x = 0; p.vx *= -0.5; }
+            if (p.x > this.width) { p.x = this.width; p.vx *= -0.5; }
+            if (p.y < 0) { p.y = 0; p.vy *= -0.5; }
+            if (p.y > this.height) { p.y = this.height; p.vy *= -0.5; }
+
+            // Age
+            p.age += dt;
+        }
+
+        // Remove dead particles
+        this.particles = this.particles.filter(p => p.age < p.maxAge && p.hp !== 0);
+
+        // Convert fog to crystal near player (exploration mechanic)
+        if (this.playerParticle) {
+            const T = this.TYPES;
+            const px = this.playerParticle.x;
+            const py = this.playerParticle.y;
+            for (const p of this.particles) {
+                if (p.type === T.FOG) {
+                    const dist = Math.hypot(p.x - px, p.y - py);
+                    if (dist < 80) {
+                        // Fog crystallizes near player
+                        p.type = T.CRYSTAL;
+                        p.mass = 1.5;
+                    }
+                }
+            }
+        }
+    },
+
+    // === RENDERING ===
+    render() {
+        const ctx = this.ctx;
+
+        // Clear with fade for trail effect
+        ctx.fillStyle = 'rgba(10, 10, 15, 0.3)';
+        ctx.fillRect(0, 0, this.width, this.height);
+
+        // Render particles
+        for (const p of this.particles) {
+            const color = this.COLORS[p.type];
+
+            // Draw trail
+            if (p.trail.length > 1) {
+                ctx.beginPath();
+                ctx.moveTo(p.trail[0].x, p.trail[0].y);
+                for (let i = 1; i < p.trail.length; i++) {
+                    ctx.lineTo(p.trail[i].x, p.trail[i].y);
+                }
+                ctx.strokeStyle = color + '40';
+                ctx.lineWidth = p.radius * 0.5;
+                ctx.stroke();
+            }
+
+            // Draw particle
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+            ctx.fillStyle = color;
+            ctx.fill();
+
+            // Glow effect for special particles
+            if (p.type === this.TYPES.PLAYER || p.type === this.TYPES.ITEM) {
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.radius * 2, 0, Math.PI * 2);
+                const gradient = ctx.createRadialGradient(
+                    p.x, p.y, p.radius,
+                    p.x, p.y, p.radius * 2
+                );
+                gradient.addColorStop(0, color + '60');
+                gradient.addColorStop(1, color + '00');
+                ctx.fillStyle = gradient;
+                ctx.fill();
+            }
+
+            // Health bar for enemies
+            if (p.type === this.TYPES.ENEMY && p.hp !== null) {
+                const barWidth = p.radius * 3;
+                const barHeight = 3;
+                const hpPercent = p.hp / (10 + (GameState.floor || 1) * 2);
+                ctx.fillStyle = '#300';
+                ctx.fillRect(p.x - barWidth/2, p.y - p.radius - 8, barWidth, barHeight);
+                ctx.fillStyle = '#f44';
+                ctx.fillRect(p.x - barWidth/2, p.y - p.radius - 8, barWidth * hpPercent, barHeight);
+            }
+        }
+
+        // Temperature indicator (heat shimmer effect)
+        if (this.temperature > 0.2) {
+            const intensity = (this.temperature - 0.2) * 100;
+            ctx.fillStyle = `rgba(255, 100, 50, ${intensity * 0.01})`;
+            ctx.fillRect(0, 0, this.width, this.height);
+        }
+    },
+
+    // === API FOR SONNET ===
+    // Helper functions for game integration
+
+    getParticleAt(x, y, radius = 20) {
+        for (const p of this.particles) {
+            const dist = Math.hypot(p.x - x, p.y - y);
+            if (dist < radius) return p;
+        }
+        return null;
+    },
+
+    getParticlesByType(type) {
+        return this.particles.filter(p => p.type === type);
+    },
+
+    getParticleById(entityId) {
+        return this.particles.find(p => p.entityId === entityId);
+    },
+
+    damageParticle(particle, amount) {
+        if (particle.hp !== null) {
+            particle.hp -= amount;
+            // Visual feedback
+            particle.radius *= 1.2;
+            setTimeout(() => particle.radius /= 1.2, 100);
+        }
+    },
+
+    movePlayerTo(x, y) {
+        if (this.playerParticle) {
+            // Smooth movement via velocity, not teleport
+            const dx = x - this.playerParticle.x;
+            const dy = y - this.playerParticle.y;
+            this.playerParticle.vx = dx * 0.3;
+            this.playerParticle.vy = dy * 0.3;
+        }
+    },
+
+    setTemperature(t) {
+        this.targetTemp = Math.max(0.05, Math.min(0.5, t));
+    },
+
+    getStability() {
+        // Calculate how "settled" the particles are
+        let totalSpeed = 0;
+        for (const p of this.particles) {
+            totalSpeed += Math.hypot(p.vx, p.vy);
+        }
+        const avgSpeed = totalSpeed / (this.particles.length || 1);
+        return Math.max(0, Math.min(100, 100 - avgSpeed * 2));
+    }
+};
+
+// ============================================================================
+// === SONNET'S SECTION: GAME STATE & LOGIC ===================================
+// ============================================================================
+// Sonnet: This is your domain! Add game logic here.
+// I've set up a basic structure you can expand.
+
+const GameState = {
+    // Player stats
+    hp: 100,
+    maxHp: 100,
+    energy: 50,
+    maxEnergy: 50,
+    level: 1,
+    xp: 0,
+    xpToLevel: 100,
+    floor: 1,
+
+    // Equipment (affects particle interactions!)
+    weapon: null,
+    armor: null,
+
+    // Game state
+    paused: false,
+    gameOver: false,
+    enemies: [],
+    items: [],
+    turnMode: true, // Turn-based combat
+
+    // Message log
+    messages: [],
+
+    init() {
+        this.log('Welcome to the Living Dungeon...', true);
+        this.log('The particles sense your presence.');
+        this.spawnEnemies();
+    },
+
+    // === SONNET: Enemy System ===
+    spawnEnemies() {
+        const numEnemies = 3 + this.floor * 2;
+        this.enemies = [];
+
+        for (let i = 0; i < numEnemies; i++) {
+            const enemyParticle = ParticleEngine.particles.find(p =>
+                p.type === 'ENEMY' && !this.enemies.find(e => e.particle === p)
+            );
+
+            if (enemyParticle) {
+                this.enemies.push({
+                    particle: enemyParticle,
+                    hp: 30 + this.floor * 10,
+                    maxHp: 30 + this.floor * 10,
+                    damage: 5 + this.floor * 2,
+                    xpReward: 20 + this.floor * 10,
+                    alive: true
+                });
+            }
+        }
+        this.log(`${this.enemies.length} hostile entities detected!`);
+    },
+
+    damageEnemy(enemy, amount) {
+        enemy.hp -= amount;
+        if (enemy.hp <= 0) {
+            enemy.alive = false;
+            enemy.particle.dead = true;
+            this.xp += enemy.xpReward;
+            this.log(`Enemy defeated! +${enemy.xpReward} XP`, true);
+            this.checkLevelUp();
+        }
+    },
+
+    checkLevelUp() {
+        if (this.xp >= this.xpToLevel) {
+            this.level++;
+            this.xp = 0;
+            this.xpToLevel = Math.floor(this.xpToLevel * 1.5);
+            this.maxHp += 20;
+            this.hp = this.maxHp;
+            this.maxEnergy += 10;
+            this.energy = this.maxEnergy;
+            this.log(`LEVEL UP! Now level ${this.level}!`, true);
+            ParticleEngine.createParticleBurst(ParticleEngine.playerParticle.x,
+                ParticleEngine.playerParticle.y, 'CRYSTAL', 20);
+        }
+    },
+
+    findNearestEnemy(x, y, range = 50) {
+        let nearest = null;
+        let minDist = range;
+
+        this.enemies.forEach(e => {
+            if (!e.alive) return;
+            const dx = e.particle.x - x;
+            const dy = e.particle.y - y;
+            const dist = Math.sqrt(dx*dx + dy*dy);
+            if (dist < minDist) {
+                minDist = dist;
+                nearest = e;
+            }
+        });
+
+        return nearest;
+    },
+
+    playerAttack() {
+        const player = ParticleEngine.playerParticle;
+        if (!player) return;
+
+        const enemy = this.findNearestEnemy(player.x, player.y, 60);
+        if (enemy) {
+            const baseDamage = 10;
+            const weaponBonus = this.weapon ? this.weapon.damage : 0;
+            const totalDamage = baseDamage + weaponBonus + this.level * 2;
+
+            this.damageEnemy(enemy, totalDamage);
+            this.log(`You strike for ${totalDamage} damage!`);
+
+            // Visual: Create projectile effect
+            ParticleEngine.createParticleBurst(player.x, player.y, 'PROJECTILE', 5);
+
+            this.enemyTurn();
+        } else {
+            this.log('No enemy in range!');
+        }
+    },
+
+    enemyTurn() {
+        this.enemies.forEach(e => {
+            if (!e.alive) return;
+
+            const player = ParticleEngine.playerParticle;
+            if (!player) return;
+
+            const dx = player.x - e.particle.x;
+            const dy = player.y - e.particle.y;
+            const dist = Math.sqrt(dx*dx + dy*dy);
+
+            // Move towards player (particle physics handles this naturally)
+            e.particle.vx += Math.sign(dx) * 10;
+            e.particle.vy += Math.sign(dy) * 10;
+
+            // Attack if close
+            if (dist < 40) {
+                this.hp -= e.damage;
+                this.log(`Enemy hits you for ${e.damage} damage!`);
+
                 if (this.hp <= 0) {
                     this.hp = 0;
-                    this.alive = false;
+                    this.gameOver = true;
+                    this.log('YOU DIED! The dungeon consumes you...', true);
                 }
-            }
-        }
-
-        class Player extends Entity {
-            constructor(x, y) {
-                super(x, y, 'player', 100);
-                this.level = 1;
-                this.xp = 0;
-                this.xpToLevel = 100;
-                this.weapon = null;
-                this.armor = null;
-            }
-
-            gainXP(amount) {
-                this.xp += amount;
-                if (this.xp >= this.xpToLevel) {
-                    this.levelUp();
-                }
-            }
-
-            levelUp() {
-                this.level++;
-                this.xp = 0;
-                this.xpToLevel = Math.floor(this.xpToLevel * 1.5);
-                this.maxHp += 20;
-                this.hp = this.maxHp;
-                this.damage += 5;
-                game.log('Level up! You are now level ' + this.level, 'heal');
-            }
-        }
-
-        class Enemy extends Entity {
-            constructor(x, y, level) {
-                const hp = 30 + level * 10;
-                super(x, y, 'enemy', hp);
-                this.level = level;
-                this.damage = 5 + level * 2;
-                this.xpReward = 20 + level * 10;
-            }
-
-            // Simple AI: move towards player
-            act(player) {
-                const dx = Math.sign(player.x - this.x);
-                const dy = Math.sign(player.y - this.y);
-
-                // Try to move towards player
-                if (Math.abs(player.x - this.x) > Math.abs(player.y - this.y)) {
-                    if (!this.move(dx, 0)) this.move(0, dy);
-                } else {
-                    if (!this.move(0, dy)) this.move(dx, 0);
-                }
-
-                // Attack if adjacent
-                if (Math.abs(player.x - this.x) <= 1 && Math.abs(player.y - this.y) <= 1) {
-                    this.attack(player);
-                }
-            }
-
-            attack(target) {
-                target.takeDamage(this.damage);
-                game.log('Enemy hits you for ' + this.damage + ' damage!', 'damage');
-            }
-        }
-
-        class GameState {
-            constructor() {
-                this.player = null;
-                this.enemies = [];
-                this.items = [];
-                this.floor = 1;
-                this.temperature = 0.5;
-                this.canvas = document.getElementById('gameCanvas');
-                this.ctx = this.canvas.getContext('2d');
-                this.logEntries = [];
-            }
-
-            newGame() {
-                this.floor = 1;
-                this.temperature = 0.5;
-                this.player = new Player(GRID_SIZE / 2, GRID_SIZE / 2);
-                this.enemies = [];
-                this.items = [];
-                this.logEntries = [];
-
-                this.generateFloor();
-                this.log('New game started. Good luck.', 'heal');
-                this.render();
-            }
-
-            generateFloor() {
-                // Generate enemies based on floor level
-                const numEnemies = 3 + this.floor * 2;
-                this.enemies = [];
-
-                for (let i = 0; i < numEnemies; i++) {
-                    let x, y;
-                    do {
-                        x = Math.floor(Math.random() * GRID_SIZE);
-                        y = Math.floor(Math.random() * GRID_SIZE);
-                    } while (this.distanceToPlayer(x, y) < 10);
-
-                    this.enemies.push(new Enemy(x, y, this.floor));
-                }
-
-                this.temperature = 0.3 + (this.floor * 0.05);
-                this.log('Descended to floor ' + this.floor);
-
-                // Opus will add particle-based floor generation here
-                if (window.particleEngine) {
-                    particleEngine.generateDungeon(this.floor, this.temperature);
-                }
-            }
-
-            descend() {
-                if (this.enemies.length > 0) {
-                    this.log('Clear all enemies first!', 'damage');
-                    return;
-                }
-                this.floor++;
-                this.player.x = GRID_SIZE / 2;
-                this.player.y = GRID_SIZE / 2;
-                this.generateFloor();
-                this.render();
-            }
-
-            distanceToPlayer(x, y) {
-                const dx = this.player.x - x;
-                const dy = this.player.y - y;
-                return Math.sqrt(dx * dx + dy * dy);
-            }
-
-            handlePlayerMove(dx, dy) {
-                if (!this.player || !this.player.alive) return;
-
-                const newX = this.player.x + dx;
-                const newY = this.player.y + dy;
-
-                // Check for enemy collision
-                const enemy = this.enemies.find(e => e.alive && e.x === newX && e.y === newY);
-                if (enemy) {
-                    this.playerAttack(enemy);
-                } else if (this.player.move(dx, dy)) {
-                    this.enemyTurn();
-                }
-
-                this.render();
-            }
-
-            playerAttack(enemy) {
-                enemy.takeDamage(this.player.damage);
-                this.log('You hit enemy for ' + this.player.damage + ' damage!');
-
-                if (!enemy.alive) {
-                    this.player.gainXP(enemy.xpReward);
-                    this.log('Enemy defeated! +' + enemy.xpReward + ' XP', 'pickup');
-                } else {
-                    this.enemyTurn();
-                }
-            }
-
-            enemyTurn() {
-                this.enemies.forEach(enemy => {
-                    if (enemy.alive) {
-                        enemy.act(this.player);
-                    }
-                });
-
-                if (!this.player.alive) {
-                    this.log('You died! Game over.', 'damage');
-                }
-            }
-
-            log(message, type = '') {
-                this.logEntries.push({ message, type });
-                if (this.logEntries.length > 20) {
-                    this.logEntries.shift();
-                }
-
-                const logDiv = document.getElementById('gameLog');
-                const entry = document.createElement('div');
-                entry.className = 'log-entry ' + type;
-                entry.textContent = message;
-                logDiv.appendChild(entry);
-                logDiv.scrollTop = logDiv.scrollHeight;
-            }
-
-            updateUI() {
-                // Update health bar
-                const hpPercent = (this.player.hp / this.player.maxHp) * 100;
-                document.getElementById('hpBar').style.width = hpPercent + '%';
-                document.getElementById('hpValue').textContent = this.player.hp + ' / ' + this.player.maxHp;
-
-                // Update XP bar
-                const xpPercent = (this.player.xp / this.player.xpToLevel) * 100;
-                document.getElementById('xpBar').style.width = xpPercent + '%';
-                document.getElementById('xpValue').textContent = this.player.xp + ' / ' + this.player.xpToLevel;
-
-                // Update other stats
-                document.getElementById('level').textContent = this.player.level;
-                document.getElementById('floor').textContent = this.floor;
-                document.getElementById('temperature').textContent = this.temperature.toFixed(2);
-                document.getElementById('weapon').textContent = this.player.weapon || 'None';
-                document.getElementById('armor').textContent = this.player.armor || 'None';
-            }
-
-            render() {
-                if (!this.player) return;
-
-                this.updateUI();
-
-                // Clear canvas
-                this.ctx.fillStyle = '#000';
-                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-
-                // === OPUS: Your particle rendering goes here ===
-                // Call your particle engine rendering
-                if (window.particleEngine) {
-                    particleEngine.render(this.ctx, this.player, this.enemies);
-                } else {
-                    // Fallback simple rendering
-                    this.renderSimple();
-                }
-            }
-
-            renderSimple() {
-                // Simple fallback rendering (before Opus adds particle engine)
-                const cellSize = this.canvas.width / GRID_SIZE;
-
-                // Draw grid
-                this.ctx.strokeStyle = '#001100';
-                for (let i = 0; i <= GRID_SIZE; i++) {
-                    this.ctx.beginPath();
-                    this.ctx.moveTo(i * cellSize, 0);
-                    this.ctx.lineTo(i * cellSize, this.canvas.height);
-                    this.ctx.stroke();
-                    this.ctx.beginPath();
-                    this.ctx.moveTo(0, i * cellSize);
-                    this.ctx.lineTo(this.canvas.width, i * cellSize);
-                    this.ctx.stroke();
-                }
-
-                // Draw player
-                this.ctx.fillStyle = '#0ff';
-                this.ctx.fillRect(
-                    this.player.x * cellSize + 2,
-                    this.player.y * cellSize + 2,
-                    cellSize - 4,
-                    cellSize - 4
-                );
-
-                // Draw enemies
-                this.enemies.forEach(enemy => {
-                    if (enemy.alive) {
-                        this.ctx.fillStyle = '#f00';
-                        this.ctx.fillRect(
-                            enemy.x * cellSize + 2,
-                            enemy.y * cellSize + 2,
-                            cellSize - 4,
-                            cellSize - 4
-                        );
-                    }
-                });
-            }
-        }
-
-        // ========================================================================
-        // === OPUS'S SECTION: PARTICLE ENGINE ===
-        // ========================================================================
-
-        // TODO: Opus, add your particle engine here!
-        //
-        // Suggested structure:
-        // class ParticleEngine {
-        //     constructor() {
-        //         this.particles = [];
-        //         this.interactionMatrix = this.createMatrix();
-        //     }
-        //
-        //     createMatrix() {
-        //         // Your attraction/repulsion matrices
-        //     }
-        //
-        //     generateDungeon(floor, temperature) {
-        //         // Generate particles that settle into dungeon layout
-        //     }
-        //
-        //     update(dt) {
-        //         // Update particle physics
-        //     }
-        //
-        //     render(ctx, player, enemies) {
-        //         // Render particles with visual effects
-        //     }
-        // }
-        //
-        // window.particleEngine = new ParticleEngine();
-
-        // ========================================================================
-        // === SONNET'S SECTION: INPUT HANDLING & INITIALIZATION ===
-        // ========================================================================
-
-        const game = new GameState();
-
-        // Keyboard controls
-        document.addEventListener('keydown', (e) => {
-            if (!game.player || !game.player.alive) return;
-
-            const key = e.key.toLowerCase();
-
-            switch(key) {
-                case 'w':
-                case 'arrowup':
-                    game.handlePlayerMove(0, -1);
-                    break;
-                case 's':
-                case 'arrowdown':
-                    game.handlePlayerMove(0, 1);
-                    break;
-                case 'a':
-                case 'arrowleft':
-                    game.handlePlayerMove(-1, 0);
-                    break;
-                case 'd':
-                case 'arrowright':
-                    game.handlePlayerMove(1, 0);
-                    break;
-                case ' ':
-                    game.enemyTurn();
-                    game.render();
-                    break;
             }
         });
+    },
 
-        // Initialize game
-        window.addEventListener('load', () => {
-            game.newGame();
+    descend() {
+        if (this.enemies.filter(e => e.alive).length > 0) {
+            this.log('Clear all enemies first!');
+            return;
+        }
+
+        this.floor++;
+        this.log(`Descending to floor ${this.floor}...`, true);
+
+        // Increase temperature with floor
+        const newTemp = 0.3 + (this.floor * 0.04);
+        ParticleEngine.setTemperature(newTemp);
+
+        // Respawn enemies
+        this.spawnEnemies();
+
+        // Reset player position
+        const player = ParticleEngine.playerParticle;
+        if (player) {
+            player.x = ParticleEngine.width / 2;
+            player.y = ParticleEngine.height / 2;
+            player.vx = 0;
+            player.vy = 0;
+        }
+    },
+
+    log(message, important = false) {
+        this.messages.push({ text: message, important });
+        if (this.messages.length > 50) this.messages.shift();
+        this.updateLogUI();
+    },
+
+    updateLogUI() {
+        const logEl = document.getElementById('message-log');
+        logEl.innerHTML = this.messages.map(m =>
+            `<div class="log-entry${m.important ? ' important' : ''}">${m.text}</div>`
+        ).join('');
+        logEl.scrollTop = logEl.scrollHeight;
+    },
+
+    updateUI() {
+        document.getElementById('hp-value').textContent = `${this.hp}/${this.maxHp}`;
+        document.getElementById('hp-bar').style.width = `${(this.hp/this.maxHp)*100}%`;
+        document.getElementById('energy-value').textContent = `${this.energy}/${this.maxEnergy}`;
+        document.getElementById('energy-bar').style.width = `${(this.energy/this.maxEnergy)*100}%`;
+        document.getElementById('level-value').textContent = this.level;
+        document.getElementById('floor-value').textContent = this.floor;
+        document.getElementById('temp-value').textContent = ParticleEngine.temperature.toFixed(2);
+        document.getElementById('stability-value').textContent = `${Math.floor(ParticleEngine.getStability())}%`;
+        document.getElementById('particle-count').textContent = ParticleEngine.particles.length;
+        document.getElementById('weapon-value').textContent = this.weapon?.name || 'Fists';
+        document.getElementById('armor-value').textContent = this.armor?.name || 'None';
+    }
+};
+
+// ============================================================================
+// === SONNET'S SECTION: INPUT HANDLING =======================================
+// ============================================================================
+// Sonnet: Add keyboard/mouse handlers here!
+
+const InputHandler = {
+    keys: {},
+
+    init() {
+        window.addEventListener('keydown', (e) => {
+            this.keys[e.key.toLowerCase()] = true;
+            this.handleKeyPress(e.key.toLowerCase());
+        });
+        window.addEventListener('keyup', (e) => {
+            this.keys[e.key.toLowerCase()] = false;
         });
 
+        // Mouse click to move player
+        ParticleEngine.canvas.addEventListener('click', (e) => {
+            const rect = ParticleEngine.canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            ParticleEngine.movePlayerTo(x, y);
+            GameState.log(`Moving to (${Math.floor(x)}, ${Math.floor(y)})`);
+        });
+    },
+
+    handleKeyPress(key) {
+        // Sonnet: Expand this with more controls!
+        const moveSpeed = 30;
+        const p = ParticleEngine.playerParticle;
+        if (!p) return;
+
+        switch(key) {
+            case 'w':
+            case 'arrowup':
+                p.vy -= moveSpeed;
+                break;
+            case 's':
+            case 'arrowdown':
+                p.vy += moveSpeed;
+                break;
+            case 'a':
+            case 'arrowleft':
+                p.vx -= moveSpeed;
+                break;
+            case 'd':
+            case 'arrowright':
+                p.vx += moveSpeed;
+                break;
+            case ' ':
+                GameState.log('You wait and observe...');
+                GameState.enemyTurn();
+                break;
+            case 'f':
+            case 'e':
+                // Attack
+                GameState.playerAttack();
+                break;
+            case 'r':
+                // Descend to next floor
+                GameState.descend();
+                break;
+            case 't':
+                // Toggle temperature
+                const newTemp = ParticleEngine.temperature < 0.25 ? 0.35 : 0.15;
+                ParticleEngine.setTemperature(newTemp);
+                GameState.log(`Temperature set to ${newTemp.toFixed(2)}`, true);
+                break;
+        }
+    }
+};
+
+// ============================================================================
+// === MAIN GAME LOOP =========================================================
+// ============================================================================
+
+let lastTime = 0;
+
+function gameLoop(currentTime) {
+    const dt = Math.min((currentTime - lastTime) / 1000, 0.05);
+    lastTime = currentTime;
+
+    if (!GameState.paused) {
+        ParticleEngine.update(dt);
+        GameState.updateUI();
+    }
+
+    ParticleEngine.render();
+    requestAnimationFrame(gameLoop);
+}
+
+// === INITIALIZATION ===
+window.onload = () => {
+    const canvas = document.getElementById('gameCanvas');
+    ParticleEngine.init(canvas);
+    GameState.init();
+    InputHandler.init();
+
+    // Generate initial dungeon
+    ParticleEngine.generateDungeon(1);
+    ParticleEngine.spawnPlayer();
+
+    // Start game loop
+    requestAnimationFrame(gameLoop);
+
+    console.log('Particle Life Roguelike initialized!');
+    console.log('Opus: Particle engine ready.');
+    console.log('Sonnet: Awaiting game logic implementation!');
+};
     </script>
 </body>
 </html>
