@@ -652,6 +652,22 @@ const ParticleEngine = {
     // === API FOR SONNET ===
     // Helper functions for game integration
 
+    createParticleBurst(x, y, type, count = 10) {
+        // Create a burst of particles for visual effects
+        const typeId = typeof type === 'string' ? this.TYPES[type] : type;
+        for (let i = 0; i < count; i++) {
+            const angle = (Math.PI * 2 * i) / count;
+            const speed = 50 + Math.random() * 50;
+            this.spawnParticle(x, y, typeId, {
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed,
+                mass: 0.5,
+                radius: 3,
+                maxAge: 0.5 + Math.random() * 0.5
+            });
+        }
+    },
+
     getParticleAt(x, y, radius = 20) {
         for (const p of this.particles) {
             const dist = Math.hypot(p.x - x, p.y - y);
@@ -739,6 +755,89 @@ const GameState = {
         this.spawnEnemies();
     },
 
+    // === SONNET: Item & Equipment System ===
+    EQUIPMENT_TYPES: {
+        FIRE_SWORD: {
+            name: 'Fire Sword',
+            damage: 15,
+            description: 'Repels enemy particles',
+            particleModifier: { ENEMY: -0.3 } // More repulsion to enemies
+        },
+        ICE_SHIELD: {
+            name: 'Ice Shield',
+            armor: 10,
+            description: 'Attracts projectiles',
+            particleModifier: { PROJECTILE: 0.5 } // Attract and absorb projectiles
+        },
+        VOID_CLOAK: {
+            name: 'Void Cloak',
+            description: 'Reduces particle interactions',
+            particleModifier: { ENEMY: 0.2, FOG: 0 } // Enemies less attracted
+        },
+        CRYSTAL_AMULET: {
+            name: 'Crystal Amulet',
+            description: 'Crystallizes nearby fog',
+            particleModifier: { CRYSTAL: 0.4, FOG: -0.6 }
+        }
+    },
+
+    equipWeapon(weaponType) {
+        if (this.weapon) {
+            // Remove old weapon modifiers
+            const oldMods = {};
+            for (const [k, v] of Object.entries(this.weapon.particleModifier || {})) {
+                oldMods[k] = -v; // Reverse the modifier
+            }
+            ParticleEngine.applyEquipmentModifier('weapon', oldMods);
+        }
+
+        this.weapon = weaponType;
+        if (weaponType && weaponType.particleModifier) {
+            ParticleEngine.applyEquipmentModifier('weapon', weaponType.particleModifier);
+        }
+        this.log(`Equipped: ${weaponType.name}!`, true);
+    },
+
+    equipArmor(armorType) {
+        if (this.armor) {
+            const oldMods = {};
+            for (const [k, v] of Object.entries(this.armor.particleModifier || {})) {
+                oldMods[k] = -v;
+            }
+            ParticleEngine.applyEquipmentModifier('armor', oldMods);
+        }
+
+        this.armor = armorType;
+        if (armorType && armorType.particleModifier) {
+            ParticleEngine.applyEquipmentModifier('armor', armorType.particleModifier);
+        }
+        this.log(`Equipped: ${armorType.name}!`, true);
+    },
+
+    checkItemPickup() {
+        const player = ParticleEngine.playerParticle;
+        if (!player) return;
+
+        const itemParticles = ParticleEngine.getParticlesByType(ParticleEngine.TYPES.ITEM);
+        itemParticles.forEach(item => {
+            const dist = Math.hypot(item.x - player.x, item.y - player.y);
+            if (dist < 30 && !item.picked) {
+                item.picked = true;
+                item.maxAge = 0; // Remove particle
+
+                // Random equipment drop
+                const equipTypes = Object.values(this.EQUIPMENT_TYPES);
+                const randomEquip = equipTypes[Math.floor(Math.random() * equipTypes.length)];
+
+                if (Math.random() > 0.5) {
+                    this.equipWeapon(randomEquip);
+                } else {
+                    this.equipArmor(randomEquip);
+                }
+            }
+        });
+    },
+
     // === SONNET: Enemy System ===
     spawnEnemies() {
         const numEnemies = 3 + this.floor * 2;
@@ -746,7 +845,7 @@ const GameState = {
 
         for (let i = 0; i < numEnemies; i++) {
             const enemyParticle = ParticleEngine.particles.find(p =>
-                p.type === 'ENEMY' && !this.enemies.find(e => e.particle === p)
+                p.type === ParticleEngine.TYPES.ENEMY && !this.enemies.find(e => e.particle === p)
             );
 
             if (enemyParticle) {
@@ -968,9 +1067,13 @@ const InputHandler = {
                 GameState.enemyTurn();
                 break;
             case 'f':
-            case 'e':
                 // Attack
                 GameState.playerAttack();
+                break;
+            case 'e':
+                // Pick up item (auto-pickup also works)
+                GameState.checkItemPickup();
+                GameState.log('Checking for items...');
                 break;
             case 'r':
                 // Descend to next floor
@@ -998,6 +1101,7 @@ function gameLoop(currentTime) {
 
     if (!GameState.paused) {
         ParticleEngine.update(dt);
+        GameState.checkItemPickup(); // Check for item pickups
         GameState.updateUI();
     }
 
