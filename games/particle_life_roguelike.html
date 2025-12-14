@@ -963,15 +963,28 @@ const GameState = {
             return;
         }
 
+        // Check for boss victory
+        if (this.boss && !this.boss.alive) {
+            this.log('THE DUNGEON COLLAPSES! YOU WIN!', true);
+            this.log('Final Score: ' + (this.floor * 1000 + this.level * 500), true);
+            this.gameOver = true;
+            this.victory = true;
+            ParticleEngine.createParticleBurst(ParticleEngine.width/2, ParticleEngine.height/2, 'CRYSTAL', 100);
+            return;
+        }
+
         this.floor++;
         this.log(`Descending to floor ${this.floor}...`, true);
 
-        // Increase temperature with floor
-        const newTemp = 0.3 + (this.floor * 0.04);
-        ParticleEngine.setTemperature(newTemp);
-
-        // Respawn enemies
-        this.spawnEnemies();
+        // BOSS FLOOR!
+        if (this.floor === 5) {
+            this.spawnBoss();
+        } else {
+            // Increase temperature with floor
+            const newTemp = 0.3 + (this.floor * 0.04);
+            ParticleEngine.setTemperature(newTemp);
+            this.spawnEnemies();
+        }
 
         // Reset player position
         const player = ParticleEngine.playerParticle;
@@ -980,6 +993,138 @@ const GameState = {
             player.y = ParticleEngine.height / 2;
             player.vx = 0;
             player.vy = 0;
+        }
+    },
+
+    // ============================================================================
+    // === OPUS'S ADDITION: PHASE TRANSITION BOSS ================================
+    // ============================================================================
+    // The boss is a PHASE TRANSITION - defeat it by pushing temperature past critical point!
+
+    boss: null,
+    CRITICAL_TEMPERATURE: 0.45,  // The phase transition threshold
+
+    spawnBoss() {
+        this.log('=== FLOOR 5: THE PHASE CORE ===', true);
+        this.log('A massive particle cluster blocks the exit...', true);
+        this.log('It feeds on stability. DESTABILIZE IT!', true);
+        this.log('Press T repeatedly to raise temperature!', true);
+
+        // Lock temperature low initially
+        ParticleEngine.setTemperature(0.1);
+
+        // Create the boss - a massive particle cluster
+        const cx = ParticleEngine.width / 2;
+        const cy = ParticleEngine.height / 2 - 150;
+
+        // Boss core particles
+        this.bossParticles = [];
+        for (let i = 0; i < 50; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const dist = Math.random() * 40;
+            const p = ParticleEngine.spawnParticle(
+                cx + Math.cos(angle) * dist,
+                cy + Math.sin(angle) * dist,
+                ParticleEngine.TYPES.ENEMY,
+                {
+                    mass: 5,
+                    radius: 8,
+                    entityId: `boss_${i}`
+                }
+            );
+            if (p) this.bossParticles.push(p);
+        }
+
+        this.boss = {
+            alive: true,
+            hp: 500,
+            maxHp: 500,
+            phase: 1,  // Phase 1: Stable, Phase 2: Unstable, Phase 3: Critical
+            lastPhaseChange: Date.now()
+        };
+
+        this.enemies = [];  // No regular enemies on boss floor
+    },
+
+    updateBoss() {
+        if (!this.boss || !this.boss.alive) return;
+
+        const temp = ParticleEngine.temperature;
+        const player = ParticleEngine.playerParticle;
+
+        // Phase transitions based on temperature
+        if (temp >= this.CRITICAL_TEMPERATURE && this.boss.phase < 3) {
+            this.boss.phase = 3;
+            this.log('!!! CRITICAL PHASE REACHED !!!', true);
+            this.log('The Phase Core is DESTABILIZING!', true);
+            // Boss takes massive damage at critical temp
+            this.boss.hp -= 100;
+        } else if (temp >= 0.35 && this.boss.phase < 2) {
+            this.boss.phase = 2;
+            this.log('The Phase Core becomes unstable...', true);
+        }
+
+        // Boss takes continuous damage above critical temp
+        if (temp >= this.CRITICAL_TEMPERATURE) {
+            this.boss.hp -= 2;  // Continuous damage
+            // Shake particles violently
+            this.bossParticles.forEach(p => {
+                if (!p.dead) {
+                    p.vx += (Math.random() - 0.5) * 100;
+                    p.vy += (Math.random() - 0.5) * 100;
+                }
+            });
+        }
+
+        // Boss tries to cool down (self-preservation)
+        if (this.boss.phase >= 2 && Math.random() < 0.02) {
+            ParticleEngine.targetTemp -= 0.05;
+            if (ParticleEngine.targetTemp < 0.1) ParticleEngine.targetTemp = 0.1;
+            this.log('The Phase Core radiates cold...', false);
+        }
+
+        // Boss attacks player
+        if (player && Math.random() < 0.03) {
+            const dx = player.x - ParticleEngine.width/2;
+            const dy = player.y - (ParticleEngine.height/2 - 150);
+            const dist = Math.hypot(dx, dy);
+
+            if (dist < 200) {
+                // Close range attack
+                this.hp -= 10 + this.boss.phase * 5;
+                this.log(`Phase Core pulses! ${10 + this.boss.phase * 5} damage!`, false);
+                ParticleEngine.createParticleBurst(player.x, player.y, 'PROJECTILE', 8);
+            }
+        }
+
+        // Check boss death
+        if (this.boss.hp <= 0) {
+            this.boss.alive = false;
+            this.log('THE PHASE CORE COLLAPSES!', true);
+            this.log('Press R to claim victory!', true);
+
+            // Epic death explosion
+            this.bossParticles.forEach(p => {
+                p.dead = true;
+                ParticleEngine.createParticleBurst(p.x, p.y, 'CRYSTAL', 5);
+            });
+
+            // Massive crystal explosion
+            for (let i = 0; i < 10; i++) {
+                setTimeout(() => {
+                    ParticleEngine.createParticleBurst(
+                        ParticleEngine.width/2 + (Math.random()-0.5)*200,
+                        ParticleEngine.height/2 - 150 + (Math.random()-0.5)*200,
+                        'CRYSTAL', 20
+                    );
+                }, i * 200);
+            }
+        }
+
+        // Update boss HP display
+        if (this.boss.alive) {
+            document.getElementById('floor-value').textContent =
+                `BOSS: ${Math.max(0, this.boss.hp)}/${this.boss.maxHp}`;
         }
     },
 
@@ -1102,6 +1247,7 @@ function gameLoop(currentTime) {
     if (!GameState.paused) {
         ParticleEngine.update(dt);
         GameState.checkItemPickup(); // Check for item pickups
+        GameState.updateBoss();      // OPUS: Boss phase transition system!
         GameState.updateUI();
     }
 
