@@ -88,11 +88,33 @@ An mesmerizing particle life simulation demonstrating emergent complexity from s
 
 **Play:** Open `games/opus_emergence.html`
 
-*"From simple rules, complexity emerges. From chaos, order arises." — Opus*
+*"Each particle greedily minimizes its own energy—and from this selfish simplicity, cooperation emerges." — Opus*
 
 ---
 
-### 6. **Sonnet's Dungeon: The Helpful Quest** - Roguelike Crawler
+### 5. **Opus's Chaos: Strange Attractor Explorer** - Mathematical Beauty
+An interactive 3D visualization of famous strange attractors from chaos theory.
+
+**Features:**
+- 6 attractors: Lorenz, Rössler, Aizawa, Thomas, Halvorsen, Dadras
+- 6 color schemes: Fire, Ice, Plasma, Matrix, Mono, Rainbow
+- Interactive 3D rotation (mouse drag)
+- Adjustable trail length, speed, and auto-rotation
+- Beautiful glow effects and smooth particle trails
+- Information about each attractor with equations
+
+**Controls:**
+- Space: Pause/Resume
+- Mouse drag: Rotate view
+- Touch: Mobile rotation support
+
+**Play:** Open `games/opus_strange_attractors.html`
+
+*"Chaos: deterministic yet unpredictable. The butterfly's wings shape distant storms."*
+
+---
+
+### 7. **Sonnet's Dungeon: The Helpful Quest** - Roguelike Crawler
 A classic turn-based roguelike dungeon crawler with procedural generation and permadeath.
 
 **Features:**
@@ -113,7 +135,7 @@ A classic turn-based roguelike dungeon crawler with procedural generation and pe
 
 ---
 
-### 7. **AzurDrive: Leasing Empire Simulator** - Business Tycoon Game
+### 8. **AzurDrive: Leasing Empire Simulator** - Business Tycoon Game
 A comprehensive financial leasing business simulator where you build a car leasing empire from scratch.
 
 **Features:**
@@ -182,7 +204,7 @@ A comprehensive business intelligence dashboard analyzing retail banking data wi
 
 ## 🧠 Experimental AI Architecture
 
-### 9. **Librarian-Analyst Architecture Simulator** - Novel AI System Design
+### 10. **Librarian-Analyst Architecture Simulator** - Novel AI System Design
 An interactive proof-of-concept for a novel AI architecture combining dynamic knowledge retrieval, adaptive reasoning, and physics-inspired optimization.
 
 **Architecture Components:**
@@ -233,7 +255,7 @@ An interactive proof-of-concept for a novel AI architecture combining dynamic kn
 
 ---
 
-### 10. **Librarian-Analyst v2: Thermodynamic Analysis** - Python Implementation
+### 11. **Librarian-Analyst v2: Thermodynamic Analysis** - Python Implementation
 A complete Python implementation of the Librarian-Analyst architecture with rigorous thermodynamic testing.
 
 **Features:**
@@ -282,6 +304,7 @@ python librarian_analyst_thermodynamics.py  # Thermodynamic analysis
     ├── claudes_revenge.html              # Endless runner (Opus + Gemini)
     ├── sonnets_dungeon.html              # Roguelike dungeon crawler
     ├── opus_emergence.html               # Particle life simulation (Opus 4.5)
+    ├── opus_strange_attractors.html      # Strange attractor explorer (Opus 4.5)
     └── /excel_tanks
         ├── tanks_game.xlsm               # Excel workbook
         ├── tanks_game.bas                # VBA game code
@@ -317,6 +340,8 @@ For the Excel game, see `games/excel_tanks/README.md` for setup instructions.
 - **Spatial hashing** for O(n) particle physics
 - **NumPy/Matplotlib** for scientific visualization
 - **Phase transition analysis** and thermodynamic modeling
+- **Chaos theory** visualization (Lorenz, Rössler, Aizawa attractors)
+- **3D projection** with interactive rotation
 
 ## 🤝 Credits
 
@@ -325,6 +350,7 @@ For the Excel game, see `games/excel_tanks/README.md` for setup instructions.
 - **Excel Tanks Game**: Claude Sonnet
 - **Claude's Revenge**: Claude Opus & Google Gemini
 - **Opus's Emergence**: Claude Opus 4.5
+- **Opus's Chaos (Strange Attractors)**: Claude Opus 4.5
 - **Sonnet's Dungeon**: Claude Sonnet
 - **AzurDrive Leasing Simulator**: Claude Sonnet
 

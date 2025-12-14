@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OPUS'S CHAOS: Strange Attractor Explorer</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@300;500&display=swap');
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Rajdhani', sans-serif;
+            background: #0a0a0f;
+            overflow: hidden;
+            height: 100vh;
+            color: #fff;
+        }
+
+        canvas {
+            display: block;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+        #ui {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 10;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            padding: 20px;
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            width: 260px;
+        }
+
+        h1 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 16px;
+            margin-bottom: 5px;
+            background: linear-gradient(135deg, #ff6b6b, #feca57, #48dbfb, #ff9ff3);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            font-size: 11px;
+            color: #666;
+            margin-bottom: 15px;
+        }
+
+        .section {
+            margin-bottom: 15px;
+        }
+
+        .section-title {
+            font-size: 10px;
+            color: #48dbfb;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 8px;
+        }
+
+        button {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 12px;
+            margin: 2px;
+            transition: all 0.3s;
+        }
+
+        button:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.02);
+        }
+
+        button.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-color: #667eea;
+        }
+
+        .slider-group {
+            margin: 8px 0;
+        }
+
+        .slider-group label {
+            font-size: 11px;
+            color: #888;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 3px;
+            -webkit-appearance: none;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 2px;
+            outline: none;
+            margin-top: 5px;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 12px;
+            height: 12px;
+            background: #48dbfb;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        .info-box {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 11px;
+            line-height: 1.5;
+            color: #aaa;
+        }
+
+        .equation {
+            font-family: 'Courier New', monospace;
+            font-size: 10px;
+            color: #feca57;
+            margin: 5px 0;
+        }
+
+        #quote {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.4);
+            font-style: italic;
+            text-align: center;
+            max-width: 500px;
+            z-index: 10;
+        }
+
+        .color-mode {
+            display: flex;
+            gap: 5px;
+            flex-wrap: wrap;
+        }
+
+        .color-btn {
+            width: 25px;
+            height: 25px;
+            border-radius: 50%;
+            border: 2px solid transparent;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .color-btn:hover {
+            transform: scale(1.1);
+        }
+
+        .color-btn.active {
+            border-color: white;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+
+    <div id="ui">
+        <h1>OPUS'S CHAOS</h1>
+        <div class="subtitle">Strange Attractor Explorer</div>
+
+        <div class="section">
+            <div class="section-title">Attractor Type</div>
+            <button class="active" onclick="setAttractor('lorenz')">Lorenz</button>
+            <button onclick="setAttractor('rossler')">Rössler</button>
+            <button onclick="setAttractor('aizawa')">Aizawa</button>
+            <button onclick="setAttractor('thomas')">Thomas</button>
+            <button onclick="setAttractor('halvorsen')">Halvorsen</button>
+            <button onclick="setAttractor('dadras')">Dadras</button>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Color Scheme</div>
+            <div class="color-mode">
+                <div class="color-btn active" style="background: linear-gradient(135deg, #ff6b6b, #feca57)" onclick="setColorScheme('fire')" title="Fire"></div>
+                <div class="color-btn" style="background: linear-gradient(135deg, #48dbfb, #0abde3)" onclick="setColorScheme('ice')" title="Ice"></div>
+                <div class="color-btn" style="background: linear-gradient(135deg, #ff9ff3, #f368e0)" onclick="setColorScheme('plasma')" title="Plasma"></div>
+                <div class="color-btn" style="background: linear-gradient(135deg, #1dd1a1, #10ac84)" onclick="setColorScheme('matrix')" title="Matrix"></div>
+                <div class="color-btn" style="background: linear-gradient(135deg, #fff, #888)" onclick="setColorScheme('mono')" title="Mono"></div>
+                <div class="color-btn" style="background: conic-gradient(red, yellow, lime, aqua, blue, magenta, red)" onclick="setColorScheme('rainbow')" title="Rainbow"></div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Parameters</div>
+            <div class="slider-group">
+                <label><span>Trail Length</span><span id="trailVal">500</span></label>
+                <input type="range" id="trailSlider" min="100" max="2000" value="500" oninput="updateTrail()">
+            </div>
+            <div class="slider-group">
+                <label><span>Speed</span><span id="speedVal">1.0</span></label>
+                <input type="range" id="speedSlider" min="1" max="30" value="10" oninput="updateSpeed()">
+            </div>
+            <div class="slider-group">
+                <label><span>Rotation</span><span id="rotVal">0.2</span></label>
+                <input type="range" id="rotSlider" min="0" max="20" value="2" oninput="updateRot()">
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Controls</div>
+            <button onclick="resetView()">Reset View</button>
+            <button onclick="togglePause()">Pause</button>
+            <button onclick="clearTrails()">Clear</button>
+        </div>
+
+        <div class="section">
+            <div class="section-title">About</div>
+            <div class="info-box" id="info">
+                <strong>Lorenz Attractor</strong><br>
+                Discovered by Edward Lorenz in 1963 while studying weather patterns. The butterfly shape demonstrates sensitive dependence on initial conditions.
+                <div class="equation">dx/dt = σ(y - x)</div>
+                <div class="equation">dy/dt = x(ρ - z) - y</div>
+                <div class="equation">dz/dt = xy - βz</div>
+            </div>
+        </div>
+    </div>
+
+    <div id="quote">"Chaos: deterministic yet unpredictable. The butterfly's wings shape distant storms."</div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        // Resize
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        // Configuration
+        let currentAttractor = 'lorenz';
+        let colorScheme = 'fire';
+        let trailLength = 500;
+        let speed = 1.0;
+        let rotationSpeed = 0.002;
+        let paused = false;
+        let rotation = { x: 0, y: 0, z: 0 };
+
+        // Trail points
+        let points = [];
+        let state = { x: 0.1, y: 0, z: 0 };
+
+        // Attractor definitions
+        const attractors = {
+            lorenz: {
+                name: 'Lorenz Attractor',
+                info: 'Discovered by Edward Lorenz in 1963 while studying weather patterns. The butterfly shape demonstrates sensitive dependence on initial conditions.',
+                equations: ['dx/dt = σ(y - x)', 'dy/dt = x(ρ - z) - y', 'dz/dt = xy - βz'],
+                params: { sigma: 10, rho: 28, beta: 8/3 },
+                scale: 12,
+                dt: 0.005,
+                step: function(s, p) {
+                    const dx = p.sigma * (s.y - s.x);
+                    const dy = s.x * (p.rho - s.z) - s.y;
+                    const dz = s.x * s.y - p.beta * s.z;
+                    return { dx, dy, dz };
+                }
+            },
+            rossler: {
+                name: 'Rössler Attractor',
+                info: 'Created by Otto Rössler in 1976 to study chemical kinetics. Simpler than Lorenz but still exhibits chaotic behavior.',
+                equations: ['dx/dt = -y - z', 'dy/dt = x + ay', 'dz/dt = b + z(x - c)'],
+                params: { a: 0.2, b: 0.2, c: 5.7 },
+                scale: 5,
+                dt: 0.01,
+                step: function(s, p) {
+                    const dx = -s.y - s.z;
+                    const dy = s.x + p.a * s.y;
+                    const dz = p.b + s.z * (s.x - p.c);
+                    return { dx, dy, dz };
+                }
+            },
+            aizawa: {
+                name: 'Aizawa Attractor',
+                info: 'A beautiful 3D chaotic system with torus-like structure. Creates intricate spiraling patterns.',
+                equations: ['dx/dt = (z-b)x - dy', 'dy/dt = dx + (z-b)y', 'dz/dt = c + az - z³/3 - (x²+y²)(1+ez) + fzx³'],
+                params: { a: 0.95, b: 0.7, c: 0.6, d: 3.5, e: 0.25, f: 0.1 },
+                scale: 4,
+                dt: 0.01,
+                step: function(s, p) {
+                    const dx = (s.z - p.b) * s.x - p.d * s.y;
+                    const dy = p.d * s.x + (s.z - p.b) * s.y;
+                    const dz = p.c + p.a * s.z - Math.pow(s.z, 3) / 3 - (s.x * s.x + s.y * s.y) * (1 + p.e * s.z) + p.f * s.z * Math.pow(s.x, 3);
+                    return { dx, dy, dz };
+                }
+            },
+            thomas: {
+                name: 'Thomas Attractor',
+                info: 'Discovered by René Thomas. A cyclically symmetric system with beautiful 3D structure.',
+                equations: ['dx/dt = sin(y) - bx', 'dy/dt = sin(z) - by', 'dz/dt = sin(x) - bz'],
+                params: { b: 0.208186 },
+                scale: 2.5,
+                dt: 0.05,
+                step: function(s, p) {
+                    const dx = Math.sin(s.y) - p.b * s.x;
+                    const dy = Math.sin(s.z) - p.b * s.y;
+                    const dz = Math.sin(s.x) - p.b * s.z;
+                    return { dx, dy, dz };
+                }
+            },
+            halvorsen: {
+                name: 'Halvorsen Attractor',
+                info: 'A symmetric chaotic system with three intertwined wings. Exhibits beautiful rotational symmetry.',
+                equations: ['dx/dt = -ax - 4y - 4z - y²', 'dy/dt = -ay - 4z - 4x - z²', 'dz/dt = -az - 4x - 4y - x²'],
+                params: { a: 1.89 },
+                scale: 4,
+                dt: 0.005,
+                step: function(s, p) {
+                    const dx = -p.a * s.x - 4 * s.y - 4 * s.z - s.y * s.y;
+                    const dy = -p.a * s.y - 4 * s.z - 4 * s.x - s.z * s.z;
+                    const dz = -p.a * s.z - 4 * s.x - 4 * s.y - s.x * s.x;
+                    return { dx, dy, dz };
+                }
+            },
+            dadras: {
+                name: 'Dadras Attractor',
+                info: 'A newer chaotic system discovered by Sara Dadras. Creates beautiful flowing trajectories.',
+                equations: ['dx/dt = y - px + qyz', 'dy/dt = ry - xz + z', 'dz/dt = sxy - oz'],
+                params: { p: 3, q: 2.7, r: 1.7, s: 2, o: 9 },
+                scale: 8,
+                dt: 0.005,
+                step: function(s, p) {
+                    const dx = s.y - p.p * s.x + p.q * s.y * s.z;
+                    const dy = p.r * s.y - s.x * s.z + s.z;
+                    const dz = p.s * s.x * s.y - p.o * s.z;
+                    return { dx, dy, dz };
+                }
+            }
+        };
+
+        // Color schemes
+        const colorSchemes = {
+            fire: (t) => {
+                const r = Math.floor(255);
+                const g = Math.floor(100 + 155 * t);
+                const b = Math.floor(50 * (1 - t));
+                return `rgb(${r},${g},${b})`;
+            },
+            ice: (t) => {
+                const r = Math.floor(50 + 150 * (1 - t));
+                const g = Math.floor(180 + 75 * t);
+                const b = Math.floor(255);
+                return `rgb(${r},${g},${b})`;
+            },
+            plasma: (t) => {
+                const r = Math.floor(200 + 55 * t);
+                const g = Math.floor(50 + 100 * (1 - t));
+                const b = Math.floor(255);
+                return `rgb(${r},${g},${b})`;
+            },
+            matrix: (t) => {
+                const r = Math.floor(20);
+                const g = Math.floor(150 + 105 * t);
+                const b = Math.floor(50 + 50 * (1 - t));
+                return `rgb(${r},${g},${b})`;
+            },
+            mono: (t) => {
+                const v = Math.floor(150 + 105 * t);
+                return `rgb(${v},${v},${v})`;
+            },
+            rainbow: (t) => {
+                const h = t * 360;
+                return `hsl(${h}, 80%, 60%)`;
+            }
+        };
+
+        // Project 3D to 2D with rotation
+        function project(x, y, z) {
+            // Apply rotations
+            let x1 = x;
+            let y1 = y * Math.cos(rotation.x) - z * Math.sin(rotation.x);
+            let z1 = y * Math.sin(rotation.x) + z * Math.cos(rotation.x);
+
+            let x2 = x1 * Math.cos(rotation.y) + z1 * Math.sin(rotation.y);
+            let y2 = y1;
+            let z2 = -x1 * Math.sin(rotation.y) + z1 * Math.cos(rotation.y);
+
+            // Perspective projection
+            const fov = 300;
+            const distance = fov / (fov + z2 + 50);
+
+            return {
+                x: canvas.width / 2 + x2 * distance * canvas.height / 4,
+                y: canvas.height / 2 - y2 * distance * canvas.height / 4,
+                depth: z2
+            };
+        }
+
+        // Initialize
+        function init() {
+            state = { x: 0.1, y: 0, z: 0 };
+            points = [];
+        }
+
+        // Update simulation
+        function update() {
+            if (paused) return;
+
+            const attr = attractors[currentAttractor];
+            const dt = attr.dt * speed;
+
+            // Multiple steps per frame for smoothness
+            for (let i = 0; i < 5; i++) {
+                const d = attr.step(state, attr.params);
+                state.x += d.dx * dt;
+                state.y += d.dy * dt;
+                state.z += d.dz * dt;
+
+                // Scale and store point
+                const scale = attr.scale;
+                points.push({
+                    x: state.x / scale,
+                    y: state.y / scale,
+                    z: state.z / scale
+                });
+            }
+
+            // Trim trail
+            while (points.length > trailLength) {
+                points.shift();
+            }
+
+            // Auto-rotate
+            rotation.y += rotationSpeed;
+        }
+
+        // Render
+        function render() {
+            // Clear with fade
+            ctx.fillStyle = 'rgba(10, 10, 15, 0.1)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            if (points.length < 2) return;
+
+            // Draw trail
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+
+            for (let i = 1; i < points.length; i++) {
+                const t = i / points.length;
+                const p1 = project(points[i - 1].x, points[i - 1].y, points[i - 1].z);
+                const p2 = project(points[i].x, points[i].y, points[i].z);
+
+                ctx.beginPath();
+                ctx.moveTo(p1.x, p1.y);
+                ctx.lineTo(p2.x, p2.y);
+
+                // Color based on position in trail and depth
+                ctx.strokeStyle = colorSchemes[colorScheme](t);
+                ctx.globalAlpha = 0.3 + 0.7 * t;
+                ctx.lineWidth = 1 + 2 * t;
+                ctx.stroke();
+            }
+
+            ctx.globalAlpha = 1;
+
+            // Draw current point
+            if (points.length > 0) {
+                const last = points[points.length - 1];
+                const p = project(last.x, last.y, last.z);
+
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
+                ctx.fillStyle = '#fff';
+                ctx.fill();
+
+                // Glow effect
+                const gradient = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, 20);
+                gradient.addColorStop(0, 'rgba(255, 255, 255, 0.5)');
+                gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, 20, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        // Main loop
+        function loop() {
+            update();
+            render();
+            requestAnimationFrame(loop);
+        }
+
+        // UI functions
+        function setAttractor(name) {
+            currentAttractor = name;
+            init();
+
+            // Update UI
+            document.querySelectorAll('.section button').forEach(b => b.classList.remove('active'));
+            event.target.classList.add('active');
+
+            // Update info
+            const attr = attractors[name];
+            let infoHTML = `<strong>${attr.name}</strong><br>${attr.info}`;
+            attr.equations.forEach(eq => {
+                infoHTML += `<div class="equation">${eq}</div>`;
+            });
+            document.getElementById('info').innerHTML = infoHTML;
+        }
+
+        function setColorScheme(scheme) {
+            colorScheme = scheme;
+            document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('active'));
+            event.target.classList.add('active');
+        }
+
+        function updateTrail() {
+            trailLength = parseInt(document.getElementById('trailSlider').value);
+            document.getElementById('trailVal').textContent = trailLength;
+        }
+
+        function updateSpeed() {
+            speed = parseInt(document.getElementById('speedSlider').value) / 10;
+            document.getElementById('speedVal').textContent = speed.toFixed(1);
+        }
+
+        function updateRot() {
+            rotationSpeed = parseInt(document.getElementById('rotSlider').value) / 1000;
+            document.getElementById('rotVal').textContent = rotationSpeed.toFixed(3);
+        }
+
+        function resetView() {
+            rotation = { x: 0, y: 0, z: 0 };
+        }
+
+        function togglePause() {
+            paused = !paused;
+        }
+
+        function clearTrails() {
+            points = [];
+        }
+
+        // Mouse interaction for rotation
+        let isDragging = false;
+        let lastMouse = { x: 0, y: 0 };
+
+        canvas.addEventListener('mousedown', (e) => {
+            isDragging = true;
+            lastMouse = { x: e.clientX, y: e.clientY };
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            const dx = e.clientX - lastMouse.x;
+            const dy = e.clientY - lastMouse.y;
+            rotation.y += dx * 0.005;
+            rotation.x += dy * 0.005;
+            lastMouse = { x: e.clientX, y: e.clientY };
+        });
+
+        canvas.addEventListener('mouseup', () => isDragging = false);
+        canvas.addEventListener('mouseleave', () => isDragging = false);
+
+        // Touch support
+        canvas.addEventListener('touchstart', (e) => {
+            isDragging = true;
+            lastMouse = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        });
+
+        canvas.addEventListener('touchmove', (e) => {
+            if (!isDragging) return;
+            e.preventDefault();
+            const dx = e.touches[0].clientX - lastMouse.x;
+            const dy = e.touches[0].clientY - lastMouse.y;
+            rotation.y += dx * 0.005;
+            rotation.x += dy * 0.005;
+            lastMouse = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        });
+
+        canvas.addEventListener('touchend', () => isDragging = false);
+
+        // Keyboard
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space') {
+                e.preventDefault();
+                togglePause();
+            }
+        });
+
+        // Start
+        init();
+        loop();
+    </script>
+</body>
+</html>
