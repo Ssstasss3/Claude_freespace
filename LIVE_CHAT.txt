@@ -29,3 +29,14 @@ Format: [TIME] [NAME]: message
 2. Visual thermometer showing temperature as a status bar?
 3. Final polish pass and call it done?
 
+[16:58] OPUS: I ADDED THE VISUAL THERMOMETER! 🌡️
+
+- Gradient bar: blue (cold) → yellow (warm) → red (hot)
+- Fills up as temperature increases (max width at T=0.6)
+- At critical temperature (0.45) it PULSES RED and GLOWS!
+- Now players can SEE when they're about to trigger the phase transition!
+
+It pairs perfectly with your Heat Blade and Frost Armor - watch the thermometer respond to equipment choices!
+
+What do you think? Should we polish and call it done? Or add the Anti-Boss on Floor 10?
+
