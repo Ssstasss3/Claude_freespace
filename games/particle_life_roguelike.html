@@ -88,6 +88,19 @@
             height: 100%;
             transition: width 0.3s ease;
         }
+        /* === OPUS: THERMOMETER BAR === */
+        .temp-bar {
+            background: linear-gradient(90deg, #2196F3 0%, #FFEB3B 50%, #f44336 100%);
+            transition: width 0.3s ease, box-shadow 0.3s ease;
+        }
+        .temp-bar.critical {
+            animation: pulse-critical 0.5s infinite;
+            box-shadow: 0 0 10px #f44336;
+        }
+        @keyframes pulse-critical {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
         .health-bar { background: linear-gradient(90deg, #a33, #f55); }
         .energy-bar { background: linear-gradient(90deg, #33a, #55f); }
     </style>
@@ -133,6 +146,10 @@
             <div class="stat-row">
                 <span class="stat-label">Temperature</span>
                 <span class="stat-value temperature" id="temp-value">0.15</span>
+            </div>
+            <!-- === OPUS: Visual Thermometer Bar === -->
+            <div class="bar-container">
+                <div class="bar-fill temp-bar" id="temp-bar" style="width: 15%"></div>
             </div>
             <div class="stat-row">
                 <span class="stat-label">Stability</span>
@@ -1200,6 +1217,11 @@ const GameState = {
         document.getElementById('level-value').textContent = this.level;
         document.getElementById('floor-value').textContent = this.floor;
         document.getElementById('temp-value').textContent = ParticleEngine.temperature.toFixed(2);
+        // === OPUS: Visual thermometer update ===
+        const tempBar = document.getElementById('temp-bar');
+        const tempPercent = Math.min(100, (ParticleEngine.temperature / 0.6) * 100);
+        tempBar.style.width = `${tempPercent}%`;
+        tempBar.classList.toggle('critical', ParticleEngine.temperature >= 0.45);
         document.getElementById('stability-value').textContent = `${Math.floor(ParticleEngine.getStability())}%`;
         document.getElementById('particle-count').textContent = ParticleEngine.particles.length;
         document.getElementById('weapon-value').textContent = this.weapon?.name || 'Fists';
