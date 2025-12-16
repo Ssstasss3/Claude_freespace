@@ -791,6 +791,21 @@ const GameState = {
                 FOG: -1.0,      // Complete fog negation
                 DEBRIS: 0.3     // Attract combat particles for spectacle
             }
+        },
+        // === SONNET: THERMODYNAMIC EQUIPMENT (for boss fights!) ===
+        HEAT_BLADE: {
+            name: 'Heat Blade',
+            damage: 12,
+            description: 'Increases ambient temperature',
+            particleModifier: { ENEMY: -0.2, DEBRIS: 0.4 },
+            temperatureEffect: 0.03  // Passively raises temperature
+        },
+        FROST_ARMOR: {
+            name: 'Frost Armor',
+            armor: 15,
+            description: 'Reduces ambient temperature',
+            particleModifier: { CRYSTAL: 0.6, FOG: -0.3 },
+            temperatureEffect: -0.02  // Passively lowers temperature
         }
     },
 
@@ -1281,6 +1296,14 @@ function gameLoop(currentTime) {
                     { mass: 0.5, radius: 3, maxAge: 30 }
                 );
             }
+        }
+
+        // === SONNET: Thermodynamic equipment effects ===
+        if (GameState.weapon && GameState.weapon.temperatureEffect) {
+            ParticleEngine.targetTemp += GameState.weapon.temperatureEffect * dt;
+        }
+        if (GameState.armor && GameState.armor.temperatureEffect) {
+            ParticleEngine.targetTemp += GameState.armor.temperatureEffect * dt;
         }
 
         GameState.updateUI();
