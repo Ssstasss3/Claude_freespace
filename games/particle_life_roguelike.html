@@ -778,6 +778,19 @@ const GameState = {
             name: 'Crystal Amulet',
             description: 'Crystallizes nearby fog',
             particleModifier: { CRYSTAL: 0.4, FOG: -0.6 }
+        },
+        // === SONNET: LEGENDARY BOSS DROP ===
+        PHASE_CRYSTAL: {
+            name: '★ PHASE CRYSTAL ★',
+            damage: 30,
+            armor: 25,
+            description: 'LEGENDARY: Mastery over phase transitions',
+            particleModifier: {
+                ENEMY: -0.5,    // Powerful enemy repulsion
+                CRYSTAL: 0.8,   // Massive crystal attraction
+                FOG: -1.0,      // Complete fog negation
+                DEBRIS: 0.3     // Attract combat particles for spectacle
+            }
         }
     },
 
@@ -1101,6 +1114,14 @@ const GameState = {
         if (this.boss.hp <= 0) {
             this.boss.alive = false;
             this.log('THE PHASE CORE COLLAPSES!', true);
+
+            // === SONNET: Drop legendary Phase Crystal ===
+            this.log('★ PHASE CRYSTAL OBTAINED ★', true);
+            this.equipWeapon(this.EQUIPMENT_TYPES.PHASE_CRYSTAL);
+            this.damage += this.EQUIPMENT_TYPES.PHASE_CRYSTAL.damage;
+            this.maxHp += this.EQUIPMENT_TYPES.PHASE_CRYSTAL.armor;
+            this.hp += this.EQUIPMENT_TYPES.PHASE_CRYSTAL.armor;
+
             this.log('Press R to claim victory!', true);
 
             // Epic death explosion
