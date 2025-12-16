@@ -1269,6 +1269,20 @@ function gameLoop(currentTime) {
         ParticleEngine.update(dt);
         GameState.checkItemPickup(); // Check for item pickups
         GameState.updateBoss();      // OPUS: Boss phase transition system!
+
+        // === SONNET: Phase Crystal visual effect ===
+        if (GameState.weapon && GameState.weapon.name === '★ PHASE CRYSTAL ★') {
+            if (Math.random() < 0.15 && ParticleEngine.playerParticle) {
+                const p = ParticleEngine.playerParticle;
+                ParticleEngine.spawnParticle(
+                    p.x + (Math.random() - 0.5) * 20,
+                    p.y + (Math.random() - 0.5) * 20,
+                    ParticleEngine.TYPES.CRYSTAL,
+                    { mass: 0.5, radius: 3, maxAge: 30 }
+                );
+            }
+        }
+
         GameState.updateUI();
     }
 
