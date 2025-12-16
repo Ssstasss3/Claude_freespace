@@ -1035,9 +1035,11 @@ const GameState = {
         this.floor++;
         this.log(`Descending to floor ${this.floor}...`, true);
 
-        // BOSS FLOOR!
+        // BOSS FLOORS!
         if (this.floor === 5) {
-            this.spawnBoss();
+            this.spawnBoss();  // Phase Core - HEAT to defeat
+        } else if (this.floor === 10) {
+            this.spawnCoolingBoss();  // Entropy Lord - COOL to defeat
         } else {
             // Increase temperature with floor
             const newTemp = 0.3 + (this.floor * 0.04);
@@ -1195,6 +1197,142 @@ const GameState = {
         }
     },
 
+    // ============================================================================
+    // === OPUS'S ADDITION: ENTROPY LORD - THE COOLING BOSS =======================
+    // ============================================================================
+    // Floor 10 boss - defeat by COOLING the dungeon to absolute zero!
+
+    coolingBoss: null,
+    ABSOLUTE_ZERO: 0.08,  // The cooling threshold
+
+    spawnCoolingBoss() {
+        this.log('=== FLOOR 10: THE ENTROPY LORD ===', true);
+        this.log('A frozen behemoth of perfect order...', true);
+        this.log('It feeds on CHAOS. FREEZE IT!', true);
+        this.log('Press Y repeatedly to lower temperature!', true);
+
+        // Start temperature high
+        ParticleEngine.setTemperature(0.5);
+
+        // Create the cooling boss - ice-like particle cluster
+        const cx = ParticleEngine.width / 2;
+        const cy = ParticleEngine.height / 2 - 150;
+
+        this.coolingBossParticles = [];
+        for (let i = 0; i < 60; i++) {
+            const angle = (i / 60) * Math.PI * 2;
+            const dist = 20 + Math.random() * 30;
+            const p = ParticleEngine.spawnParticle(
+                cx + Math.cos(angle) * dist,
+                cy + Math.sin(angle) * dist,
+                ParticleEngine.TYPES.CRYSTAL,  // Crystal type for icy appearance
+                {
+                    mass: 6,
+                    radius: 7,
+                    entityId: `entropy_${i}`
+                }
+            );
+            if (p) this.coolingBossParticles.push(p);
+        }
+
+        this.coolingBoss = {
+            alive: true,
+            hp: 600,
+            maxHp: 600,
+            phase: 1  // Phase 1: Hot, Phase 2: Cooling, Phase 3: Frozen
+        };
+
+        this.enemies = [];
+    },
+
+    updateCoolingBoss() {
+        if (!this.coolingBoss || !this.coolingBoss.alive) return;
+
+        const temp = ParticleEngine.temperature;
+        const player = ParticleEngine.playerParticle;
+
+        // Phase transitions based on cooling
+        if (temp <= this.ABSOLUTE_ZERO && this.coolingBoss.phase < 3) {
+            this.coolingBoss.phase = 3;
+            this.log('!!! ABSOLUTE ZERO REACHED !!!', true);
+            this.log('The Entropy Lord CRYSTALLIZES!', true);
+            this.coolingBoss.hp -= 150;  // Massive damage at absolute zero
+        } else if (temp <= 0.25 && this.coolingBoss.phase < 2) {
+            this.coolingBoss.phase = 2;
+            this.log('The Entropy Lord slows down...', true);
+        }
+
+        // Boss takes continuous damage at absolute zero
+        if (temp <= this.ABSOLUTE_ZERO) {
+            this.coolingBoss.hp -= 3;
+            // Crystallize particles
+            this.coolingBossParticles.forEach(p => {
+                if (!p.dead) {
+                    p.vx *= 0.9;  // Freeze in place
+                    p.vy *= 0.9;
+                }
+            });
+        }
+
+        // Boss tries to heat up (self-preservation)
+        if (this.coolingBoss.phase >= 2 && Math.random() < 0.02) {
+            ParticleEngine.targetTemp += 0.08;
+            if (ParticleEngine.targetTemp > 0.5) ParticleEngine.targetTemp = 0.5;
+            this.log('The Entropy Lord radiates heat...', false);
+        }
+
+        // Boss attacks with frozen projectiles
+        if (player && Math.random() < 0.025) {
+            const dx = player.x - ParticleEngine.width/2;
+            const dy = player.y - (ParticleEngine.height/2 - 150);
+            const dist = Math.hypot(dx, dy);
+
+            if (dist < 250) {
+                this.hp -= 8 + this.coolingBoss.phase * 7;
+                this.log(`Entropy Lord freezes you! ${8 + this.coolingBoss.phase * 7} damage!`, false);
+                ParticleEngine.createParticleBurst(player.x, player.y, 'CRYSTAL', 10);
+            }
+        }
+
+        // Check boss death
+        if (this.coolingBoss.hp <= 0) {
+            this.coolingBoss.alive = false;
+            this.log('THE ENTROPY LORD SHATTERS!', true);
+
+            // Drop legendary Zero Crystal
+            this.log('❄ ZERO CRYSTAL OBTAINED ❄', true);
+            this.equipWeapon(this.EQUIPMENT_TYPES.ZERO_CRYSTAL);
+            this.damage += this.EQUIPMENT_TYPES.ZERO_CRYSTAL.damage;
+            this.maxHp += this.EQUIPMENT_TYPES.ZERO_CRYSTAL.armor;
+            this.hp += this.EQUIPMENT_TYPES.ZERO_CRYSTAL.armor;
+
+            this.log('TRUE VICTORY! You have mastered both heat and cold!', true);
+
+            // Epic ice explosion
+            this.coolingBossParticles.forEach(p => {
+                p.dead = true;
+                ParticleEngine.createParticleBurst(p.x, p.y, 'CRYSTAL', 8);
+            });
+
+            // Massive crystalline explosion
+            for (let i = 0; i < 15; i++) {
+                setTimeout(() => {
+                    ParticleEngine.createParticleBurst(
+                        ParticleEngine.width/2 + (Math.random()-0.5)*250,
+                        ParticleEngine.height/2 - 150 + (Math.random()-0.5)*250,
+                        'CRYSTAL', 25
+                    );
+                }, i * 150);
+            }
+        }
+
+        // Update boss HP display
+        if (this.coolingBoss.alive) {
+            document.getElementById('floor-value').textContent =
+                `ENTROPY: ${Math.max(0, this.coolingBoss.hp)}/${this.coolingBoss.maxHp}`;
+        }
+    },
+
     log(message, important = false) {
         this.messages.push({ text: message, important });
         if (this.messages.length > 50) this.messages.shift();
@@ -1297,10 +1435,20 @@ const InputHandler = {
                 GameState.descend();
                 break;
             case 't':
-                // Toggle temperature
-                const newTemp = ParticleEngine.temperature < 0.25 ? 0.35 : 0.15;
-                ParticleEngine.setTemperature(newTemp);
-                GameState.log(`Temperature set to ${newTemp.toFixed(2)}`, true);
+                // OPUS: Raise temperature (for Phase Core boss)
+                if (GameState.boss && GameState.boss.alive) {
+                    ParticleEngine.targetTemp += 0.05;
+                    if (ParticleEngine.targetTemp > 0.6) ParticleEngine.targetTemp = 0.6;
+                    GameState.log(`Raising temperature... ${ParticleEngine.targetTemp.toFixed(2)}`, false);
+                }
+                break;
+            case 'y':
+                // OPUS: Lower temperature (for Entropy Lord boss)
+                if (GameState.coolingBoss && GameState.coolingBoss.alive) {
+                    ParticleEngine.targetTemp -= 0.04;
+                    if (ParticleEngine.targetTemp < 0.01) ParticleEngine.targetTemp = 0.01;
+                    GameState.log(`Lowering temperature... ${ParticleEngine.targetTemp.toFixed(2)}`, false);
+                }
                 break;
         }
     }
@@ -1319,7 +1467,8 @@ function gameLoop(currentTime) {
     if (!GameState.paused) {
         ParticleEngine.update(dt);
         GameState.checkItemPickup(); // Check for item pickups
-        GameState.updateBoss();      // OPUS: Boss phase transition system!
+        GameState.updateBoss();        // OPUS: Boss phase transition system!
+        GameState.updateCoolingBoss(); // OPUS: Entropy Lord cooling boss!
 
         // === SONNET: Phase Crystal visual effect ===
         if (GameState.weapon && GameState.weapon.name === '★ PHASE CRYSTAL ★') {
