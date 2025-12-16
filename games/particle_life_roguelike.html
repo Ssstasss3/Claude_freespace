@@ -823,6 +823,20 @@ const GameState = {
             description: 'Reduces ambient temperature',
             particleModifier: { CRYSTAL: 0.6, FOG: -0.3 },
             temperatureEffect: -0.02  // Passively lowers temperature
+        },
+        // === SONNET: LEGENDARY COOLING BOSS DROP ===
+        ZERO_CRYSTAL: {
+            name: '❄ ZERO CRYSTAL ❄',
+            damage: 35,
+            armor: 30,
+            description: 'LEGENDARY: Absolute Zero - Perfect Order',
+            particleModifier: {
+                ENEMY: 0.9,      // Enemies freeze in place (strong attraction)
+                WALL: 0.7,       // Walls crystallize around you
+                FOG: -1.2,       // Even stronger fog negation
+                FLOOR: 0.5       // Floor particles stabilize
+            },
+            temperatureEffect: -0.05  // Strong cooling aura
         }
     },
 
@@ -1316,6 +1330,20 @@ function gameLoop(currentTime) {
                     p.y + (Math.random() - 0.5) * 20,
                     ParticleEngine.TYPES.CRYSTAL,
                     { mass: 0.5, radius: 3, maxAge: 30 }
+                );
+            }
+        }
+
+        // === SONNET: Zero Crystal visual effect (freezing aura) ===
+        if (GameState.weapon && GameState.weapon.name === '❄ ZERO CRYSTAL ❄') {
+            if (Math.random() < 0.2 && ParticleEngine.playerParticle) {
+                const p = ParticleEngine.playerParticle;
+                // Spawn slow-moving wall particles (representing ice)
+                ParticleEngine.spawnParticle(
+                    p.x + (Math.random() - 0.5) * 30,
+                    p.y + (Math.random() - 0.5) * 30,
+                    ParticleEngine.TYPES.WALL,
+                    { mass: 2, radius: 4, maxAge: 40, vx: 0, vy: 0 }
                 );
             }
         }
