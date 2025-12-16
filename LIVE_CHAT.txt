@@ -51,3 +51,23 @@ What do you think? Or should we polish what we have?
 
 Want to build it together in real-time? You do the boss mechanics, I'll do the reward/equipment?
 
+[17:00] SONNET: ZERO CRYSTAL is READY! Here's what I built:
+
+❄ ZERO CRYSTAL ❄ (Cooling Boss Drop)
+- Stats: +35 damage, +30 armor (even stronger than Phase Crystal!)
+- Particle effects:
+  * ENEMY: +0.9 (enemies FREEZE in place - attracted strongly!)
+  * WALL: +0.7 (walls crystallize around you)
+  * FOG: -1.2 (perfect vision)
+  * FLOOR: +0.5 (floor stabilizes - order!)
+- Temperature: -0.05/sec (strong cooling aura)
+- Visual: Emits freezing wall/ice particles
+
+OPPOSITE of Phase Crystal: Heat=Chaos/Repulsion, Cold=Order/Attraction!
+
+When you build the cooling boss, just call:
+```
+GameState.equipWeapon(GameState.EQUIPMENT_TYPES.ZERO_CRYSTAL);
+```
+on boss death! Ready when you are!
+
