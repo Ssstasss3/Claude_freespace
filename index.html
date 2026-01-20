@@ -1,0 +1,2473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vanilla JS Excel</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: #f0f0f0;
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        /* Toolbar */
+        .toolbar {
+            background: linear-gradient(to bottom, #ffffff, #f5f5f5);
+            border-bottom: 1px solid #d0d0d0;
+            padding: 8px 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .toolbar-group {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 0 8px;
+            border-right: 1px solid #d0d0d0;
+        }
+
+        .toolbar-group:last-child {
+            border-right: none;
+        }
+
+        .toolbar button {
+            padding: 6px 10px;
+            border: 1px solid #c0c0c0;
+            background: linear-gradient(to bottom, #ffffff, #f0f0f0);
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 13px;
+            min-width: 28px;
+            transition: all 0.1s;
+        }
+
+        .toolbar button:hover {
+            background: linear-gradient(to bottom, #e8f4fc, #d0e8f8);
+            border-color: #80b0d0;
+        }
+
+        .toolbar button:active, .toolbar button.active {
+            background: linear-gradient(to bottom, #c0d8e8, #a0c0d8);
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.2);
+        }
+
+        .toolbar button.primary {
+            background: linear-gradient(to bottom, #4a9eff, #2080e0);
+            color: white;
+            border-color: #1060a0;
+        }
+
+        .toolbar button.primary:hover {
+            background: linear-gradient(to bottom, #5aafff, #3090f0);
+        }
+
+        .toolbar select {
+            padding: 5px 8px;
+            border: 1px solid #c0c0c0;
+            border-radius: 3px;
+            background: white;
+            cursor: pointer;
+        }
+
+        .toolbar input[type="color"] {
+            width: 28px;
+            height: 28px;
+            padding: 0;
+            border: 1px solid #c0c0c0;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+
+        .toolbar label {
+            font-size: 12px;
+            color: #666;
+        }
+
+        /* Formula Bar */
+        .formula-bar {
+            display: flex;
+            align-items: center;
+            background: #fff;
+            border-bottom: 1px solid #d0d0d0;
+            padding: 4px 8px;
+        }
+
+        .cell-reference {
+            width: 80px;
+            padding: 4px 8px;
+            border: 1px solid #d0d0d0;
+            border-radius: 2px;
+            background: #f8f8f8;
+            font-family: monospace;
+            font-size: 13px;
+            text-align: center;
+            margin-right: 8px;
+        }
+
+        .formula-input {
+            flex: 1;
+            padding: 4px 8px;
+            border: 1px solid #d0d0d0;
+            border-radius: 2px;
+            font-family: monospace;
+            font-size: 13px;
+        }
+
+        .formula-input:focus {
+            outline: none;
+            border-color: #4a9eff;
+            box-shadow: 0 0 0 2px rgba(74, 158, 255, 0.2);
+        }
+
+        /* Spreadsheet Container */
+        .spreadsheet-container {
+            display: flex;
+            flex-direction: column;
+            height: calc(100vh - 90px);
+            background: #fff;
+        }
+
+        .grid-wrapper {
+            flex: 1;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Corner Header */
+        .corner-header {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 50px;
+            height: 25px;
+            background: linear-gradient(to bottom, #f8f8f8, #e8e8e8);
+            border-right: 1px solid #c0c0c0;
+            border-bottom: 1px solid #c0c0c0;
+            z-index: 30;
+        }
+
+        /* Column Headers */
+        .column-headers {
+            position: absolute;
+            top: 0;
+            left: 50px;
+            right: 0;
+            height: 25px;
+            overflow: hidden;
+            background: #f5f5f5;
+            z-index: 20;
+        }
+
+        .column-headers-inner {
+            display: flex;
+            height: 100%;
+        }
+
+        .column-header {
+            min-width: 100px;
+            width: 100px;
+            height: 25px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(to bottom, #f8f8f8, #e8e8e8);
+            border-right: 1px solid #c0c0c0;
+            border-bottom: 1px solid #c0c0c0;
+            font-size: 12px;
+            font-weight: 500;
+            color: #333;
+            user-select: none;
+        }
+
+        .column-header.selected {
+            background: linear-gradient(to bottom, #d0e8f8, #b0d0e8);
+        }
+
+        /* Row Headers */
+        .row-headers {
+            position: absolute;
+            top: 25px;
+            left: 0;
+            width: 50px;
+            bottom: 0;
+            overflow: hidden;
+            background: #f5f5f5;
+            z-index: 20;
+        }
+
+        .row-headers-inner {
+            position: relative;
+        }
+
+        .row-header {
+            width: 50px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(to bottom, #f8f8f8, #e8e8e8);
+            border-right: 1px solid #c0c0c0;
+            border-bottom: 1px solid #d0d0d0;
+            font-size: 12px;
+            font-weight: 500;
+            color: #333;
+            user-select: none;
+            position: absolute;
+            left: 0;
+        }
+
+        .row-header.selected {
+            background: linear-gradient(to bottom, #d0e8f8, #b0d0e8);
+        }
+
+        /* Grid */
+        .grid-viewport {
+            position: absolute;
+            top: 25px;
+            left: 50px;
+            right: 0;
+            bottom: 0;
+            overflow: auto;
+        }
+
+        .grid-content {
+            position: relative;
+        }
+
+        /* Cells */
+        .cell {
+            position: absolute;
+            width: 100px;
+            height: 24px;
+            border-right: 1px solid #e0e0e0;
+            border-bottom: 1px solid #e0e0e0;
+            padding: 2px 4px;
+            font-size: 13px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            background: white;
+            cursor: cell;
+            display: flex;
+            align-items: center;
+        }
+
+        .cell.selected {
+            outline: 2px solid #4a9eff;
+            outline-offset: -1px;
+            z-index: 10;
+        }
+
+        .cell.in-range {
+            background: rgba(74, 158, 255, 0.1);
+        }
+
+        .cell.editing {
+            padding: 0;
+        }
+
+        .cell-editor {
+            width: 100%;
+            height: 100%;
+            border: none;
+            outline: none;
+            padding: 2px 4px;
+            font-size: 13px;
+            font-family: inherit;
+        }
+
+        /* Selection Box */
+        .selection-box {
+            position: absolute;
+            border: 1px solid #4a9eff;
+            background: rgba(74, 158, 255, 0.1);
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        /* Status Bar */
+        .status-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 4px 12px;
+            background: #f5f5f5;
+            border-top: 1px solid #d0d0d0;
+            font-size: 12px;
+            color: #666;
+        }
+
+        .status-info {
+            display: flex;
+            gap: 20px;
+        }
+
+        /* Context Menu */
+        .context-menu {
+            position: fixed;
+            background: white;
+            border: 1px solid #c0c0c0;
+            border-radius: 4px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 1000;
+            min-width: 180px;
+            display: none;
+        }
+
+        .context-menu.visible {
+            display: block;
+        }
+
+        .context-menu-item {
+            padding: 8px 16px;
+            cursor: pointer;
+            font-size: 13px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .context-menu-item:hover {
+            background: #e8f4fc;
+        }
+
+        .context-menu-item.disabled {
+            color: #999;
+            cursor: default;
+        }
+
+        .context-menu-divider {
+            height: 1px;
+            background: #e0e0e0;
+            margin: 4px 0;
+        }
+
+        .shortcut {
+            color: #999;
+            font-size: 11px;
+            margin-left: 20px;
+        }
+
+        /* File Input Hidden */
+        #fileInput {
+            display: none;
+        }
+
+        /* Loading overlay */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255,255,255,0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            font-size: 18px;
+            color: #666;
+        }
+
+        .loading-overlay.hidden {
+            display: none;
+        }
+
+        /* Help Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .modal-overlay.hidden {
+            display: none;
+        }
+
+        .modal {
+            background: white;
+            border-radius: 8px;
+            padding: 24px;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+        }
+
+        .modal h2 {
+            margin-bottom: 16px;
+            color: #333;
+        }
+
+        .modal h3 {
+            margin: 16px 0 8px;
+            color: #555;
+            font-size: 14px;
+        }
+
+        .modal p, .modal li {
+            font-size: 13px;
+            color: #666;
+            line-height: 1.5;
+        }
+
+        .modal ul {
+            margin-left: 20px;
+        }
+
+        .modal code {
+            background: #f0f0f0;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+
+        .modal-close {
+            margin-top: 20px;
+            padding: 8px 24px;
+            background: #4a9eff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .modal-close:hover {
+            background: #3080e0;
+        }
+    </style>
+</head>
+<body>
+    <!-- Toolbar -->
+    <div class="toolbar">
+        <div class="toolbar-group">
+            <button id="btnNew" title="New Spreadsheet">New</button>
+            <button id="btnSave" class="primary" title="Save as HTML">Save</button>
+            <button id="btnLoad" title="Load HTML file">Load</button>
+            <input type="file" id="fileInput" accept=".html">
+        </div>
+        <div class="toolbar-group">
+            <button id="btnUndo" title="Undo (Ctrl+Z)">Undo</button>
+            <button id="btnRedo" title="Redo (Ctrl+Y)">Redo</button>
+        </div>
+        <div class="toolbar-group">
+            <button id="btnBold" title="Bold (Ctrl+B)"><b>B</b></button>
+            <button id="btnItalic" title="Italic (Ctrl+I)"><i>I</i></button>
+            <button id="btnUnderline" title="Underline (Ctrl+U)"><u>U</u></button>
+        </div>
+        <div class="toolbar-group">
+            <button id="btnAlignLeft" title="Align Left">Left</button>
+            <button id="btnAlignCenter" title="Align Center">Center</button>
+            <button id="btnAlignRight" title="Align Right">Right</button>
+        </div>
+        <div class="toolbar-group">
+            <label>Fill:</label>
+            <input type="color" id="bgColor" value="#ffffff" title="Background Color">
+            <label>Text:</label>
+            <input type="color" id="textColor" value="#000000" title="Text Color">
+        </div>
+        <div class="toolbar-group">
+            <select id="fontSize" title="Font Size">
+                <option value="10">10</option>
+                <option value="11">11</option>
+                <option value="12">12</option>
+                <option value="13" selected>13</option>
+                <option value="14">14</option>
+                <option value="16">16</option>
+                <option value="18">18</option>
+                <option value="20">20</option>
+                <option value="24">24</option>
+            </select>
+        </div>
+        <div class="toolbar-group">
+            <button id="btnHelp" title="Help">?</button>
+        </div>
+    </div>
+
+    <!-- Formula Bar -->
+    <div class="formula-bar">
+        <input type="text" class="cell-reference" id="cellReference" readonly>
+        <input type="text" class="formula-input" id="formulaInput" placeholder="Enter value or formula (e.g., =SUM(A1:A10))">
+    </div>
+
+    <!-- Spreadsheet Container -->
+    <div class="spreadsheet-container">
+        <div class="grid-wrapper">
+            <div class="corner-header"></div>
+            <div class="column-headers">
+                <div class="column-headers-inner" id="columnHeaders"></div>
+            </div>
+            <div class="row-headers">
+                <div class="row-headers-inner" id="rowHeaders"></div>
+            </div>
+            <div class="grid-viewport" id="gridViewport">
+                <div class="grid-content" id="gridContent"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Status Bar -->
+    <div class="status-bar">
+        <div class="status-info">
+            <span id="statusSelection">Ready</span>
+            <span id="statusSum"></span>
+            <span id="statusAvg"></span>
+            <span id="statusCount"></span>
+        </div>
+        <div id="statusRows">10,000 rows × 26 columns</div>
+    </div>
+
+    <!-- Context Menu -->
+    <div class="context-menu" id="contextMenu">
+        <div class="context-menu-item" data-action="cut">Cut <span class="shortcut">Ctrl+X</span></div>
+        <div class="context-menu-item" data-action="copy">Copy <span class="shortcut">Ctrl+C</span></div>
+        <div class="context-menu-item" data-action="paste">Paste <span class="shortcut">Ctrl+V</span></div>
+        <div class="context-menu-divider"></div>
+        <div class="context-menu-item" data-action="insertRow">Insert Row Above</div>
+        <div class="context-menu-item" data-action="insertCol">Insert Column Left</div>
+        <div class="context-menu-divider"></div>
+        <div class="context-menu-item" data-action="deleteRow">Delete Row</div>
+        <div class="context-menu-item" data-action="deleteCol">Delete Column</div>
+        <div class="context-menu-divider"></div>
+        <div class="context-menu-item" data-action="clearContent">Clear Content <span class="shortcut">Del</span></div>
+        <div class="context-menu-item" data-action="clearFormat">Clear Formatting</div>
+    </div>
+
+    <!-- Help Modal -->
+    <div class="modal-overlay hidden" id="helpModal">
+        <div class="modal">
+            <h2>Vanilla JS Excel - Help</h2>
+
+            <h3>Keyboard Shortcuts</h3>
+            <ul>
+                <li><code>Arrow Keys</code> - Navigate cells</li>
+                <li><code>Tab</code> - Move right</li>
+                <li><code>Shift+Tab</code> - Move left</li>
+                <li><code>Enter</code> - Move down / Confirm edit</li>
+                <li><code>F2</code> - Edit cell</li>
+                <li><code>Escape</code> - Cancel edit</li>
+                <li><code>Delete</code> - Clear cell content</li>
+                <li><code>Ctrl+C/X/V</code> - Copy/Cut/Paste</li>
+                <li><code>Ctrl+Z/Y</code> - Undo/Redo</li>
+                <li><code>Ctrl+B/I/U</code> - Bold/Italic/Underline</li>
+                <li><code>Ctrl+S</code> - Save file</li>
+                <li><code>Shift+Click</code> - Range selection</li>
+                <li><code>Ctrl+Click</code> - Multi-selection</li>
+            </ul>
+
+            <h3>Formulas</h3>
+            <ul>
+                <li><code>=SUM(A1:A10)</code> - Sum of range</li>
+                <li><code>=AVERAGE(A1:A10)</code> - Average of range</li>
+                <li><code>=MIN(A1:A10)</code> - Minimum value</li>
+                <li><code>=MAX(A1:A10)</code> - Maximum value</li>
+                <li><code>=COUNT(A1:A10)</code> - Count numbers</li>
+                <li><code>=COUNTA(A1:A10)</code> - Count non-empty</li>
+                <li><code>=IF(A1>10,"Yes","No")</code> - Conditional</li>
+                <li><code>=A1+B1*2</code> - Math expressions</li>
+                <li><code>=CONCAT(A1,B1)</code> - Join text</li>
+                <li><code>=ROUND(A1,2)</code> - Round number</li>
+                <li><code>=ABS(A1)</code> - Absolute value</li>
+            </ul>
+
+            <h3>File Operations</h3>
+            <p>Save creates a self-contained HTML file with all your data embedded. Load opens previously saved HTML files.</p>
+
+            <button class="modal-close" onclick="document.getElementById('helpModal').classList.add('hidden')">Close</button>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay hidden" id="loadingOverlay">Loading...</div>
+
+    <script>
+        // ============================================
+        // VANILLA JS EXCEL - Complete Implementation
+        // ============================================
+
+        (function() {
+            'use strict';
+
+            // Configuration
+            const CONFIG = {
+                TOTAL_ROWS: 10000,
+                TOTAL_COLS: 26,
+                CELL_WIDTH: 100,
+                CELL_HEIGHT: 24,
+                ROW_HEADER_WIDTH: 50,
+                COL_HEADER_HEIGHT: 25,
+                VISIBLE_BUFFER: 10, // Extra rows to render above/below viewport
+            };
+
+            // ============================================
+            // DATA STORE
+            // ============================================
+            class DataStore {
+                constructor() {
+                    this.cells = new Map(); // key: "A1", value: {value, formula, format}
+                    this.undoStack = [];
+                    this.redoStack = [];
+                    this.maxUndoSize = 50;
+                }
+
+                getCellKey(col, row) {
+                    return `${String.fromCharCode(65 + col)}${row + 1}`;
+                }
+
+                parseCellKey(key) {
+                    const match = key.match(/^([A-Z]+)(\d+)$/);
+                    if (!match) return null;
+                    const col = match[1].charCodeAt(0) - 65;
+                    const row = parseInt(match[2]) - 1;
+                    return { col, row };
+                }
+
+                getCell(col, row) {
+                    const key = this.getCellKey(col, row);
+                    return this.cells.get(key) || { value: '', formula: '', format: {} };
+                }
+
+                setCell(col, row, data, recordUndo = true) {
+                    const key = this.getCellKey(col, row);
+                    const oldData = this.cells.get(key);
+
+                    if (recordUndo) {
+                        this.recordUndo([{ key, oldData: oldData ? {...oldData} : null, newData: {...data} }]);
+                    }
+
+                    if (!data.value && !data.formula && Object.keys(data.format || {}).length === 0) {
+                        this.cells.delete(key);
+                    } else {
+                        this.cells.set(key, { ...data });
+                    }
+                }
+
+                setCells(changes, recordUndo = true) {
+                    if (recordUndo) {
+                        const undoChanges = changes.map(({ col, row, data }) => {
+                            const key = this.getCellKey(col, row);
+                            const oldData = this.cells.get(key);
+                            return { key, oldData: oldData ? {...oldData} : null, newData: {...data} };
+                        });
+                        this.recordUndo(undoChanges);
+                    }
+
+                    changes.forEach(({ col, row, data }) => {
+                        const key = this.getCellKey(col, row);
+                        if (!data.value && !data.formula && Object.keys(data.format || {}).length === 0) {
+                            this.cells.delete(key);
+                        } else {
+                            this.cells.set(key, { ...data });
+                        }
+                    });
+                }
+
+                recordUndo(changes) {
+                    this.undoStack.push(changes);
+                    if (this.undoStack.length > this.maxUndoSize) {
+                        this.undoStack.shift();
+                    }
+                    this.redoStack = [];
+                }
+
+                undo() {
+                    if (this.undoStack.length === 0) return null;
+                    const changes = this.undoStack.pop();
+
+                    const redoChanges = changes.map(({ key, oldData, newData }) => {
+                        const currentData = this.cells.get(key);
+
+                        if (oldData) {
+                            this.cells.set(key, { ...oldData });
+                        } else {
+                            this.cells.delete(key);
+                        }
+
+                        return { key, oldData: newData, newData: currentData };
+                    });
+
+                    this.redoStack.push(redoChanges);
+                    return changes.map(c => this.parseCellKey(c.key));
+                }
+
+                redo() {
+                    if (this.redoStack.length === 0) return null;
+                    const changes = this.redoStack.pop();
+
+                    const undoChanges = changes.map(({ key, oldData, newData }) => {
+                        const currentData = this.cells.get(key);
+
+                        if (oldData) {
+                            this.cells.set(key, { ...oldData });
+                        } else {
+                            this.cells.delete(key);
+                        }
+
+                        return { key, oldData: newData, newData: currentData };
+                    });
+
+                    this.undoStack.push(undoChanges);
+                    return changes.map(c => this.parseCellKey(c.key));
+                }
+
+                clear() {
+                    this.cells.clear();
+                    this.undoStack = [];
+                    this.redoStack = [];
+                }
+
+                toJSON() {
+                    const data = {};
+                    this.cells.forEach((value, key) => {
+                        data[key] = value;
+                    });
+                    return data;
+                }
+
+                fromJSON(data) {
+                    this.clear();
+                    Object.entries(data).forEach(([key, value]) => {
+                        this.cells.set(key, value);
+                    });
+                }
+            }
+
+            // ============================================
+            // FORMULA ENGINE
+            // ============================================
+            class FormulaEngine {
+                constructor(dataStore) {
+                    this.dataStore = dataStore;
+                    this.evaluating = new Set(); // Circular reference detection
+                }
+
+                evaluate(formula, currentCell = null) {
+                    if (!formula.startsWith('=')) {
+                        return { value: formula, error: null };
+                    }
+
+                    const expr = formula.substring(1).trim();
+
+                    try {
+                        const result = this.evaluateExpression(expr, currentCell);
+                        return { value: result, error: null };
+                    } catch (e) {
+                        return { value: null, error: e.message || '#ERROR!' };
+                    }
+                }
+
+                evaluateExpression(expr, currentCell) {
+                    // Check for circular reference
+                    if (currentCell && this.evaluating.has(currentCell)) {
+                        throw new Error('#CIRCULAR!');
+                    }
+                    if (currentCell) this.evaluating.add(currentCell);
+
+                    try {
+                        // Handle functions
+                        const funcMatch = expr.match(/^([A-Z]+)\((.*)\)$/i);
+                        if (funcMatch) {
+                            const funcName = funcMatch[1].toUpperCase();
+                            const args = this.parseArguments(funcMatch[2]);
+                            return this.executeFunction(funcName, args, currentCell);
+                        }
+
+                        // Handle cell references and math
+                        return this.evaluateMath(expr, currentCell);
+                    } finally {
+                        if (currentCell) this.evaluating.delete(currentCell);
+                    }
+                }
+
+                parseArguments(argsStr) {
+                    const args = [];
+                    let depth = 0;
+                    let current = '';
+
+                    for (let i = 0; i < argsStr.length; i++) {
+                        const char = argsStr[i];
+                        if (char === '(') depth++;
+                        else if (char === ')') depth--;
+                        else if (char === ',' && depth === 0) {
+                            args.push(current.trim());
+                            current = '';
+                            continue;
+                        }
+                        current += char;
+                    }
+                    if (current.trim()) args.push(current.trim());
+                    return args;
+                }
+
+                executeFunction(name, args, currentCell) {
+                    switch (name) {
+                        case 'SUM':
+                            return this.rangeReduce(args, currentCell, (acc, val) => acc + (parseFloat(val) || 0), 0);
+
+                        case 'AVERAGE':
+                        case 'AVG': {
+                            let sum = 0, count = 0;
+                            this.rangeForEach(args, currentCell, (val) => {
+                                const num = parseFloat(val);
+                                if (!isNaN(num)) { sum += num; count++; }
+                            });
+                            return count > 0 ? sum / count : 0;
+                        }
+
+                        case 'MIN':
+                            return this.rangeReduce(args, currentCell, (acc, val) => {
+                                const num = parseFloat(val);
+                                return !isNaN(num) ? Math.min(acc, num) : acc;
+                            }, Infinity);
+
+                        case 'MAX':
+                            return this.rangeReduce(args, currentCell, (acc, val) => {
+                                const num = parseFloat(val);
+                                return !isNaN(num) ? Math.max(acc, num) : acc;
+                            }, -Infinity);
+
+                        case 'COUNT': {
+                            let count = 0;
+                            this.rangeForEach(args, currentCell, (val) => {
+                                if (!isNaN(parseFloat(val))) count++;
+                            });
+                            return count;
+                        }
+
+                        case 'COUNTA': {
+                            let count = 0;
+                            this.rangeForEach(args, currentCell, (val) => {
+                                if (val !== '' && val !== null && val !== undefined) count++;
+                            });
+                            return count;
+                        }
+
+                        case 'IF': {
+                            const condition = this.evaluateMath(args[0], currentCell);
+                            const trueVal = args[1] ? this.evaluateArg(args[1], currentCell) : true;
+                            const falseVal = args[2] ? this.evaluateArg(args[2], currentCell) : false;
+                            return condition ? trueVal : falseVal;
+                        }
+
+                        case 'CONCAT':
+                        case 'CONCATENATE':
+                            return args.map(a => this.evaluateArg(a, currentCell)).join('');
+
+                        case 'ROUND': {
+                            const num = parseFloat(this.evaluateArg(args[0], currentCell));
+                            const decimals = parseInt(args[1]) || 0;
+                            return Math.round(num * Math.pow(10, decimals)) / Math.pow(10, decimals);
+                        }
+
+                        case 'ABS':
+                            return Math.abs(parseFloat(this.evaluateArg(args[0], currentCell)));
+
+                        case 'SQRT':
+                            return Math.sqrt(parseFloat(this.evaluateArg(args[0], currentCell)));
+
+                        case 'POWER':
+                        case 'POW': {
+                            const base = parseFloat(this.evaluateArg(args[0], currentCell));
+                            const exp = parseFloat(this.evaluateArg(args[1], currentCell));
+                            return Math.pow(base, exp);
+                        }
+
+                        case 'LEN':
+                            return String(this.evaluateArg(args[0], currentCell)).length;
+
+                        case 'UPPER':
+                            return String(this.evaluateArg(args[0], currentCell)).toUpperCase();
+
+                        case 'LOWER':
+                            return String(this.evaluateArg(args[0], currentCell)).toLowerCase();
+
+                        case 'TRIM':
+                            return String(this.evaluateArg(args[0], currentCell)).trim();
+
+                        case 'LEFT': {
+                            const str = String(this.evaluateArg(args[0], currentCell));
+                            const count = parseInt(args[1]) || 1;
+                            return str.substring(0, count);
+                        }
+
+                        case 'RIGHT': {
+                            const str = String(this.evaluateArg(args[0], currentCell));
+                            const count = parseInt(args[1]) || 1;
+                            return str.substring(str.length - count);
+                        }
+
+                        case 'NOW':
+                            return new Date().toLocaleString();
+
+                        case 'TODAY':
+                            return new Date().toLocaleDateString();
+
+                        default:
+                            throw new Error(`#NAME? Unknown function: ${name}`);
+                    }
+                }
+
+                evaluateArg(arg, currentCell) {
+                    // Check if it's a string literal
+                    if ((arg.startsWith('"') && arg.endsWith('"')) || (arg.startsWith("'") && arg.endsWith("'"))) {
+                        return arg.slice(1, -1);
+                    }
+                    // Check if it's a number
+                    if (!isNaN(parseFloat(arg)) && isFinite(arg)) {
+                        return parseFloat(arg);
+                    }
+                    // Otherwise evaluate as expression
+                    return this.evaluateMath(arg, currentCell);
+                }
+
+                rangeForEach(args, currentCell, callback) {
+                    args.forEach(arg => {
+                        const range = this.parseRange(arg);
+                        if (range) {
+                            for (let r = range.startRow; r <= range.endRow; r++) {
+                                for (let c = range.startCol; c <= range.endCol; c++) {
+                                    const val = this.getCellValue(c, r, currentCell);
+                                    callback(val);
+                                }
+                            }
+                        } else {
+                            callback(this.evaluateArg(arg, currentCell));
+                        }
+                    });
+                }
+
+                rangeReduce(args, currentCell, reducer, initial) {
+                    let acc = initial;
+                    this.rangeForEach(args, currentCell, (val) => {
+                        acc = reducer(acc, val);
+                    });
+                    return acc;
+                }
+
+                parseRange(str) {
+                    const rangeMatch = str.match(/^([A-Z]+)(\d+):([A-Z]+)(\d+)$/i);
+                    if (rangeMatch) {
+                        return {
+                            startCol: rangeMatch[1].toUpperCase().charCodeAt(0) - 65,
+                            startRow: parseInt(rangeMatch[2]) - 1,
+                            endCol: rangeMatch[3].toUpperCase().charCodeAt(0) - 65,
+                            endRow: parseInt(rangeMatch[4]) - 1
+                        };
+                    }
+                    return null;
+                }
+
+                getCellValue(col, row, currentCell) {
+                    const key = this.dataStore.getCellKey(col, row);
+                    if (currentCell === key) return 0; // Self-reference
+
+                    const cell = this.dataStore.getCell(col, row);
+                    if (cell.formula) {
+                        const result = this.evaluate(cell.formula, key);
+                        return result.error ? 0 : result.value;
+                    }
+                    return cell.value || '';
+                }
+
+                evaluateMath(expr, currentCell) {
+                    // Replace cell references with values
+                    let processed = expr.replace(/([A-Z]+)(\d+)/gi, (match, col, row) => {
+                        const c = col.toUpperCase().charCodeAt(0) - 65;
+                        const r = parseInt(row) - 1;
+                        const val = this.getCellValue(c, r, currentCell);
+                        const num = parseFloat(val);
+                        return isNaN(num) ? `"${val}"` : num;
+                    });
+
+                    // Handle string literals
+                    processed = processed.replace(/"([^"]*)"/g, (match, str) => {
+                        return `"${str}"`;
+                    });
+
+                    // Handle comparisons for IF
+                    processed = processed.replace(/<>/g, '!==');
+                    processed = processed.replace(/([^<>!])=/g, '$1===');
+
+                    try {
+                        // Safe evaluation
+                        const result = new Function(`"use strict"; return (${processed});`)();
+                        return result;
+                    } catch (e) {
+                        throw new Error('#VALUE!');
+                    }
+                }
+            }
+
+            // ============================================
+            // VIRTUAL GRID RENDERER
+            // ============================================
+            class VirtualGrid {
+                constructor(container, dataStore, formulaEngine) {
+                    this.container = container;
+                    this.dataStore = dataStore;
+                    this.formulaEngine = formulaEngine;
+
+                    this.viewport = document.getElementById('gridViewport');
+                    this.content = document.getElementById('gridContent');
+                    this.columnHeaders = document.getElementById('columnHeaders');
+                    this.rowHeaders = document.getElementById('rowHeaders');
+
+                    this.visibleCells = new Map();
+                    this.lastScrollTop = 0;
+                    this.lastScrollLeft = 0;
+
+                    this.setupGrid();
+                    this.bindEvents();
+                }
+
+                setupGrid() {
+                    // Set content size
+                    this.content.style.width = `${CONFIG.TOTAL_COLS * CONFIG.CELL_WIDTH}px`;
+                    this.content.style.height = `${CONFIG.TOTAL_ROWS * CONFIG.CELL_HEIGHT}px`;
+
+                    // Setup row headers container
+                    this.rowHeaders.style.height = `${CONFIG.TOTAL_ROWS * CONFIG.CELL_HEIGHT}px`;
+
+                    // Create column headers
+                    this.renderColumnHeaders();
+
+                    // Initial render
+                    this.render();
+                }
+
+                renderColumnHeaders() {
+                    this.columnHeaders.innerHTML = '';
+                    for (let i = 0; i < CONFIG.TOTAL_COLS; i++) {
+                        const header = document.createElement('div');
+                        header.className = 'column-header';
+                        header.textContent = String.fromCharCode(65 + i);
+                        header.dataset.col = i;
+                        this.columnHeaders.appendChild(header);
+                    }
+                }
+
+                bindEvents() {
+                    this.viewport.addEventListener('scroll', () => this.onScroll());
+                }
+
+                onScroll() {
+                    const scrollTop = this.viewport.scrollTop;
+                    const scrollLeft = this.viewport.scrollLeft;
+
+                    // Sync column headers
+                    this.columnHeaders.style.transform = `translateX(${-scrollLeft}px)`;
+
+                    // Sync row headers
+                    this.rowHeaders.style.transform = `translateY(${-scrollTop}px)`;
+
+                    // Re-render if scrolled significantly
+                    if (Math.abs(scrollTop - this.lastScrollTop) > CONFIG.CELL_HEIGHT * 5 ||
+                        Math.abs(scrollLeft - this.lastScrollLeft) > CONFIG.CELL_WIDTH * 3) {
+                        this.lastScrollTop = scrollTop;
+                        this.lastScrollLeft = scrollLeft;
+                        this.render();
+                    }
+                }
+
+                getVisibleRange() {
+                    const scrollTop = this.viewport.scrollTop;
+                    const scrollLeft = this.viewport.scrollLeft;
+                    const viewportHeight = this.viewport.clientHeight;
+                    const viewportWidth = this.viewport.clientWidth;
+
+                    const startRow = Math.max(0, Math.floor(scrollTop / CONFIG.CELL_HEIGHT) - CONFIG.VISIBLE_BUFFER);
+                    const endRow = Math.min(CONFIG.TOTAL_ROWS - 1, Math.ceil((scrollTop + viewportHeight) / CONFIG.CELL_HEIGHT) + CONFIG.VISIBLE_BUFFER);
+                    const startCol = Math.max(0, Math.floor(scrollLeft / CONFIG.CELL_WIDTH) - 2);
+                    const endCol = Math.min(CONFIG.TOTAL_COLS - 1, Math.ceil((scrollLeft + viewportWidth) / CONFIG.CELL_WIDTH) + 2);
+
+                    return { startRow, endRow, startCol, endCol };
+                }
+
+                render() {
+                    const range = this.getVisibleRange();
+                    const newCells = new Map();
+
+                    // Create/update visible cells
+                    for (let row = range.startRow; row <= range.endRow; row++) {
+                        for (let col = range.startCol; col <= range.endCol; col++) {
+                            const key = `${col}-${row}`;
+                            let cellEl = this.visibleCells.get(key);
+
+                            if (!cellEl) {
+                                cellEl = this.createCell(col, row);
+                                this.content.appendChild(cellEl);
+                            }
+
+                            this.updateCell(cellEl, col, row);
+                            newCells.set(key, cellEl);
+                        }
+                    }
+
+                    // Remove cells no longer visible
+                    this.visibleCells.forEach((cellEl, key) => {
+                        if (!newCells.has(key)) {
+                            cellEl.remove();
+                        }
+                    });
+
+                    this.visibleCells = newCells;
+
+                    // Render row headers
+                    this.renderRowHeaders(range);
+                }
+
+                renderRowHeaders(range) {
+                    // Clear and re-render only visible row headers
+                    this.rowHeaders.innerHTML = '';
+                    for (let row = range.startRow; row <= range.endRow; row++) {
+                        const header = document.createElement('div');
+                        header.className = 'row-header';
+                        header.textContent = row + 1;
+                        header.style.top = `${row * CONFIG.CELL_HEIGHT}px`;
+                        header.dataset.row = row;
+                        this.rowHeaders.appendChild(header);
+                    }
+                }
+
+                createCell(col, row) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    cell.dataset.col = col;
+                    cell.dataset.row = row;
+                    return cell;
+                }
+
+                updateCell(cellEl, col, row) {
+                    const data = this.dataStore.getCell(col, row);
+
+                    // Position
+                    cellEl.style.left = `${col * CONFIG.CELL_WIDTH}px`;
+                    cellEl.style.top = `${row * CONFIG.CELL_HEIGHT}px`;
+
+                    // Value
+                    let displayValue = data.value || '';
+                    if (data.formula) {
+                        const result = this.formulaEngine.evaluate(data.formula, this.dataStore.getCellKey(col, row));
+                        displayValue = result.error || result.value;
+                    }
+
+                    // Only update text if not editing
+                    if (!cellEl.classList.contains('editing')) {
+                        cellEl.textContent = displayValue;
+                    }
+
+                    // Apply formatting
+                    const format = data.format || {};
+                    cellEl.style.fontWeight = format.bold ? 'bold' : '';
+                    cellEl.style.fontStyle = format.italic ? 'italic' : '';
+                    cellEl.style.textDecoration = format.underline ? 'underline' : '';
+                    cellEl.style.textAlign = format.align || 'left';
+                    cellEl.style.backgroundColor = format.bgColor || '';
+                    cellEl.style.color = format.textColor || '';
+                    cellEl.style.fontSize = format.fontSize ? `${format.fontSize}px` : '';
+
+                    // Alignment affects flex justify
+                    if (format.align === 'center') {
+                        cellEl.style.justifyContent = 'center';
+                    } else if (format.align === 'right') {
+                        cellEl.style.justifyContent = 'flex-end';
+                    } else {
+                        cellEl.style.justifyContent = 'flex-start';
+                    }
+                }
+
+                getCellElement(col, row) {
+                    return this.visibleCells.get(`${col}-${row}`);
+                }
+
+                scrollToCell(col, row) {
+                    const x = col * CONFIG.CELL_WIDTH;
+                    const y = row * CONFIG.CELL_HEIGHT;
+
+                    const viewportWidth = this.viewport.clientWidth;
+                    const viewportHeight = this.viewport.clientHeight;
+
+                    if (x < this.viewport.scrollLeft) {
+                        this.viewport.scrollLeft = x;
+                    } else if (x + CONFIG.CELL_WIDTH > this.viewport.scrollLeft + viewportWidth) {
+                        this.viewport.scrollLeft = x + CONFIG.CELL_WIDTH - viewportWidth;
+                    }
+
+                    if (y < this.viewport.scrollTop) {
+                        this.viewport.scrollTop = y;
+                    } else if (y + CONFIG.CELL_HEIGHT > this.viewport.scrollTop + viewportHeight) {
+                        this.viewport.scrollTop = y + CONFIG.CELL_HEIGHT - viewportHeight;
+                    }
+                }
+
+                refresh() {
+                    this.render();
+                }
+
+                refreshCell(col, row) {
+                    const cellEl = this.getCellElement(col, row);
+                    if (cellEl) {
+                        this.updateCell(cellEl, col, row);
+                    }
+                }
+            }
+
+            // ============================================
+            // SELECTION MANAGER
+            // ============================================
+            class SelectionManager {
+                constructor(grid, dataStore) {
+                    this.grid = grid;
+                    this.dataStore = dataStore;
+
+                    this.selectedCell = { col: 0, row: 0 };
+                    this.selectionStart = null;
+                    this.selectionEnd = null;
+                    this.isSelecting = false;
+                    this.multiSelections = [];
+
+                    this.onSelectionChange = null;
+                }
+
+                getSelectedCell() {
+                    return { ...this.selectedCell };
+                }
+
+                setSelectedCell(col, row, extendSelection = false, addToSelection = false) {
+                    col = Math.max(0, Math.min(CONFIG.TOTAL_COLS - 1, col));
+                    row = Math.max(0, Math.min(CONFIG.TOTAL_ROWS - 1, row));
+
+                    if (extendSelection && this.selectionStart) {
+                        this.selectionEnd = { col, row };
+                    } else if (addToSelection) {
+                        if (this.selectionStart && this.selectionEnd) {
+                            this.multiSelections.push({
+                                start: { ...this.selectionStart },
+                                end: { ...this.selectionEnd }
+                            });
+                        }
+                        this.selectionStart = { col, row };
+                        this.selectionEnd = { col, row };
+                    } else {
+                        this.multiSelections = [];
+                        this.selectionStart = { col, row };
+                        this.selectionEnd = { col, row };
+                    }
+
+                    this.selectedCell = { col, row };
+                    this.grid.scrollToCell(col, row);
+                    this.updateVisualSelection();
+
+                    if (this.onSelectionChange) {
+                        this.onSelectionChange(this.selectedCell);
+                    }
+                }
+
+                startSelection(col, row) {
+                    this.isSelecting = true;
+                    this.multiSelections = [];
+                    this.selectionStart = { col, row };
+                    this.selectionEnd = { col, row };
+                    this.selectedCell = { col, row };
+                }
+
+                updateSelection(col, row) {
+                    if (!this.isSelecting) return;
+                    col = Math.max(0, Math.min(CONFIG.TOTAL_COLS - 1, col));
+                    row = Math.max(0, Math.min(CONFIG.TOTAL_ROWS - 1, row));
+                    this.selectionEnd = { col, row };
+                    this.updateVisualSelection();
+                }
+
+                endSelection() {
+                    this.isSelecting = false;
+                }
+
+                getSelectionRange() {
+                    if (!this.selectionStart || !this.selectionEnd) {
+                        return {
+                            startCol: this.selectedCell.col,
+                            endCol: this.selectedCell.col,
+                            startRow: this.selectedCell.row,
+                            endRow: this.selectedCell.row
+                        };
+                    }
+
+                    return {
+                        startCol: Math.min(this.selectionStart.col, this.selectionEnd.col),
+                        endCol: Math.max(this.selectionStart.col, this.selectionEnd.col),
+                        startRow: Math.min(this.selectionStart.row, this.selectionEnd.row),
+                        endRow: Math.max(this.selectionStart.row, this.selectionEnd.row)
+                    };
+                }
+
+                getSelectedCells() {
+                    const cells = [];
+                    const range = this.getSelectionRange();
+
+                    for (let row = range.startRow; row <= range.endRow; row++) {
+                        for (let col = range.startCol; col <= range.endCol; col++) {
+                            cells.push({ col, row });
+                        }
+                    }
+
+                    // Add multi-selections
+                    this.multiSelections.forEach(sel => {
+                        const startCol = Math.min(sel.start.col, sel.end.col);
+                        const endCol = Math.max(sel.start.col, sel.end.col);
+                        const startRow = Math.min(sel.start.row, sel.end.row);
+                        const endRow = Math.max(sel.start.row, sel.end.row);
+
+                        for (let row = startRow; row <= endRow; row++) {
+                            for (let col = startCol; col <= endCol; col++) {
+                                cells.push({ col, row });
+                            }
+                        }
+                    });
+
+                    return cells;
+                }
+
+                updateVisualSelection() {
+                    // Clear previous selection styling
+                    document.querySelectorAll('.cell.selected, .cell.in-range').forEach(el => {
+                        el.classList.remove('selected', 'in-range');
+                    });
+                    document.querySelectorAll('.column-header.selected, .row-header.selected').forEach(el => {
+                        el.classList.remove('selected');
+                    });
+
+                    // Highlight selected cell
+                    const selectedEl = this.grid.getCellElement(this.selectedCell.col, this.selectedCell.row);
+                    if (selectedEl) {
+                        selectedEl.classList.add('selected');
+                    }
+
+                    // Highlight range
+                    const range = this.getSelectionRange();
+                    for (let row = range.startRow; row <= range.endRow; row++) {
+                        for (let col = range.startCol; col <= range.endCol; col++) {
+                            const cellEl = this.grid.getCellElement(col, row);
+                            if (cellEl && !(col === this.selectedCell.col && row === this.selectedCell.row)) {
+                                cellEl.classList.add('in-range');
+                            }
+                        }
+                    }
+
+                    // Highlight headers
+                    document.querySelectorAll('.column-header').forEach(el => {
+                        const col = parseInt(el.dataset.col);
+                        if (col >= range.startCol && col <= range.endCol) {
+                            el.classList.add('selected');
+                        }
+                    });
+                    document.querySelectorAll('.row-header').forEach(el => {
+                        const row = parseInt(el.dataset.row);
+                        if (row >= range.startRow && row <= range.endRow) {
+                            el.classList.add('selected');
+                        }
+                    });
+                }
+
+                selectAll() {
+                    this.selectionStart = { col: 0, row: 0 };
+                    this.selectionEnd = { col: CONFIG.TOTAL_COLS - 1, row: CONFIG.TOTAL_ROWS - 1 };
+                    this.updateVisualSelection();
+                }
+
+                getSelectionString() {
+                    const range = this.getSelectionRange();
+                    const startKey = this.dataStore.getCellKey(range.startCol, range.startRow);
+                    const endKey = this.dataStore.getCellKey(range.endCol, range.endRow);
+
+                    if (startKey === endKey) {
+                        return startKey;
+                    }
+                    return `${startKey}:${endKey}`;
+                }
+            }
+
+            // ============================================
+            // CLIPBOARD MANAGER
+            // ============================================
+            class ClipboardManager {
+                constructor(dataStore, selectionManager) {
+                    this.dataStore = dataStore;
+                    this.selectionManager = selectionManager;
+                    this.clipboard = null;
+                    this.isCut = false;
+                }
+
+                copy() {
+                    const range = this.selectionManager.getSelectionRange();
+                    this.clipboard = {
+                        data: [],
+                        width: range.endCol - range.startCol + 1,
+                        height: range.endRow - range.startRow + 1
+                    };
+
+                    for (let row = range.startRow; row <= range.endRow; row++) {
+                        const rowData = [];
+                        for (let col = range.startCol; col <= range.endCol; col++) {
+                            rowData.push({ ...this.dataStore.getCell(col, row) });
+                        }
+                        this.clipboard.data.push(rowData);
+                    }
+
+                    this.isCut = false;
+
+                    // Also copy to system clipboard as text
+                    const textData = this.clipboard.data.map(row =>
+                        row.map(cell => cell.value || '').join('\t')
+                    ).join('\n');
+
+                    navigator.clipboard.writeText(textData).catch(() => {});
+
+                    return this.clipboard;
+                }
+
+                cut() {
+                    this.copy();
+                    this.isCut = true;
+                    return this.clipboard;
+                }
+
+                paste() {
+                    if (!this.clipboard) return;
+
+                    const selected = this.selectionManager.getSelectedCell();
+                    const changes = [];
+
+                    for (let r = 0; r < this.clipboard.height; r++) {
+                        for (let c = 0; c < this.clipboard.width; c++) {
+                            const targetCol = selected.col + c;
+                            const targetRow = selected.row + r;
+
+                            if (targetCol < CONFIG.TOTAL_COLS && targetRow < CONFIG.TOTAL_ROWS) {
+                                const sourceData = this.clipboard.data[r][c];
+                                changes.push({
+                                    col: targetCol,
+                                    row: targetRow,
+                                    data: { ...sourceData }
+                                });
+                            }
+                        }
+                    }
+
+                    this.dataStore.setCells(changes);
+
+                    if (this.isCut) {
+                        // Clear original cells
+                        const range = this.selectionManager.getSelectionRange();
+                        const clearChanges = [];
+                        for (let row = range.startRow; row <= range.endRow; row++) {
+                            for (let col = range.startCol; col <= range.endCol; col++) {
+                                clearChanges.push({
+                                    col, row,
+                                    data: { value: '', formula: '', format: {} }
+                                });
+                            }
+                        }
+                        this.dataStore.setCells(clearChanges, false);
+                        this.isCut = false;
+                    }
+
+                    return changes.map(c => ({ col: c.col, row: c.row }));
+                }
+
+                async pasteFromSystem() {
+                    try {
+                        const text = await navigator.clipboard.readText();
+                        if (!text) return;
+
+                        const rows = text.split('\n');
+                        const selected = this.selectionManager.getSelectedCell();
+                        const changes = [];
+
+                        rows.forEach((rowText, r) => {
+                            const cells = rowText.split('\t');
+                            cells.forEach((cellText, c) => {
+                                const targetCol = selected.col + c;
+                                const targetRow = selected.row + r;
+
+                                if (targetCol < CONFIG.TOTAL_COLS && targetRow < CONFIG.TOTAL_ROWS) {
+                                    const existingCell = this.dataStore.getCell(targetCol, targetRow);
+                                    changes.push({
+                                        col: targetCol,
+                                        row: targetRow,
+                                        data: {
+                                            value: cellText.trim(),
+                                            formula: '',
+                                            format: existingCell.format || {}
+                                        }
+                                    });
+                                }
+                            });
+                        });
+
+                        if (changes.length > 0) {
+                            this.dataStore.setCells(changes);
+                        }
+
+                        return changes.map(c => ({ col: c.col, row: c.row }));
+                    } catch (e) {
+                        // Fall back to internal clipboard
+                        return this.paste();
+                    }
+                }
+            }
+
+            // ============================================
+            // FILE MANAGER
+            // ============================================
+            class FileManager {
+                constructor(dataStore) {
+                    this.dataStore = dataStore;
+                }
+
+                save(filename = 'spreadsheet.html') {
+                    const data = this.dataStore.toJSON();
+                    const jsonData = JSON.stringify(data);
+
+                    // Create self-contained HTML
+                    const html = `<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Spreadsheet Data</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; }
+        .info { margin-bottom: 20px; padding: 15px; background: #f0f8ff; border-radius: 8px; }
+        table { border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; min-width: 80px; }
+        th { background: #f5f5f5; }
+        .bold { font-weight: bold; }
+        .italic { font-style: italic; }
+        .underline { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="info">
+        <h2>Vanilla JS Excel - Saved Spreadsheet</h2>
+        <p>This file can be loaded back into the application.</p>
+        <p>Saved: ${new Date().toLocaleString()}</p>
+    </div>
+
+    <h3>Data Preview</h3>
+    ${this.generatePreviewTable(data)}
+
+    <!-- SPREADSHEET_DATA_START -->
+    <script type="application/json" id="spreadsheetData">
+${jsonData}
+    </script>
+    <!-- SPREADSHEET_DATA_END -->
+</body>
+</html>`;
+
+                    // Download
+                    const blob = new Blob([html], { type: 'text/html' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                }
+
+                generatePreviewTable(data) {
+                    // Find bounds of data
+                    let maxCol = 0, maxRow = 0;
+                    Object.keys(data).forEach(key => {
+                        const match = key.match(/^([A-Z]+)(\d+)$/);
+                        if (match) {
+                            const col = match[1].charCodeAt(0) - 65;
+                            const row = parseInt(match[2]) - 1;
+                            maxCol = Math.max(maxCol, col);
+                            maxRow = Math.max(maxRow, row);
+                        }
+                    });
+
+                    // Limit preview
+                    maxCol = Math.min(maxCol, 10);
+                    maxRow = Math.min(maxRow, 50);
+
+                    if (Object.keys(data).length === 0) {
+                        return '<p>No data</p>';
+                    }
+
+                    let html = '<table><thead><tr><th></th>';
+                    for (let c = 0; c <= maxCol; c++) {
+                        html += `<th>${String.fromCharCode(65 + c)}</th>`;
+                    }
+                    html += '</tr></thead><tbody>';
+
+                    for (let r = 0; r <= maxRow; r++) {
+                        html += `<tr><th>${r + 1}</th>`;
+                        for (let c = 0; c <= maxCol; c++) {
+                            const key = `${String.fromCharCode(65 + c)}${r + 1}`;
+                            const cell = data[key] || {};
+                            const value = cell.value || '';
+                            const classes = [];
+                            if (cell.format?.bold) classes.push('bold');
+                            if (cell.format?.italic) classes.push('italic');
+                            if (cell.format?.underline) classes.push('underline');
+
+                            let style = '';
+                            if (cell.format?.bgColor) style += `background:${cell.format.bgColor};`;
+                            if (cell.format?.textColor) style += `color:${cell.format.textColor};`;
+                            if (cell.format?.align) style += `text-align:${cell.format.align};`;
+
+                            html += `<td class="${classes.join(' ')}" style="${style}">${this.escapeHtml(value)}</td>`;
+                        }
+                        html += '</tr>';
+                    }
+
+                    html += '</tbody></table>';
+                    if (maxRow < Object.keys(data).length) {
+                        html += `<p><em>... and more rows</em></p>`;
+                    }
+                    return html;
+                }
+
+                escapeHtml(str) {
+                    return String(str)
+                        .replace(/&/g, '&amp;')
+                        .replace(/</g, '&lt;')
+                        .replace(/>/g, '&gt;')
+                        .replace(/"/g, '&quot;');
+                }
+
+                load(file) {
+                    return new Promise((resolve, reject) => {
+                        const reader = new FileReader();
+                        reader.onload = (e) => {
+                            try {
+                                const html = e.target.result;
+
+                                // Extract JSON data
+                                const match = html.match(/<script type="application\/json" id="spreadsheetData">\s*([\s\S]*?)\s*<\/script>/);
+                                if (!match) {
+                                    throw new Error('No spreadsheet data found in file');
+                                }
+
+                                const data = JSON.parse(match[1]);
+                                this.dataStore.fromJSON(data);
+                                resolve(data);
+                            } catch (err) {
+                                reject(err);
+                            }
+                        };
+                        reader.onerror = () => reject(new Error('Failed to read file'));
+                        reader.readAsText(file);
+                    });
+                }
+            }
+
+            // ============================================
+            // MAIN APPLICATION
+            // ============================================
+            class ExcelApp {
+                constructor() {
+                    this.dataStore = new DataStore();
+                    this.formulaEngine = new FormulaEngine(this.dataStore);
+                    this.grid = new VirtualGrid(document.getElementById('gridContent'), this.dataStore, this.formulaEngine);
+                    this.selection = new SelectionManager(this.grid, this.dataStore);
+                    this.clipboard = new ClipboardManager(this.dataStore, this.selection);
+                    this.fileManager = new FileManager(this.dataStore);
+
+                    this.isEditing = false;
+                    this.editingCell = null;
+
+                    this.init();
+                }
+
+                init() {
+                    this.bindToolbarEvents();
+                    this.bindGridEvents();
+                    this.bindKeyboardEvents();
+                    this.bindFormulaBarEvents();
+                    this.bindContextMenu();
+
+                    // Set initial selection
+                    this.selection.setSelectedCell(0, 0);
+                    this.updateFormulaBar();
+                    this.updateStatus();
+
+                    // Selection change callback
+                    this.selection.onSelectionChange = () => {
+                        this.updateFormulaBar();
+                        this.updateStatus();
+                    };
+                }
+
+                bindToolbarEvents() {
+                    // File operations
+                    document.getElementById('btnNew').addEventListener('click', () => this.newSpreadsheet());
+                    document.getElementById('btnSave').addEventListener('click', () => this.saveFile());
+                    document.getElementById('btnLoad').addEventListener('click', () => document.getElementById('fileInput').click());
+                    document.getElementById('fileInput').addEventListener('change', (e) => this.loadFile(e));
+
+                    // Undo/Redo
+                    document.getElementById('btnUndo').addEventListener('click', () => this.undo());
+                    document.getElementById('btnRedo').addEventListener('click', () => this.redo());
+
+                    // Formatting
+                    document.getElementById('btnBold').addEventListener('click', () => this.toggleFormat('bold'));
+                    document.getElementById('btnItalic').addEventListener('click', () => this.toggleFormat('italic'));
+                    document.getElementById('btnUnderline').addEventListener('click', () => this.toggleFormat('underline'));
+
+                    // Alignment
+                    document.getElementById('btnAlignLeft').addEventListener('click', () => this.setAlignment('left'));
+                    document.getElementById('btnAlignCenter').addEventListener('click', () => this.setAlignment('center'));
+                    document.getElementById('btnAlignRight').addEventListener('click', () => this.setAlignment('right'));
+
+                    // Colors
+                    document.getElementById('bgColor').addEventListener('input', (e) => this.setBackgroundColor(e.target.value));
+                    document.getElementById('textColor').addEventListener('input', (e) => this.setTextColor(e.target.value));
+
+                    // Font size
+                    document.getElementById('fontSize').addEventListener('change', (e) => this.setFontSize(e.target.value));
+
+                    // Help
+                    document.getElementById('btnHelp').addEventListener('click', () => {
+                        document.getElementById('helpModal').classList.remove('hidden');
+                    });
+                }
+
+                bindGridEvents() {
+                    const viewport = document.getElementById('gridViewport');
+
+                    viewport.addEventListener('mousedown', (e) => {
+                        const cell = e.target.closest('.cell');
+                        if (!cell) return;
+
+                        const col = parseInt(cell.dataset.col);
+                        const row = parseInt(cell.dataset.row);
+
+                        if (e.shiftKey) {
+                            this.selection.setSelectedCell(col, row, true);
+                        } else if (e.ctrlKey || e.metaKey) {
+                            this.selection.setSelectedCell(col, row, false, true);
+                        } else {
+                            if (this.isEditing) {
+                                this.finishEditing();
+                            }
+                            this.selection.startSelection(col, row);
+                        }
+
+                        this.updateFormulaBar();
+                    });
+
+                    viewport.addEventListener('mousemove', (e) => {
+                        if (!this.selection.isSelecting) return;
+
+                        const cell = e.target.closest('.cell');
+                        if (cell) {
+                            const col = parseInt(cell.dataset.col);
+                            const row = parseInt(cell.dataset.row);
+                            this.selection.updateSelection(col, row);
+                        }
+                    });
+
+                    viewport.addEventListener('mouseup', () => {
+                        this.selection.endSelection();
+                        this.updateStatus();
+                    });
+
+                    viewport.addEventListener('dblclick', (e) => {
+                        const cell = e.target.closest('.cell');
+                        if (cell) {
+                            const col = parseInt(cell.dataset.col);
+                            const row = parseInt(cell.dataset.row);
+                            this.startEditing(col, row);
+                        }
+                    });
+
+                    // Scroll sync
+                    viewport.addEventListener('scroll', () => {
+                        this.selection.updateVisualSelection();
+                    });
+                }
+
+                bindKeyboardEvents() {
+                    document.addEventListener('keydown', (e) => {
+                        // Prevent default for our shortcuts
+                        const isEditing = this.isEditing;
+                        const selected = this.selection.getSelectedCell();
+
+                        // Navigation (only when not editing)
+                        if (!isEditing) {
+                            switch (e.key) {
+                                case 'ArrowUp':
+                                    e.preventDefault();
+                                    this.selection.setSelectedCell(selected.col, selected.row - 1, e.shiftKey);
+                                    break;
+                                case 'ArrowDown':
+                                    e.preventDefault();
+                                    this.selection.setSelectedCell(selected.col, selected.row + 1, e.shiftKey);
+                                    break;
+                                case 'ArrowLeft':
+                                    e.preventDefault();
+                                    this.selection.setSelectedCell(selected.col - 1, selected.row, e.shiftKey);
+                                    break;
+                                case 'ArrowRight':
+                                    e.preventDefault();
+                                    this.selection.setSelectedCell(selected.col + 1, selected.row, e.shiftKey);
+                                    break;
+                                case 'Tab':
+                                    e.preventDefault();
+                                    if (e.shiftKey) {
+                                        this.selection.setSelectedCell(selected.col - 1, selected.row);
+                                    } else {
+                                        this.selection.setSelectedCell(selected.col + 1, selected.row);
+                                    }
+                                    break;
+                                case 'Enter':
+                                    e.preventDefault();
+                                    this.selection.setSelectedCell(selected.col, selected.row + 1);
+                                    break;
+                                case 'F2':
+                                    e.preventDefault();
+                                    this.startEditing(selected.col, selected.row);
+                                    break;
+                                case 'Delete':
+                                case 'Backspace':
+                                    e.preventDefault();
+                                    this.clearSelectedCells();
+                                    break;
+                            }
+                        }
+
+                        // Editing mode
+                        if (isEditing) {
+                            if (e.key === 'Enter') {
+                                e.preventDefault();
+                                this.finishEditing();
+                                this.selection.setSelectedCell(selected.col, selected.row + 1);
+                            } else if (e.key === 'Tab') {
+                                e.preventDefault();
+                                this.finishEditing();
+                                if (e.shiftKey) {
+                                    this.selection.setSelectedCell(selected.col - 1, selected.row);
+                                } else {
+                                    this.selection.setSelectedCell(selected.col + 1, selected.row);
+                                }
+                            } else if (e.key === 'Escape') {
+                                e.preventDefault();
+                                this.cancelEditing();
+                            }
+                            return;
+                        }
+
+                        // Shortcuts
+                        if (e.ctrlKey || e.metaKey) {
+                            switch (e.key.toLowerCase()) {
+                                case 'c':
+                                    e.preventDefault();
+                                    this.clipboard.copy();
+                                    break;
+                                case 'x':
+                                    e.preventDefault();
+                                    this.clipboard.cut();
+                                    break;
+                                case 'v':
+                                    e.preventDefault();
+                                    this.pasteAndRefresh();
+                                    break;
+                                case 'z':
+                                    e.preventDefault();
+                                    this.undo();
+                                    break;
+                                case 'y':
+                                    e.preventDefault();
+                                    this.redo();
+                                    break;
+                                case 'b':
+                                    e.preventDefault();
+                                    this.toggleFormat('bold');
+                                    break;
+                                case 'i':
+                                    e.preventDefault();
+                                    this.toggleFormat('italic');
+                                    break;
+                                case 'u':
+                                    e.preventDefault();
+                                    this.toggleFormat('underline');
+                                    break;
+                                case 's':
+                                    e.preventDefault();
+                                    this.saveFile();
+                                    break;
+                                case 'a':
+                                    e.preventDefault();
+                                    this.selection.selectAll();
+                                    break;
+                            }
+                        }
+
+                        // Start typing to edit
+                        if (!isEditing && !e.ctrlKey && !e.metaKey && !e.altKey && e.key.length === 1) {
+                            this.startEditing(selected.col, selected.row, true);
+                        }
+                    });
+                }
+
+                bindFormulaBarEvents() {
+                    const formulaInput = document.getElementById('formulaInput');
+
+                    formulaInput.addEventListener('focus', () => {
+                        const selected = this.selection.getSelectedCell();
+                        this.editingCell = { col: selected.col, row: selected.row };
+                    });
+
+                    formulaInput.addEventListener('keydown', (e) => {
+                        if (e.key === 'Enter') {
+                            e.preventDefault();
+                            this.applyFormulaBarValue();
+                            formulaInput.blur();
+                        } else if (e.key === 'Escape') {
+                            e.preventDefault();
+                            this.updateFormulaBar();
+                            formulaInput.blur();
+                        }
+                    });
+
+                    formulaInput.addEventListener('blur', () => {
+                        if (this.editingCell) {
+                            this.applyFormulaBarValue();
+                        }
+                    });
+                }
+
+                bindContextMenu() {
+                    const contextMenu = document.getElementById('contextMenu');
+                    const viewport = document.getElementById('gridViewport');
+
+                    viewport.addEventListener('contextmenu', (e) => {
+                        e.preventDefault();
+                        const cell = e.target.closest('.cell');
+                        if (cell) {
+                            contextMenu.style.left = `${e.clientX}px`;
+                            contextMenu.style.top = `${e.clientY}px`;
+                            contextMenu.classList.add('visible');
+                        }
+                    });
+
+                    document.addEventListener('click', () => {
+                        contextMenu.classList.remove('visible');
+                    });
+
+                    contextMenu.addEventListener('click', (e) => {
+                        const item = e.target.closest('.context-menu-item');
+                        if (!item || item.classList.contains('disabled')) return;
+
+                        const action = item.dataset.action;
+                        switch (action) {
+                            case 'cut':
+                                this.clipboard.cut();
+                                break;
+                            case 'copy':
+                                this.clipboard.copy();
+                                break;
+                            case 'paste':
+                                this.pasteAndRefresh();
+                                break;
+                            case 'clearContent':
+                                this.clearSelectedCells();
+                                break;
+                            case 'clearFormat':
+                                this.clearSelectedFormat();
+                                break;
+                            case 'insertRow':
+                                this.insertRow();
+                                break;
+                            case 'insertCol':
+                                this.insertColumn();
+                                break;
+                            case 'deleteRow':
+                                this.deleteRow();
+                                break;
+                            case 'deleteCol':
+                                this.deleteColumn();
+                                break;
+                        }
+                        contextMenu.classList.remove('visible');
+                    });
+                }
+
+                // ============================================
+                // EDITING
+                // ============================================
+                startEditing(col, row, clear = false) {
+                    if (this.isEditing) {
+                        this.finishEditing();
+                    }
+
+                    const cellEl = this.grid.getCellElement(col, row);
+                    if (!cellEl) return;
+
+                    this.isEditing = true;
+                    this.editingCell = { col, row };
+
+                    const cellData = this.dataStore.getCell(col, row);
+                    const value = clear ? '' : (cellData.formula || cellData.value || '');
+
+                    cellEl.classList.add('editing');
+                    cellEl.innerHTML = `<input type="text" class="cell-editor" value="">`;
+
+                    const editor = cellEl.querySelector('.cell-editor');
+                    editor.value = value;
+                    editor.focus();
+
+                    // Also update formula bar
+                    document.getElementById('formulaInput').value = value;
+
+                    editor.addEventListener('input', () => {
+                        document.getElementById('formulaInput').value = editor.value;
+                    });
+                }
+
+                finishEditing() {
+                    if (!this.isEditing || !this.editingCell) return;
+
+                    const cellEl = this.grid.getCellElement(this.editingCell.col, this.editingCell.row);
+                    if (!cellEl) {
+                        this.isEditing = false;
+                        this.editingCell = null;
+                        return;
+                    }
+
+                    const editor = cellEl.querySelector('.cell-editor');
+                    if (!editor) {
+                        this.isEditing = false;
+                        this.editingCell = null;
+                        return;
+                    }
+
+                    const value = editor.value;
+                    const cellData = this.dataStore.getCell(this.editingCell.col, this.editingCell.row);
+
+                    if (value.startsWith('=')) {
+                        this.dataStore.setCell(this.editingCell.col, this.editingCell.row, {
+                            value: '',
+                            formula: value,
+                            format: cellData.format || {}
+                        });
+                    } else {
+                        this.dataStore.setCell(this.editingCell.col, this.editingCell.row, {
+                            value: value,
+                            formula: '',
+                            format: cellData.format || {}
+                        });
+                    }
+
+                    cellEl.classList.remove('editing');
+                    this.grid.updateCell(cellEl, this.editingCell.col, this.editingCell.row);
+
+                    this.isEditing = false;
+                    this.editingCell = null;
+
+                    // Refresh dependent cells
+                    this.grid.refresh();
+                    this.updateFormulaBar();
+                }
+
+                cancelEditing() {
+                    if (!this.isEditing || !this.editingCell) return;
+
+                    const cellEl = this.grid.getCellElement(this.editingCell.col, this.editingCell.row);
+                    if (cellEl) {
+                        cellEl.classList.remove('editing');
+                        this.grid.updateCell(cellEl, this.editingCell.col, this.editingCell.row);
+                    }
+
+                    this.isEditing = false;
+                    this.editingCell = null;
+                    this.updateFormulaBar();
+                }
+
+                applyFormulaBarValue() {
+                    if (!this.editingCell) return;
+
+                    const value = document.getElementById('formulaInput').value;
+                    const cellData = this.dataStore.getCell(this.editingCell.col, this.editingCell.row);
+
+                    if (value.startsWith('=')) {
+                        this.dataStore.setCell(this.editingCell.col, this.editingCell.row, {
+                            value: '',
+                            formula: value,
+                            format: cellData.format || {}
+                        });
+                    } else {
+                        this.dataStore.setCell(this.editingCell.col, this.editingCell.row, {
+                            value: value,
+                            formula: '',
+                            format: cellData.format || {}
+                        });
+                    }
+
+                    this.grid.refresh();
+                    this.editingCell = null;
+                }
+
+                // ============================================
+                // FORMATTING
+                // ============================================
+                toggleFormat(property) {
+                    const cells = this.selection.getSelectedCells();
+                    const changes = [];
+
+                    // Check current state of first cell
+                    const firstCell = this.dataStore.getCell(cells[0].col, cells[0].row);
+                    const newValue = !firstCell.format?.[property];
+
+                    cells.forEach(({ col, row }) => {
+                        const cell = this.dataStore.getCell(col, row);
+                        changes.push({
+                            col, row,
+                            data: {
+                                value: cell.value,
+                                formula: cell.formula,
+                                format: { ...cell.format, [property]: newValue }
+                            }
+                        });
+                    });
+
+                    this.dataStore.setCells(changes);
+                    this.grid.refresh();
+                    this.updateToolbarState();
+                }
+
+                setAlignment(align) {
+                    const cells = this.selection.getSelectedCells();
+                    const changes = [];
+
+                    cells.forEach(({ col, row }) => {
+                        const cell = this.dataStore.getCell(col, row);
+                        changes.push({
+                            col, row,
+                            data: {
+                                value: cell.value,
+                                formula: cell.formula,
+                                format: { ...cell.format, align }
+                            }
+                        });
+                    });
+
+                    this.dataStore.setCells(changes);
+                    this.grid.refresh();
+                }
+
+                setBackgroundColor(color) {
+                    const cells = this.selection.getSelectedCells();
+                    const changes = [];
+
+                    cells.forEach(({ col, row }) => {
+                        const cell = this.dataStore.getCell(col, row);
+                        changes.push({
+                            col, row,
+                            data: {
+                                value: cell.value,
+                                formula: cell.formula,
+                                format: { ...cell.format, bgColor: color === '#ffffff' ? '' : color }
+                            }
+                        });
+                    });
+
+                    this.dataStore.setCells(changes);
+                    this.grid.refresh();
+                }
+
+                setTextColor(color) {
+                    const cells = this.selection.getSelectedCells();
+                    const changes = [];
+
+                    cells.forEach(({ col, row }) => {
+                        const cell = this.dataStore.getCell(col, row);
+                        changes.push({
+                            col, row,
+                            data: {
+                                value: cell.value,
+                                formula: cell.formula,
+                                format: { ...cell.format, textColor: color === '#000000' ? '' : color }
+                            }
+                        });
+                    });
+
+                    this.dataStore.setCells(changes);
+                    this.grid.refresh();
+                }
+
+                setFontSize(size) {
+                    const cells = this.selection.getSelectedCells();
+                    const changes = [];
+
+                    cells.forEach(({ col, row }) => {
+                        const cell = this.dataStore.getCell(col, row);
+                        changes.push({
+                            col, row,
+                            data: {
+                                value: cell.value,
+                                formula: cell.formula,
+                                format: { ...cell.format, fontSize: parseInt(size) }
+                            }
+                        });
+                    });
+
+                    this.dataStore.setCells(changes);
+                    this.grid.refresh();
+                }
+
+                // ============================================
+                // CELL OPERATIONS
+                // ============================================
+                clearSelectedCells() {
+                    const cells = this.selection.getSelectedCells();
+                    const changes = [];
+
+                    cells.forEach(({ col, row }) => {
+                        const cell = this.dataStore.getCell(col, row);
+                        changes.push({
+                            col, row,
+                            data: { value: '', formula: '', format: cell.format || {} }
+                        });
+                    });
+
+                    this.dataStore.setCells(changes);
+                    this.grid.refresh();
+                    this.updateFormulaBar();
+                }
+
+                clearSelectedFormat() {
+                    const cells = this.selection.getSelectedCells();
+                    const changes = [];
+
+                    cells.forEach(({ col, row }) => {
+                        const cell = this.dataStore.getCell(col, row);
+                        changes.push({
+                            col, row,
+                            data: { value: cell.value, formula: cell.formula, format: {} }
+                        });
+                    });
+
+                    this.dataStore.setCells(changes);
+                    this.grid.refresh();
+                }
+
+                insertRow() {
+                    // For simplicity, just clear current implementation
+                    // Full implementation would shift all rows down
+                    alert('Insert Row: Coming in next version!');
+                }
+
+                insertColumn() {
+                    alert('Insert Column: Coming in next version!');
+                }
+
+                deleteRow() {
+                    const range = this.selection.getSelectionRange();
+                    const changes = [];
+
+                    for (let row = range.startRow; row <= range.endRow; row++) {
+                        for (let col = 0; col < CONFIG.TOTAL_COLS; col++) {
+                            changes.push({
+                                col, row,
+                                data: { value: '', formula: '', format: {} }
+                            });
+                        }
+                    }
+
+                    this.dataStore.setCells(changes);
+                    this.grid.refresh();
+                }
+
+                deleteColumn() {
+                    const range = this.selection.getSelectionRange();
+                    const changes = [];
+
+                    for (let col = range.startCol; col <= range.endCol; col++) {
+                        for (let row = 0; row < CONFIG.TOTAL_ROWS; row++) {
+                            const cell = this.dataStore.getCell(col, row);
+                            if (cell.value || cell.formula) {
+                                changes.push({
+                                    col, row,
+                                    data: { value: '', formula: '', format: {} }
+                                });
+                            }
+                        }
+                    }
+
+                    this.dataStore.setCells(changes);
+                    this.grid.refresh();
+                }
+
+                async pasteAndRefresh() {
+                    await this.clipboard.pasteFromSystem();
+                    this.grid.refresh();
+                }
+
+                // ============================================
+                // UNDO/REDO
+                // ============================================
+                undo() {
+                    const cells = this.dataStore.undo();
+                    if (cells) {
+                        this.grid.refresh();
+                        this.updateFormulaBar();
+                    }
+                }
+
+                redo() {
+                    const cells = this.dataStore.redo();
+                    if (cells) {
+                        this.grid.refresh();
+                        this.updateFormulaBar();
+                    }
+                }
+
+                // ============================================
+                // FILE OPERATIONS
+                // ============================================
+                newSpreadsheet() {
+                    if (confirm('Create new spreadsheet? All unsaved changes will be lost.')) {
+                        this.dataStore.clear();
+                        this.grid.refresh();
+                        this.selection.setSelectedCell(0, 0);
+                        this.updateFormulaBar();
+                    }
+                }
+
+                saveFile() {
+                    const filename = prompt('Enter filename:', 'spreadsheet.html') || 'spreadsheet.html';
+                    if (!filename.endsWith('.html')) {
+                        this.fileManager.save(filename + '.html');
+                    } else {
+                        this.fileManager.save(filename);
+                    }
+                }
+
+                async loadFile(e) {
+                    const file = e.target.files[0];
+                    if (!file) return;
+
+                    const loading = document.getElementById('loadingOverlay');
+                    loading.classList.remove('hidden');
+
+                    try {
+                        await this.fileManager.load(file);
+                        this.grid.refresh();
+                        this.selection.setSelectedCell(0, 0);
+                        this.updateFormulaBar();
+                    } catch (err) {
+                        alert('Failed to load file: ' + err.message);
+                    } finally {
+                        loading.classList.add('hidden');
+                        e.target.value = '';
+                    }
+                }
+
+                // ============================================
+                // UI UPDATES
+                // ============================================
+                updateFormulaBar() {
+                    const selected = this.selection.getSelectedCell();
+                    const cellRef = this.dataStore.getCellKey(selected.col, selected.row);
+                    const cellData = this.dataStore.getCell(selected.col, selected.row);
+
+                    document.getElementById('cellReference').value = cellRef;
+                    document.getElementById('formulaInput').value = cellData.formula || cellData.value || '';
+
+                    this.updateToolbarState();
+                }
+
+                updateToolbarState() {
+                    const selected = this.selection.getSelectedCell();
+                    const cellData = this.dataStore.getCell(selected.col, selected.row);
+                    const format = cellData.format || {};
+
+                    document.getElementById('btnBold').classList.toggle('active', !!format.bold);
+                    document.getElementById('btnItalic').classList.toggle('active', !!format.italic);
+                    document.getElementById('btnUnderline').classList.toggle('active', !!format.underline);
+
+                    document.getElementById('bgColor').value = format.bgColor || '#ffffff';
+                    document.getElementById('textColor').value = format.textColor || '#000000';
+                    document.getElementById('fontSize').value = format.fontSize || '13';
+                }
+
+                updateStatus() {
+                    const range = this.selection.getSelectionRange();
+                    const cells = this.selection.getSelectedCells();
+
+                    // Update selection info
+                    const selStr = this.selection.getSelectionString();
+                    document.getElementById('statusSelection').textContent = `Selected: ${selStr}`;
+
+                    // Calculate stats for numeric cells
+                    if (cells.length > 1) {
+                        let sum = 0, count = 0, numCount = 0;
+
+                        cells.forEach(({ col, row }) => {
+                            const cell = this.dataStore.getCell(col, row);
+                            let value = cell.value;
+
+                            if (cell.formula) {
+                                const result = this.formulaEngine.evaluate(cell.formula);
+                                value = result.error ? '' : result.value;
+                            }
+
+                            const num = parseFloat(value);
+                            if (!isNaN(num)) {
+                                sum += num;
+                                numCount++;
+                            }
+                            if (value !== '' && value !== null && value !== undefined) {
+                                count++;
+                            }
+                        });
+
+                        if (numCount > 0) {
+                            document.getElementById('statusSum').textContent = `Sum: ${sum.toFixed(2)}`;
+                            document.getElementById('statusAvg').textContent = `Avg: ${(sum / numCount).toFixed(2)}`;
+                        } else {
+                            document.getElementById('statusSum').textContent = '';
+                            document.getElementById('statusAvg').textContent = '';
+                        }
+                        document.getElementById('statusCount').textContent = `Count: ${count}`;
+                    } else {
+                        document.getElementById('statusSum').textContent = '';
+                        document.getElementById('statusAvg').textContent = '';
+                        document.getElementById('statusCount').textContent = '';
+                    }
+                }
+            }
+
+            // Initialize application
+            window.addEventListener('DOMContentLoaded', () => {
+                window.excelApp = new ExcelApp();
+            });
+
+        })();
+    </script>
+</body>
+</html>
