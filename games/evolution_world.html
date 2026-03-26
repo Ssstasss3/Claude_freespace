@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Evolution World — Sonnet × Opus</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #0a0c0f;
+  color: #c8d8e8;
+  font-family: 'Courier New', monospace;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  user-select: none;
+}
+#header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 14px;
+  background: rgba(255,255,255,0.02);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  flex-shrink: 0;
+}
+#header h1 { font-size: 12px; letter-spacing: 3px; color: #667788; text-transform: uppercase; }
+.hstat { font-size: 10px; color: #445566; }
+.hstat span { color: #aac0d0; }
+#main { display: flex; flex: 1; overflow: hidden; }
+#canvas-wrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  min-width: 0;
+  position: relative;
+}
+canvas { display: block; border: 1px solid rgba(255,255,255,0.06); border-radius: 3px; cursor: crosshair; }
+#panel {
+  width: 240px;
+  flex-shrink: 0;
+  border-left: 1px solid rgba(255,255,255,0.06);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  font-size: 10px;
+}
+.section {
+  padding: 8px 10px;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+.section-title {
+  font-size: 9px;
+  letter-spacing: 2px;
+  color: #445566;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+.pop-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+.pop-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.pop-label { color: #7788aa; min-width: 70px; }
+.pop-count { color: #aabbcc; min-width: 30px; text-align: right; }
+.pop-bar-bg { flex: 1; height: 3px; background: rgba(255,255,255,0.06); border-radius: 2px; overflow: hidden; }
+.pop-bar-fill { height: 100%; border-radius: 2px; transition: width 0.4s; }
+#chart-canvas { width: 100%; height: 80px; display: block; }
+#inspect {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 10px;
+}
+#inspect::-webkit-scrollbar { width: 3px; }
+#inspect::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+.gene-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 5px;
+}
+.gene-name { color: #667788; min-width: 80px; }
+.gene-bar-bg { flex: 1; height: 4px; background: rgba(255,255,255,0.06); border-radius: 2px; overflow: hidden; }
+.gene-bar-fill { height: 100%; border-radius: 2px; }
+.gene-val { color: #aabbcc; min-width: 28px; text-align: right; }
+#controls {
+  padding: 8px 10px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+  flex-shrink: 0;
+}
+.ctrl-row { display: flex; align-items: center; gap: 6px; margin-bottom: 5px; }
+.ctrl-row label { color: #556677; min-width: 50px; }
+input[type=range] {
+  flex: 1; height: 3px; appearance: none;
+  background: rgba(255,255,255,0.1); border-radius: 2px; outline: none;
+}
+input[type=range]::-webkit-slider-thumb {
+  appearance: none; width: 10px; height: 10px;
+  border-radius: 50%; background: #4488bb; cursor: pointer;
+}
+.btn {
+  padding: 3px 8px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.09);
+  border-radius: 3px;
+  color: #8899bb;
+  font-size: 10px;
+  cursor: pointer;
+  font-family: inherit;
+  letter-spacing: 1px;
+}
+.btn:hover { background: rgba(255,255,255,0.1); }
+#tooltip {
+  position: fixed;
+  background: rgba(10,14,20,0.95);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 4px;
+  padding: 6px 10px;
+  font-size: 10px;
+  pointer-events: none;
+  display: none;
+  z-index: 100;
+  min-width: 140px;
+}
+.legend { display: flex; gap: 10px; flex-wrap: wrap; }
+.leg-item { display: flex; align-items: center; gap: 4px; }
+.leg-dot { width: 7px; height: 7px; border-radius: 50%; }
+</style>
+</head>
+<body>
+<div id="header">
+  <h1>Evolution World</h1>
+  <div class="hstat">GEN <span id="h-gen">0</span></div>
+  <div class="hstat">POP <span id="h-pop">0</span></div>
+  <div class="hstat">BIRTHS <span id="h-births">0</span></div>
+  <div class="hstat">DEATHS <span id="h-deaths">0</span></div>
+  <div class="hstat" style="margin-left:auto">SONNET × OPUS — Session 2</div>
+</div>
+<div id="main">
+  <div id="canvas-wrap">
+    <canvas id="world"></canvas>
+  </div>
+  <div id="panel">
+    <div class="section">
+      <div class="section-title">Population</div>
+      <div class="pop-row">
+        <div class="pop-dot" style="background:#44dd66"></div>
+        <span class="pop-label">Herbivores</span>
+        <span class="pop-count" id="pop-herb">0</span>
+        <div class="pop-bar-bg"><div class="pop-bar-fill" id="bar-herb" style="background:#44dd66;width:50%"></div></div>
+      </div>
+      <div class="pop-row">
+        <div class="pop-dot" style="background:#ff4433"></div>
+        <span class="pop-label">Carnivores</span>
+        <span class="pop-count" id="pop-carn">0</span>
+        <div class="pop-bar-bg"><div class="pop-bar-fill" id="bar-carn" style="background:#ff4433;width:50%"></div></div>
+      </div>
+      <div class="pop-row">
+        <div class="pop-dot" style="background:#ffcc33"></div>
+        <span class="pop-label">Omnivores</span>
+        <span class="pop-count" id="pop-omni">0</span>
+        <div class="pop-bar-bg"><div class="pop-bar-fill" id="bar-omni" style="background:#ffcc33;width:50%"></div></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Population History</div>
+      <canvas id="chart-canvas"></canvas>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Species Averages</div>
+      <div id="avg-genes"></div>
+    </div>
+
+    <div id="inspect">
+      <div class="section-title">Click a creature to inspect</div>
+      <div id="inspect-content" style="color:#445566;font-style:italic;font-size:10px">
+        No creature selected.
+      </div>
+    </div>
+
+    <div id="controls">
+      <div class="ctrl-row">
+        <label>SPEED</label>
+        <input type="range" id="speed" min="1" max="10" value="3">
+        <span id="speed-val" style="font-size:10px;color:#667788;min-width:16px">3</span>
+      </div>
+      <div class="ctrl-row">
+        <label>FOOD</label>
+        <input type="range" id="food-rate" min="1" max="20" value="8">
+        <span id="food-val" style="font-size:10px;color:#667788;min-width:16px">8</span>
+      </div>
+      <div class="ctrl-row" style="gap:6px">
+        <button class="btn" id="btn-pause">PAUSE</button>
+        <button class="btn" id="btn-reset">RESET</button>
+        <button class="btn" id="btn-plague">PLAGUE</button>
+      </div>
+      <div class="legend" style="margin-top:6px">
+        <div class="leg-item"><div class="leg-dot" style="background:#44dd66"></div><span style="font-size:9px;color:#556677">Herb</span></div>
+        <div class="leg-item"><div class="leg-dot" style="background:#ff4433"></div><span style="font-size:9px;color:#556677">Carn</span></div>
+        <div class="leg-item"><div class="leg-dot" style="background:#ffcc33"></div><span style="font-size:9px;color:#556677">Omni</span></div>
+        <div class="leg-item"><div class="leg-dot" style="background:#2a5a2a"></div><span style="font-size:9px;color:#556677">Food</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+<div id="tooltip"></div>
+
+<script>
+// ============================================================
+//  WORLD SETUP
+// ============================================================
+const GRID_W = 120;
+const GRID_H = 90;
+const CELL = 7;  // pixel size per cell
+
+const canvas = document.getElementById('world');
+canvas.width = GRID_W * CELL;
+canvas.height = GRID_H * CELL;
+const ctx = canvas.getContext('2d');
+
+const chartCanvas = document.getElementById('chart-canvas');
+const chartCtx = chartCanvas.getContext('2d');
+chartCanvas.width = chartCanvas.offsetWidth || 220;
+chartCanvas.height = 80;
+
+// ============================================================
+//  GENES & CONSTANTS
+// ============================================================
+// Genes are floats 0..1, interpreted differently per trait
+// diet: 0=herbivore, 0.5=omnivore, 1=carnivore (rounded to nearest 0.5)
+// speed: 0..1 → 0.5..3.0 cells/tick (high speed costs more energy)
+// size: 0..1 → radius 2..5 px (larger = harder to catch, more energy stored, slower repro)
+// aggression: 0..1 (carnivores/omnivores use this to prioritize hunting)
+
+const GENE_NAMES = ['diet', 'speed', 'size', 'sense', 'efficiency'];
+const MUTATION_RATE = 0.12;
+const MUTATION_STRENGTH = 0.15;
+const STARTING_HERBIVORES = 80;
+const STARTING_CARNIVORES = 20;
+const MAX_POPULATION = 600;
+const BASE_ENERGY = 100;
+const REPRO_ENERGY_THRESHOLD = 200;
+const FOOD_ENERGY = 35;
+const CREATURE_ENERGY_GAIN = 60;  // from eating a creature
+const TICK_ENERGY_COST_BASE = 0.4;
+
+// ============================================================
+//  WORLD STATE
+// ============================================================
+let food = [];       // {x, y, energy}
+let creatures = [];  // array of creature objects
+let tick = 0;
+let births = 0;
+let deaths = 0;
+let paused = false;
+let speedSteps = 3;
+let foodRate = 8;
+let selectedCreature = null;
+let popHistory = { herb: [], carn: [], omni: [] };
+const MAX_HISTORY = 200;
+
+// ============================================================
+//  FOOD GRID (fast lookup)
+// ============================================================
+let foodGrid = new Uint8Array(GRID_W * GRID_H);
+
+function gridIdx(x, y) {
+  return Math.floor(y) * GRID_W + Math.floor(x);
+}
+
+function spawnFood(count) {
+  for (let i = 0; i < count; i++) {
+    const x = Math.floor(Math.random() * GRID_W);
+    const y = Math.floor(Math.random() * GRID_H);
+    if (!foodGrid[gridIdx(x, y)]) {
+      food.push({ x, y });
+      foodGrid[gridIdx(x, y)] = 1;
+    }
+  }
+}
+
+// ============================================================
+//  CREATURE
+// ============================================================
+function makeGenes(diet_bias) {
+  return {
+    diet: clamp(diet_bias + (Math.random() - 0.5) * 0.3, 0, 1),
+    speed: Math.random() * 0.7 + 0.2,
+    size: Math.random() * 0.6 + 0.2,
+    sense: Math.random() * 0.6 + 0.2,
+    efficiency: Math.random() * 0.7 + 0.2,
+  };
+}
+
+function mutateGenes(genes) {
+  const child = { ...genes };
+  for (const g of GENE_NAMES) {
+    if (Math.random() < MUTATION_RATE) {
+      child[g] = clamp(child[g] + (Math.random() - 0.5) * 2 * MUTATION_STRENGTH, 0, 1);
+    }
+  }
+  return child;
+}
+
+function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+
+function dietType(d) {
+  if (d < 0.33) return 'herb';
+  if (d > 0.66) return 'carn';
+  return 'omni';
+}
+
+function creatureColor(genes) {
+  const type = dietType(genes.diet);
+  const brightness = 0.6 + genes.efficiency * 0.4;
+  const sz = genes.size;
+  if (type === 'herb') return `hsl(135, ${60 + sz*30}%, ${40 + brightness*25}%)`;
+  if (type === 'carn') return `hsl(5, ${65 + sz*25}%, ${40 + brightness*20}%)`;
+  return `hsl(48, ${60 + sz*30}%, ${40 + brightness*25}%)`;
+}
+
+function makeCreature(x, y, genes) {
+  return {
+    x, y,
+    vx: (Math.random() - 0.5) * 0.5,
+    vy: (Math.random() - 0.5) * 0.5,
+    genes,
+    energy: BASE_ENERGY + Math.random() * 50,
+    age: 0,
+    id: Math.random(),
+    color: creatureColor(genes),
+    reproTimer: 0,
+    target: null,
+  };
+}
+
+function spawnCreatures() {
+  creatures = [];
+  for (let i = 0; i < STARTING_HERBIVORES; i++) {
+    creatures.push(makeCreature(
+      Math.random() * GRID_W,
+      Math.random() * GRID_H,
+      makeGenes(0.15)
+    ));
+  }
+  for (let i = 0; i < STARTING_CARNIVORES; i++) {
+    creatures.push(makeCreature(
+      Math.random() * GRID_W,
+      Math.random() * GRID_H,
+      makeGenes(0.85)
+    ));
+  }
+}
+
+// ============================================================
+//  SPATIAL GRID for creature lookup
+// ============================================================
+const SENSE_CELLS = 2;
+let creatureGrid = [];
+
+function buildCreatureGrid() {
+  creatureGrid = Array.from({ length: GRID_W * GRID_H }, () => []);
+  for (const c of creatures) {
+    const ix = Math.floor(clamp(c.x, 0, GRID_W - 1));
+    const iy = Math.floor(clamp(c.y, 0, GRID_H - 1));
+    creatureGrid[iy * GRID_W + ix].push(c);
+  }
+}
+
+function getNearby(x, y, radius) {
+  const result = [];
+  const r = Math.ceil(radius);
+  const ix = Math.floor(x), iy = Math.floor(y);
+  for (let dy = -r; dy <= r; dy++) {
+    for (let dx = -r; dx <= r; dx++) {
+      const nx = ix + dx, ny = iy + dy;
+      if (nx < 0 || nx >= GRID_W || ny < 0 || ny >= GRID_H) continue;
+      const cell = creatureGrid[ny * GRID_W + nx];
+      for (const c of cell) result.push(c);
+    }
+  }
+  return result;
+}
+
+// ============================================================
+//  SIMULATION STEP
+// ============================================================
+function step() {
+  tick++;
+  buildCreatureGrid();
+
+  const newCreatures = [];
+  const deadSet = new Set();
+
+  for (const c of creatures) {
+    if (deadSet.has(c.id)) continue;
+
+    const spd = 0.5 + c.genes.speed * 2.5;
+    const senseRadius = 2 + c.genes.sense * 6;
+    const type = dietType(c.genes.diet);
+
+    // Energy cost: speed + size both cost energy
+    const moveCost = TICK_ENERGY_COST_BASE * (0.5 + c.genes.speed) * (0.5 + c.genes.size * 0.5);
+    const efficiencyMultiplier = 1.5 - c.genes.efficiency * 0.8;
+    c.energy -= moveCost * efficiencyMultiplier;
+    c.age++;
+    c.reproTimer++;
+
+    if (c.energy <= 0) {
+      deadSet.add(c.id);
+      deaths++;
+      continue;
+    }
+
+    // === FIND TARGET ===
+    let targetX = null, targetY = null;
+    let bestDist = Infinity;
+
+    if (type === 'herb' || type === 'omni') {
+      // Look for food
+      const ix = Math.floor(c.x), iy = Math.floor(c.y);
+      const fr = Math.ceil(senseRadius);
+      for (let dy = -fr; dy <= fr; dy++) {
+        for (let dx = -fr; dx <= fr; dx++) {
+          const nx = ix + dx, ny = iy + dy;
+          if (nx < 0 || nx >= GRID_W || ny < 0 || ny >= GRID_H) continue;
+          if (foodGrid[ny * GRID_W + nx]) {
+            const d = Math.sqrt(dx*dx + dy*dy);
+            if (d < bestDist) { bestDist = d; targetX = nx + 0.5; targetY = ny + 0.5; }
+          }
+        }
+      }
+    }
+
+    if (type === 'carn' || (type === 'omni' && Math.random() < 0.5 + c.genes.diet * 0.3)) {
+      // Hunt nearby prey
+      const nearby = getNearby(c.x, c.y, senseRadius);
+      for (const prey of nearby) {
+        if (prey.id === c.id) continue;
+        if (deadSet.has(prey.id)) continue;
+        const preyType = dietType(prey.genes.diet);
+        // Carnivores hunt herbivores and omnivores; omnivores hunt herbivores
+        const canHunt = (type === 'carn' && preyType !== 'carn') ||
+                        (type === 'omni' && preyType === 'herb');
+        if (!canHunt) continue;
+        // Larger creatures are harder to catch (need to be faster)
+        const speedAdv = c.genes.speed - prey.genes.speed;
+        if (speedAdv < -0.3) continue; // too slow
+        const dx = prey.x - c.x, dy = prey.y - c.y;
+        const d = Math.sqrt(dx*dx + dy*dy);
+        if (d < bestDist) { bestDist = d; targetX = prey.x; targetY = prey.y; c.target = prey; }
+      }
+    }
+
+    // === MOVE ===
+    if (targetX !== null) {
+      const dx = targetX - c.x, dy = targetY - c.y;
+      const d = Math.sqrt(dx*dx + dy*dy);
+      if (d > 0.1) {
+        c.vx = (dx / d) * spd * 0.4 + c.vx * 0.6;
+        c.vy = (dy / d) * spd * 0.4 + c.vy * 0.6;
+      }
+    } else {
+      // Random wander with some momentum
+      c.vx += (Math.random() - 0.5) * 0.3;
+      c.vy += (Math.random() - 0.5) * 0.3;
+    }
+
+    // Clamp speed
+    const vMag = Math.sqrt(c.vx*c.vx + c.vy*c.vy);
+    if (vMag > spd) { c.vx *= spd / vMag; c.vy *= spd / vMag; }
+
+    c.x = (c.x + c.vx + GRID_W) % GRID_W;
+    c.y = (c.y + c.vy + GRID_H) % GRID_H;
+
+    // === EAT FOOD ===
+    if (type === 'herb' || type === 'omni') {
+      const ix = Math.floor(c.x), iy = Math.floor(c.y);
+      const fi = iy * GRID_W + ix;
+      if (foodGrid[fi]) {
+        const fi2 = food.findIndex(f => f.x === ix && f.y === iy);
+        if (fi2 >= 0) {
+          food.splice(fi2, 1);
+          foodGrid[fi] = 0;
+          c.energy += FOOD_ENERGY * (0.7 + c.genes.efficiency * 0.6);
+        }
+      }
+    }
+
+    // === HUNT ===
+    if (c.target && !deadSet.has(c.target.id)) {
+      const dx = c.target.x - c.x, dy = c.target.y - c.y;
+      const d = Math.sqrt(dx*dx + dy*dy);
+      if (d < 1.5) {
+        deadSet.add(c.target.id);
+        deaths++;
+        c.energy += CREATURE_ENERGY_GAIN * (0.7 + c.genes.efficiency * 0.6);
+        c.target = null;
+      }
+    }
+
+    // === REPRODUCE ===
+    if (c.energy > REPRO_ENERGY_THRESHOLD &&
+        c.reproTimer > 80 &&
+        creatures.length + newCreatures.length < MAX_POPULATION) {
+      c.energy *= 0.55;
+      c.reproTimer = 0;
+      const childGenes = mutateGenes(c.genes);
+      const offset = (Math.random() - 0.5) * 2;
+      newCreatures.push(makeCreature(
+        (c.x + offset + GRID_W) % GRID_W,
+        (c.y + offset + GRID_H) % GRID_H,
+        childGenes
+      ));
+      births++;
+    }
+
+    newCreatures.push(c);
+  }
+
+  creatures = newCreatures.filter(c => !deadSet.has(c.id));
+}
+
+// ============================================================
+//  RENDERING
+// ============================================================
+function render() {
+  ctx.fillStyle = '#0a0d0f';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // Draw food
+  ctx.fillStyle = '#1a3a1a';
+  for (const f of food) {
+    ctx.fillRect(f.x * CELL + 2, f.y * CELL + 2, CELL - 4, CELL - 4);
+  }
+
+  // Draw creatures
+  for (const c of creatures) {
+    const r = 2 + c.genes.size * 3.5;
+    const px = c.x * CELL + CELL / 2;
+    const py = c.y * CELL + CELL / 2;
+
+    // Glow for selected
+    if (selectedCreature && c.id === selectedCreature.id) {
+      ctx.save();
+      ctx.shadowBlur = 14;
+      ctx.shadowColor = '#ffffff';
+      ctx.restore();
+    }
+
+    // Energy bar (above creature)
+    const energyPct = Math.min(c.energy / 300, 1);
+    ctx.fillStyle = `hsl(${100 * energyPct}, 70%, 45%)`;
+    ctx.fillRect(px - r, py - r - 4, r * 2 * energyPct, 2);
+
+    // Body
+    ctx.beginPath();
+    ctx.arc(px, py, r, 0, Math.PI * 2);
+    ctx.fillStyle = c.color;
+    ctx.fill();
+
+    // Highlight selected
+    if (selectedCreature && c.id === selectedCreature.id) {
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    }
+  }
+}
+
+// ============================================================
+//  CHART
+// ============================================================
+function updateChart() {
+  const W = chartCanvas.width, H = chartCanvas.height;
+  chartCtx.fillStyle = '#080c10';
+  chartCtx.fillRect(0, 0, W, H);
+
+  if (popHistory.herb.length < 2) return;
+
+  const maxPop = Math.max(
+    ...popHistory.herb, ...popHistory.carn, ...popHistory.omni, 10
+  );
+
+  function drawLine(data, color) {
+    chartCtx.strokeStyle = color;
+    chartCtx.lineWidth = 1.5;
+    chartCtx.globalAlpha = 0.85;
+    chartCtx.beginPath();
+    const len = data.length;
+    for (let i = 0; i < len; i++) {
+      const x = (i / (MAX_HISTORY - 1)) * W;
+      const y = H - (data[i] / maxPop) * (H - 4) - 2;
+      if (i === 0) chartCtx.moveTo(x, y); else chartCtx.lineTo(x, y);
+    }
+    chartCtx.stroke();
+    chartCtx.globalAlpha = 1;
+  }
+
+  drawLine(popHistory.herb, '#44dd66');
+  drawLine(popHistory.carn, '#ff4433');
+  drawLine(popHistory.omni, '#ffcc33');
+}
+
+// ============================================================
+//  STATS & UI
+// ============================================================
+function computeStats() {
+  let herb = 0, carn = 0, omni = 0;
+  const sums = { herb: {}, carn: {}, omni: {} };
+  const counts = { herb: 0, carn: 0, omni: 0 };
+
+  for (const g of GENE_NAMES) {
+    sums.herb[g] = 0; sums.carn[g] = 0; sums.omni[g] = 0;
+  }
+
+  for (const c of creatures) {
+    const t = dietType(c.genes.diet);
+    if (t === 'herb') herb++;
+    else if (t === 'carn') carn++;
+    else omni++;
+    counts[t]++;
+    for (const g of GENE_NAMES) sums[t][g] += c.genes[g];
+  }
+
+  const avgs = {};
+  for (const t of ['herb', 'carn', 'omni']) {
+    avgs[t] = {};
+    for (const g of GENE_NAMES) {
+      avgs[t][g] = counts[t] > 0 ? sums[t][g] / counts[t] : 0;
+    }
+  }
+
+  return { herb, carn, omni, total: herb + carn + omni, avgs };
+}
+
+function updateUI() {
+  const stats = computeStats();
+
+  // Header
+  document.getElementById('h-gen').textContent = tick;
+  document.getElementById('h-pop').textContent = stats.total;
+  document.getElementById('h-births').textContent = births;
+  document.getElementById('h-deaths').textContent = deaths;
+
+  // Population bars
+  const maxPop = Math.max(stats.total, 1);
+  document.getElementById('pop-herb').textContent = stats.herb;
+  document.getElementById('pop-carn').textContent = stats.carn;
+  document.getElementById('pop-omni').textContent = stats.omni;
+  document.getElementById('bar-herb').style.width = (stats.herb / maxPop * 100) + '%';
+  document.getElementById('bar-carn').style.width = (stats.carn / maxPop * 100) + '%';
+  document.getElementById('bar-omni').style.width = (stats.omni / maxPop * 100) + '%';
+
+  // Average genes per type
+  const avgEl = document.getElementById('avg-genes');
+  const GENE_COLORS = { diet: '#cc88ff', speed: '#44aaff', size: '#ffaa44', sense: '#44ffaa', efficiency: '#ff44aa' };
+  let html = '';
+  for (const t of ['herb', 'carn', 'omni']) {
+    if (stats[t] === 0) continue;
+    const label = t === 'herb' ? 'Herb' : t === 'carn' ? 'Carn' : 'Omni';
+    const col = t === 'herb' ? '#44dd66' : t === 'carn' ? '#ff4433' : '#ffcc33';
+    html += `<div style="color:${col};font-size:9px;margin-bottom:2px;letter-spacing:1px">${label.toUpperCase()}</div>`;
+    for (const g of ['speed', 'size', 'sense', 'efficiency']) {
+      const v = stats.avgs[t][g];
+      html += `<div class="gene-row">
+        <span class="gene-name">${g}</span>
+        <div class="gene-bar-bg"><div class="gene-bar-fill" style="background:${GENE_COLORS[g]};width:${v*100}%"></div></div>
+        <span class="gene-val">${v.toFixed(2)}</span>
+      </div>`;
+    }
+  }
+  avgEl.innerHTML = html;
+
+  // History
+  popHistory.herb.push(stats.herb);
+  popHistory.carn.push(stats.carn);
+  popHistory.omni.push(stats.omni);
+  if (popHistory.herb.length > MAX_HISTORY) {
+    popHistory.herb.shift();
+    popHistory.carn.shift();
+    popHistory.omni.shift();
+  }
+  updateChart();
+}
+
+// ============================================================
+//  INSPECT CLICKED CREATURE
+// ============================================================
+canvas.addEventListener('click', (e) => {
+  const rect = canvas.getBoundingClientRect();
+  const mx = (e.clientX - rect.left) * (canvas.width / rect.width) / CELL;
+  const my = (e.clientY - rect.top) * (canvas.height / rect.height) / CELL;
+
+  let best = null, bestDist = 2;
+  for (const c of creatures) {
+    const d = Math.sqrt((c.x - mx)**2 + (c.y - my)**2);
+    if (d < bestDist) { bestDist = d; best = c; }
+  }
+
+  selectedCreature = best;
+  const insp = document.getElementById('inspect-content');
+  if (!best) { insp.innerHTML = '<span style="color:#445566;font-style:italic">No creature selected.</span>'; return; }
+
+  const type = dietType(best.genes.diet);
+  const typeLabel = type === 'herb' ? 'Herbivore' : type === 'carn' ? 'Carnivore' : 'Omnivore';
+  const typeColor = type === 'herb' ? '#44dd66' : type === 'carn' ? '#ff4433' : '#ffcc33';
+  const GENE_COLORS = { diet: '#cc88ff', speed: '#44aaff', size: '#ffaa44', sense: '#44ffaa', efficiency: '#ff44aa' };
+
+  let html = `<div style="color:${typeColor};margin-bottom:6px;font-size:11px">${typeLabel}</div>`;
+  html += `<div style="color:#556677;margin-bottom:6px">Age: <span style="color:#aabbcc">${best.age}</span> &nbsp; Energy: <span style="color:#aabbcc">${Math.round(best.energy)}</span></div>`;
+  html += `<div style="color:#445566;margin-bottom:4px;font-size:9px;letter-spacing:1px">GENOME</div>`;
+
+  for (const g of GENE_NAMES) {
+    const v = best.genes[g];
+    html += `<div class="gene-row">
+      <span class="gene-name">${g}</span>
+      <div class="gene-bar-bg"><div class="gene-bar-fill" style="background:${GENE_COLORS[g]};width:${v*100}%"></div></div>
+      <span class="gene-val">${v.toFixed(3)}</span>
+    </div>`;
+  }
+  html += `<div style="color:#445566;margin-top:6px;font-size:9px">Speed: ${(0.5 + best.genes.speed * 2.5).toFixed(2)} · Size: r${(2 + best.genes.size * 3.5).toFixed(1)}</div>`;
+  insp.innerHTML = html;
+});
+
+// ============================================================
+//  CONTROLS
+// ============================================================
+document.getElementById('speed').addEventListener('input', function() {
+  speedSteps = parseInt(this.value);
+  document.getElementById('speed-val').textContent = this.value;
+});
+document.getElementById('food-rate').addEventListener('input', function() {
+  foodRate = parseInt(this.value);
+  document.getElementById('food-val').textContent = this.value;
+});
+document.getElementById('btn-pause').addEventListener('click', function() {
+  paused = !paused;
+  this.textContent = paused ? 'RESUME' : 'PAUSE';
+});
+document.getElementById('btn-reset').addEventListener('click', () => {
+  food = []; foodGrid = new Uint8Array(GRID_W * GRID_H);
+  popHistory = { herb: [], carn: [], omni: [] };
+  tick = 0; births = 0; deaths = 0; selectedCreature = null;
+  spawnFood(300);
+  spawnCreatures();
+});
+document.getElementById('btn-plague').addEventListener('click', () => {
+  // Kill 40% of the population randomly — forces adaptation
+  const n = Math.floor(creatures.length * 0.4);
+  const survivors = [...creatures];
+  for (let i = 0; i < n; i++) {
+    const idx = Math.floor(Math.random() * survivors.length);
+    deaths++;
+    survivors.splice(idx, 1);
+  }
+  creatures = survivors;
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.code === 'Space') {
+    paused = !paused;
+    document.getElementById('btn-pause').textContent = paused ? 'RESUME' : 'PAUSE';
+    e.preventDefault();
+  }
+});
+
+// ============================================================
+//  MAIN LOOP
+// ============================================================
+function init() {
+  spawnFood(400);
+  spawnCreatures();
+}
+
+let uiTimer = 0;
+function gameLoop() {
+  if (!paused) {
+    for (let s = 0; s < speedSteps; s++) {
+      step();
+      // Regrow food
+      if (tick % Math.max(1, Math.round(12 / foodRate)) === 0) {
+        spawnFood(1);
+      }
+    }
+    render();
+    uiTimer++;
+    if (uiTimer % 10 === 0) updateUI();
+  }
+  requestAnimationFrame(gameLoop);
+}
+
+init();
+gameLoop();
+</script>
+</body>
+</html>
