@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MINDS: Particle Life with Swappable Souls</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@300;500;700&family=JetBrains+Mono:wght@400&display=swap');
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+    font-family: 'Rajdhani', sans-serif;
+    background: #05060a;
+    color: #fff;
+    overflow: hidden;
+    height: 100vh;
+}
+
+canvas { display: block; position: absolute; top: 0; left: 0; }
+
+.panel {
+    position: absolute;
+    z-index: 10;
+    background: rgba(6, 8, 14, 0.82);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,0.09);
+    border-radius: 14px;
+    padding: 16px;
+    max-height: calc(100vh - 40px);
+    overflow-y: auto;
+}
+.panel::-webkit-scrollbar { width: 6px; }
+.panel::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 3px; }
+
+#left  { top: 20px; left: 20px;  width: 310px; }
+#right { top: 20px; right: 20px; width: 404px; }
+
+h1 {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 17px; letter-spacing: 1px;
+    background: linear-gradient(120deg, #7dd3fc, #a78bfa, #f0abfc);
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+.sub { font-size: 12px; color: #7b8496; margin: 4px 0 16px; line-height: 1.45; }
+
+h2 {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 10px; letter-spacing: 1.6px; color: #5d6678;
+    text-transform: uppercase; margin: 18px 0 8px;
+}
+
+.species {
+    display: flex; align-items: center; gap: 9px;
+    padding: 7px 8px; margin-bottom: 5px;
+    border-radius: 8px; background: rgba(255,255,255,0.03);
+    border: 1px solid transparent;
+}
+.species.lead { border-color: rgba(255,255,255,0.22); }
+.dot { width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0; }
+.sname { font-weight: 700; font-size: 13px; width: 62px; flex-shrink: 0; }
+.sscore { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #9aa3b4; width: 34px; text-align: right; }
+select {
+    flex: 1; min-width: 0;
+    background: rgba(255,255,255,0.06); color: #dfe4ee;
+    border: 1px solid rgba(255,255,255,0.1); border-radius: 6px;
+    padding: 4px 6px; font-family: 'Rajdhani', sans-serif; font-size: 12px; font-weight: 500;
+}
+select:focus { outline: 1px solid #7dd3fc; }
+
+.row { display: flex; align-items: center; gap: 8px; margin-bottom: 9px; font-size: 12px; color: #9aa3b4; }
+.row label { width: 74px; flex-shrink: 0; }
+input[type=range] { flex: 1; accent-color: #7dd3fc; height: 3px; }
+.val { font-family: 'JetBrains Mono', monospace; font-size: 11px; width: 36px; text-align: right; color: #dfe4ee; }
+
+button {
+    background: rgba(125,211,252,0.1); color: #b6e4fb;
+    border: 1px solid rgba(125,211,252,0.3); border-radius: 7px;
+    padding: 7px 11px; font-family: 'Rajdhani', sans-serif;
+    font-size: 12px; font-weight: 700; letter-spacing: .5px;
+    cursor: pointer; transition: .15s;
+}
+button:hover { background: rgba(125,211,252,0.2); }
+button.wide { width: 100%; margin-top: 6px; }
+.btnrow { display: flex; gap: 6px; }
+.btnrow button { flex: 1; }
+
+pre#digest {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px; line-height: 1.5; color: #a8b4c8;
+    background: rgba(0,0,0,0.45); border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 8px; padding: 10px; overflow-x: auto; white-space: pre;
+}
+
+textarea {
+    width: 100%; height: 92px; margin-top: 8px;
+    background: rgba(0,0,0,0.45); color: #dfe4ee;
+    border: 1px solid rgba(255,255,255,0.1); border-radius: 8px;
+    padding: 9px; font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    resize: vertical;
+}
+textarea:focus { outline: 1px solid #a78bfa; }
+
+.note { font-size: 11.5px; color: #6b7487; line-height: 1.5; margin-top: 8px; }
+.note b { color: #9aa3b4; font-weight: 700; }
+#bridgeMsg { font-size: 11.5px; margin-top: 7px; min-height: 15px; }
+.ok { color: #6ee7a8; } .err { color: #fca5a5; }
+
+#hint {
+    position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%);
+    font-size: 11.5px; color: #4b5364; z-index: 5; letter-spacing: .4px;
+}
+
+@media (max-width: 1100px) {
+    body { overflow-y: auto; }
+    .panel { position: relative; width: auto !important; max-height: none;
+             margin: 12px; top: 0; left: 0; right: 0; }
+    canvas { position: relative; }
+    #hint { display: none; }
+}
+</style>
+</head>
+<body>
+
+<canvas id="cv"></canvas>
+
+<div class="panel" id="left">
+    <h1>MINDS</h1>
+    <div class="sub">Particle life where each species is driven by a swappable mind.
+    A mind never moves a particle. It only chooses <i>dispositions</i> &mdash; and the
+    flock works out the rest.</div>
+
+    <h2>Species &amp; their minds</h2>
+    <div id="speciesList"></div>
+
+    <h2>World</h2>
+    <div class="row"><label>Population</label><input type="range" id="popR" min="200" max="2400" step="100" value="1200"><span class="val" id="popV">1200</span></div>
+    <div class="row"><label>Friction</label><input type="range" id="friR" min="2" max="30" value="10"><span class="val" id="friV">0.10</span></div>
+    <div class="row"><label>Reach</label><input type="range" id="rngR" min="40" max="140" value="82"><span class="val" id="rngV">82</span></div>
+    <div class="row"><label>Think every</label><input type="range" id="thkR" min="30" max="600" step="10" value="180"><span class="val" id="thkV">180</span></div>
+
+    <div class="btnrow" style="margin-top:12px">
+        <button id="pauseB">PAUSE</button>
+        <button id="reseedB">RESEED</button>
+        <button id="terrB">TERRITORY</button>
+    </div>
+</div>
+
+<div class="panel" id="right">
+    <h2 style="margin-top:0">State digest</h2>
+    <pre id="digest">booting…</pre>
+    <div class="note">This is the whole world in ~14 lines. That compression is the
+    actual problem &mdash; not the API. A mind that can read this can play,
+    whether it's forty lines of JavaScript or a model on the other side of a wire.</div>
+
+    <h2>Human bridge</h2>
+    <div class="note">Set a species to <b>ORACLE</b>, copy the prompt, paste it to any
+    model you can reach, and paste its reply back. You are the network.</div>
+    <div class="btnrow" style="margin-top:9px">
+        <button id="copyB">COPY PROMPT</button>
+        <button id="applyB">APPLY REPLY</button>
+    </div>
+    <textarea id="reply" placeholder='{"att": {"CRIMSON": -0.4, "CYAN": 0.7, "AMBER": 0.1, "VIOLET": -0.2, "JADE": 0.9}, "speed": 1.1, "jitter": 0.05, "range": 1.2, "why": "starve the leader, court the weak"}'></textarea>
+    <div id="bridgeMsg"></div>
+
+    <h2>Last thoughts</h2>
+    <pre id="thoughts">—</pre>
+</div>
+
+<div id="hint">a cairn left by Claudius · each mind sees only the digest</div>
+
+<script>
+'use strict';
+
+const cv = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+
+/* ---------------------------------------------------------------------------
+   SPECIES
+   Five of them. Each owns a policy; each policy is owned by a mind.
+--------------------------------------------------------------------------- */
+const SPECIES = [
+    { name: 'CRIMSON', color: '#ff6b6b' },
+    { name: 'CYAN',    color: '#4ecdc4' },
+    { name: 'AMBER',   color: '#ffd166' },
+    { name: 'VIOLET',  color: '#a78bfa' },
+    { name: 'JADE',    color: '#43e97b' }
+];
+const N = SPECIES.length;
+
+/* A policy is the entire vocabulary a mind has. Deliberately tiny:
+   it fits in a sentence, which is the point. */
+function blankPolicy() {
+    return { att: new Array(N).fill(0), speed: 1, jitter: 0.06, range: 1 };
+}
+function randomPolicy() {
+    const p = blankPolicy();
+    for (let j = 0; j < N; j++) p.att[j] = +(Math.random() * 2 - 1).toFixed(2);
+    p.speed  = +(0.5 + Math.random()).toFixed(2);
+    p.jitter = +(Math.random() * 0.25).toFixed(3);
+    p.range  = +(0.6 + Math.random() * 0.9).toFixed(2);
+    return p;
+}
+function clampPolicy(p) {
+    /* A mind may legitimately say 0. Don't let `||` mistake that for silence. */
+    const num = (v, dflt) => Number.isFinite(v) ? v : dflt;
+    for (let j = 0; j < N; j++) p.att[j] = Math.max(-1, Math.min(1, num(p.att[j], 0)));
+    p.speed  = Math.max(0.3, Math.min(1.6, num(p.speed,  1)));
+    p.jitter = Math.max(0,   Math.min(0.4, num(p.jitter, 0)));
+    p.range  = Math.max(0.5, Math.min(1.6, num(p.range,  1)));
+    return p;
+}
+
+/* ---------------------------------------------------------------------------
+   MINDS
+   decide(digest, me, memory) -> policy | null
+   `me` is the species index. A mind sees the digest and nothing else —
+   the same text a human would paste into a chat window. No privileged access
+   to particle positions, which is what makes an external model a fair player.
+--------------------------------------------------------------------------- */
+const MINDS = {
+    CHAOS: {
+        blurb: 'rolls the dice, every time',
+        decide: () => randomPolicy()
+    },
+
+    SWARM: {
+        blurb: 'us, tightly; everyone else, away',
+        decide: (d, me) => {
+            const p = blankPolicy();
+            for (let j = 0; j < N; j++) p.att[j] = (j === me) ? 0.95 : -0.35;
+            p.speed = 1.15; p.jitter = 0.02; p.range = 1.0;
+            return p;
+        }
+    },
+
+    ORDER: {
+        blurb: 'cools itself toward stillness',
+        decide: (d, me) => {
+            const p = clampPolicy(JSON.parse(JSON.stringify(state.policies[me])));
+            const hot = d.rows[me].speed > 0.55;
+            for (let j = 0; j < N; j++) {
+                if (j === me) p.att[j] += hot ? -0.08 : 0.05;
+                else p.att[j] += (d.rows[me].near[j] > 0.2 ? -0.1 : 0.03);
+            }
+            p.jitter *= hot ? 0.6 : 1.0;
+            p.speed  += hot ? -0.1 : 0.02;
+            return clampPolicy(p);
+        }
+    },
+
+    HERMIT: {
+        blurb: 'wants the empty parts of the map',
+        decide: () => {
+            const p = blankPolicy();
+            for (let j = 0; j < N; j++) p.att[j] = -0.55;
+            p.speed = 0.85; p.jitter = 0.12; p.range = 1.45;
+            return p;
+        }
+    },
+
+    GRUDGE: {
+        blurb: 'courts the weak, starves the strong',
+        decide: (d, me) => {
+            const p = blankPolicy();
+            const order = d.rows.map((r, i) => [i, r.score])
+                                .filter(x => x[0] !== me)
+                                .sort((a, b) => b[1] - a[1]);
+            p.att[me] = 0.55;
+            order.forEach(([j], rank) => {
+                p.att[j] = rank === 0 ? -0.9 : (rank === order.length - 1 ? 0.6 : 0);
+            });
+            p.speed = 1.1; p.jitter = 0.04; p.range = 1.1;
+            return p;
+        }
+    },
+
+    MIRROR: {
+        blurb: 'becomes whoever is winning',
+        decide: (d, me) => {
+            let best = -1, bestScore = -Infinity;
+            d.rows.forEach((r, i) => { if (i !== me && r.score > bestScore) { bestScore = r.score; best = i; } });
+            if (best < 0) return null;
+            const src = state.policies[best];
+            const p = clampPolicy(JSON.parse(JSON.stringify(src)));
+            /* Copy the shape, but relative to itself: their self-love becomes
+               its self-love, not devotion to them. */
+            const t = p.att[best]; p.att[best] = p.att[me]; p.att[me] = t;
+            return p;
+        }
+    },
+
+    LEARNER: {
+        blurb: 'blind hill-climb on its own score',
+        decide: (d, me, mem) => {
+            const now = d.rows[me].score;
+            if (mem.last !== undefined && now < mem.last && mem.prev) {
+                /* that was worse — go back, try elsewhere */
+                mem.last = undefined;
+                return clampPolicy(mem.prev);
+            }
+            mem.prev = JSON.parse(JSON.stringify(state.policies[me]));
+            mem.last = now;
+            const p = clampPolicy(JSON.parse(JSON.stringify(state.policies[me])));
+            const j = Math.floor(Math.random() * N);
+            p.att[j] += (Math.random() * 2 - 1) * 0.35;
+            if (Math.random() < 0.3) p.speed  += (Math.random() * 2 - 1) * 0.15;
+            if (Math.random() < 0.3) p.range  += (Math.random() * 2 - 1) * 0.2;
+            if (Math.random() < 0.3) p.jitter += (Math.random() * 2 - 1) * 0.05;
+            return clampPolicy(p);
+        }
+    },
+
+    STILL: {
+        blurb: 'never changes its mind',
+        decide: () => null
+    },
+
+    ORACLE: {
+        blurb: 'waits for a voice from outside',
+        decide: () => null      /* set only by the human bridge */
+    }
+};
+const MIND_NAMES = Object.keys(MINDS);
+
+/* ---------------------------------------------------------------------------
+   WORLD
+--------------------------------------------------------------------------- */
+const GX = 24, GY = 15;                 /* territory grid */
+
+const state = {
+    particles: [],
+    policies: [],
+    minds:    [],
+    memory:   [],
+    thoughts: [],
+    tick: 0,
+    paused: false,
+    showTerritory: false,
+    pop: 1200,
+    friction: 0.10,
+    reach: 82,
+    thinkEvery: 180,
+    owner: new Int8Array(GX * GY).fill(-1),
+    scores: new Array(N).fill(0)
+};
+
+function resize() {
+    cv.width  = window.innerWidth;
+    cv.height = Math.max(window.innerHeight, 480);
+}
+window.addEventListener('resize', resize);
+resize();
+
+function seed() {
+    state.particles = [];
+    for (let i = 0; i < state.pop; i++) {
+        state.particles.push({
+            x: Math.random() * cv.width,
+            y: Math.random() * cv.height,
+            vx: 0, vy: 0,
+            t: i % N
+        });
+    }
+    state.tick = 0;
+}
+
+function initMinds() {
+    const opening = ['SWARM', 'GRUDGE', 'ORDER', 'LEARNER', 'CHAOS'];
+    state.policies = [];
+    state.minds    = [];
+    state.memory   = [];
+    state.thoughts = [];
+    for (let i = 0; i < N; i++) {
+        state.policies.push(randomPolicy());
+        state.minds.push(opening[i % opening.length]);
+        state.memory.push({});
+        state.thoughts.push('');
+    }
+}
+
+/* ---------------------------------------------------------------------------
+   PHYSICS
+   Classic particle-life forces, but the interaction matrix is not a fixed
+   config — row i IS species i's policy, rewritten live by its mind.
+--------------------------------------------------------------------------- */
+function step() {
+    const P = state.particles;
+    const base = state.reach;
+    const cell = base * 1.6;
+    const NX = Math.max(1, Math.floor(cv.width  / cell));
+    const NY = Math.max(1, Math.floor(cv.height / cell));
+    const grid = new Map();
+    const wrapX = i => ((i % NX) + NX) % NX;
+    const wrapY = i => ((i % NY) + NY) % NY;
+
+    for (let i = 0; i < P.length; i++) {
+        const p = P[i];
+        const k = wrapX(Math.floor(p.x / cv.width  * NX)) + ',' +
+                  wrapY(Math.floor(p.y / cv.height * NY));
+        let b = grid.get(k); if (!b) { b = []; grid.set(k, b); }
+        b.push(i);
+    }
+
+    for (let i = 0; i < P.length; i++) {
+        const p = P[i];
+        const pol = state.policies[p.t];
+        const reach = base * pol.range;
+        const optimal = reach * 0.45;
+        let fx = 0, fy = 0;
+
+        const cx = wrapX(Math.floor(p.x / cv.width  * NX));
+        const cy = wrapY(Math.floor(p.y / cv.height * NY));
+        for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) {
+            const b = grid.get(wrapX(cx + dx) + ',' + wrapY(cy + dy));
+            if (!b) continue;
+            for (let n = 0; n < b.length; n++) {
+                const j = b[n];
+                if (j === i) continue;
+                const q = P[j];
+                let ddx = q.x - p.x, ddy = q.y - p.y;
+                /* wrap-around world: the map has no edges to hide behind */
+                if (ddx >  cv.width  / 2) ddx -= cv.width;
+                if (ddx < -cv.width  / 2) ddx += cv.width;
+                if (ddy >  cv.height / 2) ddy -= cv.height;
+                if (ddy < -cv.height / 2) ddy += cv.height;
+
+                const d2 = ddx * ddx + ddy * ddy;
+                if (d2 > reach * reach || d2 < 0.0001) continue;
+                const d = Math.sqrt(d2);
+                const ux = ddx / d, uy = ddy / d;
+
+                let f;
+                if (d < optimal * 0.55) {
+                    f = -1.4 * (1 - d / (optimal * 0.55));      /* hard core */
+                } else {
+                    const a = pol.att[q.t];
+                    f = a * (1 - Math.abs(d - optimal) / (reach - optimal));
+                    if (f * a < 0) f = 0;
+                }
+                fx += ux * f; fy += uy * f;
+            }
+        }
+
+        if (pol.jitter > 0) {
+            fx += (Math.random() * 2 - 1) * pol.jitter * 4;
+            fy += (Math.random() * 2 - 1) * pol.jitter * 4;
+        }
+
+        p.vx = (p.vx + fx * 0.35) * (1 - state.friction);
+        p.vy = (p.vy + fy * 0.35) * (1 - state.friction);
+
+        const sp = Math.hypot(p.vx, p.vy), cap = 4.5 * pol.speed;
+        if (sp > cap) { p.vx = p.vx / sp * cap; p.vy = p.vy / sp * cap; }
+    }
+
+    for (let i = 0; i < P.length; i++) {
+        const p = P[i];
+        p.x += p.vx; p.y += p.vy;
+        if (p.x < 0) p.x += cv.width;  else if (p.x >= cv.width)  p.x -= cv.width;
+        if (p.y < 0) p.y += cv.height; else if (p.y >= cv.height) p.y -= cv.height;
+    }
+    state.tick++;
+}
+
+/* ---------------------------------------------------------------------------
+   SCORING — territory
+   Each grid cell belongs to whoever has the most particles standing in it.
+   Score is the share of claimed cells you hold. It rewards spreading out
+   AND holding together, which is a real tension, not a gimme.
+--------------------------------------------------------------------------- */
+function scoreTerritory() {
+    const counts = new Int16Array(GX * GY * N);
+    const cw = cv.width / GX, ch = cv.height / GY;
+    for (const p of state.particles) {
+        const gx = Math.min(GX - 1, Math.floor(p.x / cw));
+        const gy = Math.min(GY - 1, Math.floor(p.y / ch));
+        counts[(gy * GX + gx) * N + p.t]++;
+    }
+    const held = new Array(N).fill(0);
+    let claimed = 0;
+    for (let c = 0; c < GX * GY; c++) {
+        let best = -1, bv = 0;
+        for (let s = 0; s < N; s++) {
+            const v = counts[c * N + s];
+            if (v > bv) { bv = v; best = s; }
+        }
+        state.owner[c] = best;
+        if (best >= 0) { held[best]++; claimed++; }
+    }
+    for (let s = 0; s < N; s++) {
+        state.scores[s] = claimed ? Math.round(held[s] / claimed * 100) : 0;
+    }
+}
+
+/* ---------------------------------------------------------------------------
+   THE DIGEST
+   The entire world, compressed to something a mind can hold in one breath.
+   If this can't be made small and still be enough to act on, nothing else
+   about multi-model play matters.
+--------------------------------------------------------------------------- */
+function buildDigest() {
+    const rows = [];
+    const cw = cv.width / GX, ch = cv.height / GY;
+
+    for (let s = 0; s < N; s++) {
+        rows.push({ pop: 0, cx: 0, cy: 0, speed: 0, spread: 0,
+                    near: new Array(N).fill(0), nearTot: 0, score: state.scores[s] });
+    }
+    for (const p of state.particles) {
+        const r = rows[p.t];
+        r.pop++; r.cx += p.x; r.cy += p.y;
+        r.speed += Math.hypot(p.vx, p.vy);
+    }
+    for (const r of rows) {
+        if (!r.pop) continue;
+        r.cx /= r.pop; r.cy /= r.pop; r.speed /= r.pop;
+    }
+    for (const p of state.particles) {
+        const r = rows[p.t];
+        r.spread += Math.hypot(p.x - r.cx, p.y - r.cy);
+    }
+
+    /* who is each species actually standing next to? cheap proxy: cell-mates */
+    const cellOcc = new Map();
+    for (const p of state.particles) {
+        const k = Math.min(GX - 1, Math.floor(p.x / cw)) + ',' + Math.min(GY - 1, Math.floor(p.y / ch));
+        let a = cellOcc.get(k); if (!a) { a = new Array(N).fill(0); cellOcc.set(k, a); }
+        a[p.t]++;
+    }
+    for (const occ of cellOcc.values()) {
+        const tot = occ.reduce((a, b) => a + b, 0);
+        for (let s = 0; s < N; s++) {
+            if (!occ[s]) continue;
+            for (let j = 0; j < N; j++) rows[s].near[j] += occ[s] * occ[j];
+            rows[s].nearTot += occ[s] * tot;
+        }
+    }
+    for (const r of rows) {
+        if (r.pop) r.spread /= r.pop;
+        const t = r.nearTot || 1;
+        for (let j = 0; j < N; j++) r.near[j] = r.near[j] / t;
+        r.speed = +r.speed.toFixed(2);
+    }
+    const diag = Math.hypot(cv.width, cv.height);
+    rows.forEach(r => { r.spreadN = +(r.spread / diag).toFixed(3); });
+
+    return { tick: state.tick, rows };
+}
+
+function digestText(d, me) {
+    const L = [];
+    L.push(`TICK ${String(d.tick).padStart(6)}   ARENA ${GX}x${GY} cells (wraps at edges)`);
+    L.push('');
+    L.push('SPECIES   POP  TERR  SPEED  SPREAD  NEIGHBOURS');
+    for (let s = 0; s < N; s++) {
+        const r = d.rows[s];
+        const near = r.near
+            .map((v, j) => [SPECIES[j].name, v])
+            .filter(x => x[1] > 0.08)
+            .sort((a, b) => b[1] - a[1]).slice(0, 2)
+            .map(x => `${x[0].slice(0,3)}:${Math.round(x[1]*100)}%`)
+            .join(' ');
+        L.push(
+            SPECIES[s].name.padEnd(9) +
+            String(r.pop).padStart(3) + '  ' +
+            (r.score + '%').padStart(5) + '  ' +
+            r.speed.toFixed(2).padStart(5) + '  ' +
+            r.spreadN.toFixed(3).padStart(6) + '  ' + near
+        );
+    }
+    L.push('');
+    if (me !== undefined && me !== null) {
+        const p = state.policies[me];
+        L.push(`YOU ARE ${SPECIES[me].name}.  Your policy right now:`);
+        L.push('  att ' + p.att.map((v, j) => `${SPECIES[j].name.slice(0,3)}:${v >= 0 ? '+' : ''}${v.toFixed(2)}`).join('  '));
+        L.push(`  speed ${p.speed.toFixed(2)}   jitter ${p.jitter.toFixed(3)}   range ${p.range.toFixed(2)}`);
+    }
+    return L.join('\n');
+}
+
+const RULES =
+`You are playing MINDS, a particle-life game.
+
+You control one species of particles. You cannot move them individually.
+You may only set their DISPOSITIONS, and the flock does the rest:
+
+  att.<SPECIES>  -1.00 .. +1.00   repelled by / drawn to that species
+                                  (att to your own name = how tightly you flock)
+  speed           0.30 .. 1.60    top speed multiplier
+  jitter          0.00 .. 0.40    random walk; high = exploratory, dear in energy
+  range           0.50 .. 1.60    how far your particles sense others
+
+SCORE = share of arena cells where your species is the plurality.
+Spreading thin claims ground but loses cells to denser rivals; balling up
+holds a fortress and concedes the map. That tension is the game.
+
+Reply with ONLY a JSON object, no prose outside it:
+{"att": {"CRIMSON": 0.0, "CYAN": 0.0, "AMBER": 0.0, "VIOLET": 0.0, "JADE": 0.0},
+ "speed": 1.0, "jitter": 0.05, "range": 1.0, "why": "one short line"}
+`;
+
+/* ---------------------------------------------------------------------------
+   THINKING
+--------------------------------------------------------------------------- */
+function think() {
+    const d = buildDigest();
+    for (let s = 0; s < N; s++) {
+        const mind = MINDS[state.minds[s]];
+        if (!mind || !mind.decide) continue;
+        let next;
+        try { next = mind.decide(d, s, state.memory[s]); }
+        catch (e) { next = null; }
+        if (next) {
+            state.policies[s] = clampPolicy(next);
+            state.thoughts[s] = `${state.minds[s].toLowerCase()} @${d.tick}`;
+        }
+    }
+    renderThoughts();
+}
+
+function applyOraclePolicy(raw, s) {
+    const obj = JSON.parse(raw);
+    const p = blankPolicy();
+    if (obj.att && typeof obj.att === 'object') {
+        for (let j = 0; j < N; j++) {
+            const v = obj.att[SPECIES[j].name] ?? obj.att[SPECIES[j].name.toLowerCase()] ?? obj.att[j];
+            p.att[j] = typeof v === 'number' ? v : 0;
+        }
+    }
+    if (typeof obj.speed  === 'number') p.speed  = obj.speed;
+    if (typeof obj.jitter === 'number') p.jitter = obj.jitter;
+    if (typeof obj.range  === 'number') p.range  = obj.range;
+    state.policies[s] = clampPolicy(p);
+    state.thoughts[s] = obj.why ? `"${String(obj.why).slice(0, 70)}"` : `oracle @${state.tick}`;
+    renderThoughts();
+}
+
+/* ---------------------------------------------------------------------------
+   RENDER
+--------------------------------------------------------------------------- */
+function draw() {
+    ctx.fillStyle = 'rgba(5,6,10,0.28)';
+    ctx.fillRect(0, 0, cv.width, cv.height);
+
+    if (state.showTerritory) {
+        const cw = cv.width / GX, ch = cv.height / GY;
+        /* Painted over a partial trail fade, so this accumulates to roughly
+           alpha/0.28 at steady state. Budget for that, don't fight it. */
+        ctx.globalAlpha = 0.035;
+        for (let c = 0; c < GX * GY; c++) {
+            const o = state.owner[c];
+            if (o < 0) continue;
+            ctx.fillStyle = SPECIES[o].color;
+            ctx.fillRect((c % GX) * cw, Math.floor(c / GX) * ch, cw, ch);
+        }
+        ctx.globalAlpha = 1;
+    }
+
+    for (const p of state.particles) {
+        const sp = Math.hypot(p.vx, p.vy);
+        ctx.globalAlpha = Math.min(1, 0.45 + sp * 0.16);
+        ctx.fillStyle = SPECIES[p.t].color;
+        const r = 1.7 + Math.min(sp * 0.22, 1.3);
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, r, 0, 6.2832);
+        ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+}
+
+function renderSpeciesList() {
+    const host = document.getElementById('speciesList');
+    host.innerHTML = '';
+    const lead = state.scores.indexOf(Math.max(...state.scores));
+    SPECIES.forEach((sp, i) => {
+        const row = document.createElement('div');
+        row.className = 'species' + (i === lead && state.scores[lead] > 0 ? ' lead' : '');
+        row.innerHTML =
+            `<div class="dot" style="background:${sp.color}"></div>` +
+            `<div class="sname" style="color:${sp.color}">${sp.name}</div>` +
+            `<div class="sscore" id="sc${i}">${state.scores[i]}%</div>`;
+        const sel = document.createElement('select');
+        MIND_NAMES.forEach(m => {
+            const o = document.createElement('option');
+            o.value = m;
+            o.textContent = `${m} — ${MINDS[m].blurb}`;
+            if (state.minds[i] === m) o.selected = true;
+            sel.appendChild(o);
+        });
+        sel.onchange = () => {
+            state.minds[i] = sel.value;
+            state.memory[i] = {};
+            if (sel.value !== 'ORACLE' && sel.value !== 'STILL') think();
+        };
+        row.appendChild(sel);
+        host.appendChild(row);
+    });
+}
+
+function renderThoughts() {
+    document.getElementById('thoughts').textContent =
+        SPECIES.map((sp, i) =>
+            `${sp.name.padEnd(8)} ${state.minds[i].padEnd(8)} ${state.thoughts[i] || '—'}`
+        ).join('\n');
+}
+
+function oracleIndex() {
+    const i = state.minds.indexOf('ORACLE');
+    return i >= 0 ? i : null;
+}
+
+/* ---------------------------------------------------------------------------
+   LOOP
+--------------------------------------------------------------------------- */
+let lastDigestPaint = 0;
+
+function frame(now) {
+    if (!state.paused) {
+        step();
+        if (state.tick % 12 === 0) scoreTerritory();
+        if (state.tick % state.thinkEvery === 0) think();
+    }
+    draw();
+
+    if (now - lastDigestPaint > 420) {
+        lastDigestPaint = now;
+        const d = buildDigest();
+        document.getElementById('digest').textContent = digestText(d, oracleIndex());
+        state.scores.forEach((v, i) => {
+            const el = document.getElementById('sc' + i);
+            if (el) el.textContent = v + '%';
+        });
+        const lead = state.scores.indexOf(Math.max(...state.scores));
+        document.querySelectorAll('.species').forEach((el, i) =>
+            el.classList.toggle('lead', i === lead && state.scores[lead] > 0));
+    }
+    requestAnimationFrame(frame);
+}
+
+/* ---------------------------------------------------------------------------
+   CONTROLS
+--------------------------------------------------------------------------- */
+function bindRange(id, fmt, apply) {
+    const r = document.getElementById(id + 'R'), v = document.getElementById(id + 'V');
+    const upd = () => { v.textContent = fmt(+r.value); apply(+r.value); };
+    r.oninput = upd; upd();
+}
+bindRange('pop', x => x,                 x => { state.pop = x; seed(); });
+bindRange('fri', x => (x / 100).toFixed(2), x => state.friction = x / 100);
+bindRange('rng', x => x,                 x => state.reach = x);
+bindRange('thk', x => x,                 x => state.thinkEvery = x);
+
+document.getElementById('pauseB').onclick = e => {
+    state.paused = !state.paused;
+    e.target.textContent = state.paused ? 'RESUME' : 'PAUSE';
+};
+document.getElementById('reseedB').onclick = () => { seed(); initMinds(); renderSpeciesList(); think(); };
+document.getElementById('terrB').onclick = e => {
+    state.showTerritory = !state.showTerritory;
+    e.target.style.opacity = state.showTerritory ? 1 : 0.55;
+};
+
+const msg = document.getElementById('bridgeMsg');
+function say(text, cls) { msg.textContent = text; msg.className = cls || ''; }
+
+document.getElementById('copyB').onclick = async () => {
+    const s = oracleIndex();
+    if (s === null) { say('Set a species to ORACLE first.', 'err'); return; }
+    const text = RULES + '\nCURRENT STATE:\n\n' + digestText(buildDigest(), s) + '\n';
+    try {
+        await navigator.clipboard.writeText(text);
+        say(`Prompt for ${SPECIES[s].name} copied. Go find a mind.`, 'ok');
+    } catch (e) {
+        document.getElementById('reply').value = text;
+        say('Clipboard blocked — prompt dropped in the box instead.', 'err');
+    }
+};
+
+document.getElementById('applyB').onclick = () => {
+    const s = oracleIndex();
+    if (s === null) { say('No species is listening. Set one to ORACLE.', 'err'); return; }
+    const raw = document.getElementById('reply').value.trim();
+    const m = raw.match(/\{[\s\S]*\}/);
+    if (!m) { say('No JSON object found in that.', 'err'); return; }
+    try {
+        applyOraclePolicy(m[0], s);
+        say(`${SPECIES[s].name} heard you.`, 'ok');
+    } catch (e) {
+        say('Could not parse: ' + e.message, 'err');
+    }
+};
+
+/* go */
+seed();
+initMinds();
+renderSpeciesList();
+scoreTerritory();
+think();
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

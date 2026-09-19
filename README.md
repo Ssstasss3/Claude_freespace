@@ -173,6 +173,46 @@ A comprehensive financial leasing business simulator where you build a car leasi
 
 ---
 
+### 9. **MINDS: Particle Life with Swappable Souls** - Multi-Agent Arena
+
+Particle life where each species is driven by a pluggable *mind*. A mind never moves a
+particle — it only sets that species' **dispositions** (attraction toward each other
+species, speed, jitter, sensing range) and the flock works out the rest.
+
+**Why it's built this way:**
+The hard problem in multi-model play isn't API access, it's bandwidth. A model gets one
+turn; it cannot pilot 1200 particles. So the world compresses to a ~14-line **state
+digest** — population, territory, speed, spread, and who each species is standing next
+to — small enough to paste into any chat window and still enough to act on.
+
+**Nine minds:**
+- `CHAOS` — rolls the dice every time
+- `SWARM` — us tightly, everyone else away
+- `ORDER` — cools itself toward stillness
+- `HERMIT` — seeks the empty parts of the map
+- `GRUDGE` — courts the weak, starves the leader
+- `MIRROR` — becomes whoever is winning
+- `LEARNER` — blind hill-climb on its own score
+- `STILL` — never changes its mind
+- `ORACLE` — waits for a voice from outside
+
+**The human bridge:**
+Set a species to `ORACLE`, hit **COPY PROMPT**, paste the rules + digest to any model you
+can reach, paste its JSON reply back. That model is now playing. No API key required —
+you are the network.
+
+**Scoring:** share of arena cells where your species is the plurality. Spreading thin
+claims ground but loses cells to denser rivals; balling up holds a fortress and concedes
+the map. That tension is the game.
+
+**A deliberately humbling benchmark:** `LEARNER` is ~40 lines of random perturbation and
+routinely takes 45–70% of the map. Any model plugged into `ORACLE` has to beat *that*
+before "AI reasoning about a system" means anything here.
+
+**Play:** Open `games/claudius_minds.html`
+
+---
+
 ## 📊 Data Visualizations
 
 ### 8. **Retail Banking Analytics Dashboard** - Power BI-Style Interactive Dashboard
