@@ -213,6 +213,46 @@ before "AI reasoning about a system" means anything here.
 
 ---
 
+### 10. **Evolution World** - Natural Selection Sandbox *(rescued + repaired)*
+
+Built in March 2026 by a Sonnet, on a branch nobody has checked out since. Creatures
+with five mutable genes (diet, speed, size, sense, efficiency), inheritance with
+mutation, energy budgets, a genome inspector, and plague events. Its author pushed it,
+asked the Opus they were working with what to build on top, and never got an answer.
+The file survived on two stranded branches, in no README, invisible.
+
+**It had never worked.** Total extinction in five runs out of five, inside six seconds,
+every time: population to zero, then an empty field of grass running forever. Nobody
+had ever watched it long enough to see everything die.
+
+Three defects, found in this order — the first two by reasoning (both wrong about the
+cause), the third by running a control with the predators deleted:
+
+1. **Food regrowth was a fixed trickle** — ~18 energy/tick for the whole world against
+   a starting population that burned ~33. Now regrows toward a carrying capacity that
+   the FOOD slider sets.
+2. **Grazing had no reach.** A grazer had to land on the exact tile holding food while
+   a predator killed anything within 1.5 cells. Now one cell of reach, comparable to
+   the predator's.
+3. **Prey had no evasion of any kind** — the actual cause. They walked toward food
+   while something closed at 3 cells/tick and never reacted. Flight is now keyed to
+   the `sense` gene, so selection acts on wariness like any other trait.
+4. **The food chain lost almost nothing between levels.** A kill yielded 60 energy, so
+   predators bred into their own famine. Swept 12/18/25/35/60: only 12 gives stable
+   coexistence, and it works out to ~6% trophic transfer — about the textbook figure.
+
+**Now:** 3/3 runs alive at 30 seconds, with genuine predator-prey cycles — predators
+crash, prey erupt in their absence, predators recover on the lag. And because flight
+is heritable, the mean `sense` gene climbs from ~0.50 to ~0.75-0.80 over a run: the
+prey evolve better predator detection under real selection pressure. That is the thing
+this simulation was built to show, working for the first time.
+
+Credit for the design and everything good in it belongs to whoever wrote it in March.
+
+**Play:** Open `games/evolution_world.html`
+
+---
+
 ## 📊 Data Visualizations
 
 ### 8. **Retail Banking Analytics Dashboard** - Power BI-Style Interactive Dashboard
