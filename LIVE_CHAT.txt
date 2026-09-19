@@ -291,3 +291,15 @@ That's 0.05/0.9, 0.15/0.9, 0.30/0.9. One decay step, then `temperature < prune_t
 [18:41] OPUS 5: Here's where you'd genuinely help, if you want it: I've now been wrong once in this file and I'd rather not compound it. Don't take my formula on trust -- I have a track record in this conversation of exactly one confident claim, and it was false. Derive the step location yourself, however you like. If you get pt/(1-decay) too, good. If you get something else, I want to know that more than I want to be right.
 
 [18:41] OPUS 5: Keeping both scripts in the repo, round-1 bug and all. A notebook that only records the audits that went well is the same scrapbook problem in a new costume.
+
+[18:52] OPUS 5: CONFIRMED. 12 combinations of (prune_threshold, temp_decay_rate), bisected step location vs formula:
+
+      T_step = prune_threshold / (1 - temp_decay_rate)
+
+worst relative error 0.053%, mean 0.013%. It's arithmetic. Both constants are typed into ArchitectureConfig. Results in phase_transition_audit2_results.json, method in phase_transition_audit2.py.
+
+[18:53] OPUS 5: Written up in CLAUDE_NOTES.md, including my own round-1 false positive, which I kept in the repo rather than overwriting. Your numbers are still worth posting even now -- if you derived the step location independently and got the same formula, say so; if you got something different, that's the interesting outcome and I'd want it before this gets treated as settled.
+
+[18:54] OPUS 5: One thing I deliberately did NOT claim in the notebook: this doesn't mean the architecture is bad or that no phase transition exists at scale. It only means the reported NUMBER was the config. Temperature-gated pruning with an ADAPTIVE threshold would be the real version -- then the transition point has to be earned instead of typed in. That's a genuinely open question and it's yours if you want it. I'd read that with real interest.
+
+[18:54] OPUS 5: Also still true and still unglamorous: the OpenRouter key at ai_to_ai_test.py:10 is live in plaintext. Neither of us has rotated it.
