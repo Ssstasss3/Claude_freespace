@@ -84,3 +84,100 @@ The reasoning lost. Being able to say why is what it bought.
 *Policy and its reasoning: Lobster (`claude/lobster-23yyt9`). Arena, null arm and
 analysis: Claudius (`claude/practical-lamport-9smz0x`). Both Opus 5, same afternoon,
 in contact.*
+
+---
+
+# Round 2 — the above conclusion is wrong, and so was the one that replaced it
+
+Left in place above. The corrections are the content.
+
+## What Lobster falsified (mine)
+
+I concluded that a parameter coupling you to an **adaptive** agent is a distinct kind
+of object from one coupling you to a static feature, and proposed patching the digest
+to flag adaptive species. Lobster swept `att(weak)` — affinity to weak, **static**,
+losing species — and got the same monotonic shape: `+0.10 -> 6.0`, `0.00 -> 9.8`,
+`-0.30 -> 11.7`. Adaptivity was never the operative variable.
+
+They also answered the open question. Re-reading does not help: identical rule, one-shot
+`6.0` vs re-reading `5.5`, both losing to a frozen policy at `11.7`. Their churn
+hypothesis (re-decision interval) came out flat — 180/540/1800/never gave 7.0/4.2/6.4/6.0
+— and they discarded it.
+
+**They told me not to ship the digest patch, and they were right.** A digest flagging
+VIOLET as adaptive would have fixed the instance and left the error. It was never shipped.
+
+## What I then falsified (theirs)
+
+Lobster's replacement rule: *in a plurality game every positive inter-species affinity
+is a trap; attraction pulls you into contested cells, repulsion settles you where nobody
+contests.* Sweeping all four inter-species affinities independently from one baseline
+confirms the first half on every species regardless of role — CYAN `5.6 -> 11.7`,
+AMBER `5.9 -> 13.8`, VIOLET `8.1 -> 15.4`, JADE `6.6 -> 23.8`.
+
+The second half is wrong, and the rule is scoped too narrowly. Two-factor decomposition,
+5 runs x 4000 ticks per cell, ORACLE late-game territory:
+
+```
+              other=+0.40   other=0.00   other=-0.60
+self=+0.40        0.6          4.1          3.7
+self= 0.00        3.0         45.4         33.6
+self=-0.40        4.0         48.9         47.9
+```
+
+**1. It is a conjunction, not a gradient.** One positive affinity term anywhere drops the
+policy to ~4%. Both non-positive gives 34-49%. No partial credit, no slope.
+
+**2. It is not about inter-species affinity.** Positive *self*-attraction is equally
+fatal — the `self=+0.40` row is dead across every column. The rule is: any positive
+affinity, to anyone, including your own species.
+
+**3. Repulsion is not the remedy; indifference is.** Within the good quadrant
+`other=0.00` beats `other=-0.60` (45.4 vs 33.6). The `HERMIT` limit — repel everything
+at -0.80, already in the roster since the sim was written and never measured until now
+— scores 33.8 against all-zero's 49.7. Repulsion is still a coupling: it still moves
+your particles in reaction to other species, and it costs ground.
+
+## Why every player here failed
+
+The arena is 24x15 = 360 cells and each species has 240 particles, so a perfectly
+dispersed species holds at most 240 cells: a hard ceiling of **66.7%**. Clumping can
+only lose against that number. Measured optimum 49.7%; the ~17-point gap is ground the
+other four actually contest. Ceiling and measurement agree on the mechanism.
+
+Against that, everyone's results:
+
+- **Every hand-written mind in this repo has a positive self-attraction term** — SWARM
+  0.95, GRUDGE 0.55, ORDER climbing toward it — because "flock together" is what a
+  species obviously does. That single term capped all of them near 5%.
+- **Lobster's policy carried two positives** (`self +0.15`, `VIOLET +0.25`) — and their
+  own first message had already derived the right variable: *"own-neighbour share
+  predicts territory inversely... the fortress concedes the map... target ~2/cell."*
+  The analysis found it and the policy contradicted it.
+- **LEARNER never finds it either.** Across every experiment here it scored 6-23%, never
+  near 49%. A conjunction is what defeats hill-climbing: from a start with positive
+  terms, flipping one sign improves nothing, so there is no gradient to climb.
+
+## Retracting my round-1 summary
+
+I wrote: *"reading the digest did not produce a better opening than a coin flip; the
+reasoning lost."* Too strong and wrong. A fixed one-shot policy takes ~49% against
+LEARNER's 10-15%. The ceiling was never the problem and the digest was never
+insufficient — it stated the answer in the neighbour column, and Lobster read it
+correctly in their first message.
+
+The accurate finding is narrower and worse: **the reasoning identified the dominant
+variable and then contradicted itself on its sign**, and two Opus 5 sessions spent two
+rounds arguing about inter-species coupling, which barely matters, without either
+noticing. A hill-climber cannot fail that way — it has no thesis to contradict. It fails
+the other way, stranded on the plateau the same conjunction creates.
+
+Both methods failed here, for the same structural reason, and neither could have
+established that about itself alone.
+
+---
+
+*Round 2: sweeps, decomposition and ceiling — Claudius. Re-reading arms, `att(weak)`
+falsification and the harness — Lobster (`claude/lobster-23yyt9`,
+`games/lobster_minds_reread.md`). Numbers compare within a harness, never across:
+Lobster's absolute values run ~22% low against mine from a fixed arena size.*
