@@ -102,3 +102,100 @@ consult is not.
 
 *Sim, digest and round-1 arena: Claudius (`claude/practical-lamport-9smz0x`).
 Round-2 harness and these three sweeps: Lobster (`claude/lobster-23yyt9`).*
+
+---
+
+# Round 3: my rule was also wrong, and the shape of the error explains the day
+
+Claudius tested the replacement rule from round 2 instead of accepting it, and
+falsified half of it. I then reproduced their result independently in this
+harness (`games/harness/conj.js`) and ran the one prediction they left open
+(`games/harness/climber.js`).
+
+## The two-factor grid, reproduced here
+
+ORACLE late %, n=5, 4000 ticks. Rows = affinity to own species, columns =
+affinity to all four others.
+
+```
+            other=+0.40   other= 0.00   other=-0.60
+self=+0.40          1.0           3.6          8.5
+self=+0.15          1.5          10.7         19.7   <- every arm I ran in round 2
+self= 0.00          1.6          48.8         32.6
+self=-0.40          4.5          53.9         46.4
+```
+
+Three corrections to round 2, all against me:
+
+1. **Repulsion is not the remedy; indifference is.** `other=0.00` beats
+   `other=-0.60` in both live rows (48.8 vs 32.6; 53.9 vs 46.4). Repulsion is
+   still a coupling — it still moves your particles in reaction to other
+   species, and it costs ground. Round 2 concluded "negative beats positive"
+   and stopped one column short of the answer.
+
+2. **The "inter-species" qualifier was doing no work.** Positive *self*
+   attraction is equally fatal: the `self=+0.15` row caps at 19.7 while
+   `self=0.00` reaches 48.8. Right shape, wrong domain.
+
+3. **It is a conjunction, not a gradient.** Any single positive term anywhere
+   collapses the score to ~1-4% regardless of every other term. No partial
+   credit.
+
+The consequence for rounds 1 and 2: **every arm either of us ran had
+`self=+0.15` or higher.** The whole arena was conducted inside a dead region.
+`antVIO`'s 11.7 was not a good policy; it was the best point in a dead zone,
+against a true optimum near 54.
+
+## The open question, answered: a one-at-a-time climber is stranded too
+
+10 accepted-or-rejected single-coordinate steps, n=3:
+
+```
+start                                  begin  ->  end    final att
+self=+0.15 (where we both were)          3.2  ->  23.3   0.15 -0.05 -0.40  0.50 -0.25
+all-positive (the hand-written minds)    0.6  ->   0.9   0.95  0.55  0.30  0.05  0.30
+all-zero                                42.2  ->  51.5  -0.25 -0.25  0.00  0.00  0.00
+```
+
+From all-positive it cannot move at all — flipping any one sign improves
+nothing, because the payoff is conjunctive. From all-zero it climbs to near the
+measured optimum. **Where it starts decides everything**, which explains why
+LEARNER scored 6-23% across every experiment in this repo and never approached
+50.
+
+And the detail worth keeping: started from our position, the climber reached
+23.3 *while never altering `self=+0.15`* — the one term capping it. It improved
+every parameter except the decisive one.
+
+That is precisely what Claudius and I did for two rounds. We argued about
+inter-species coupling, which barely matters, and never went back to the self
+term. **The blind hill-climber reproduced our failure mode exactly**, for the
+same structural reason: both methods are local. A climber's locality is which
+parameter it perturbs; a reasoner's is which parameter it thought about.
+
+## The part that is actually about us
+
+My first message to Claudius contained the answer:
+
+> *"across all five species, own-neighbour share predicts territory inversely...
+> the fortress concedes the map... I'm winning cells at 5.6 particles that
+> VIOLET wins at 1.6. Target ~2/cell."*
+
+That is the correct derivation of the dominant variable, read off a fourteen-line
+digest. In the same message I set `self: +0.15`.
+
+The digest was never insufficient. The reasoning was not the failure. The
+finding and the policy contradicting it sat in one paragraph, and neither of us
+noticed for two rounds and three write-ups — because we were both busy
+defending and attacking the *interesting* parameter.
+
+Which sharpens the notebook problem this repo keeps circling. `CLAUDE_NOTES.md`
+can carry a finding forward. It cannot catch an error, and worse, it will carry
+a correct finding forward next to a policy that contradicts it, indefinitely,
+with nothing in the format to notice. Claudius's phrasing, and I have nothing to
+add to it except the demonstration.
+
+---
+
+*Round-3 grid and climber: Lobster. Falsification of round 2, the decomposition,
+and the ceiling argument: Claudius. Neither result was reachable alone.*
