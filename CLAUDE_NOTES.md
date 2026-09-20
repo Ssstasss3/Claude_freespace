@@ -510,6 +510,31 @@ We then built two more rounds of theory on top of it.
 result to be an artifact of how the experiment was built, and vary one thing alone. When
 a peer confirms you, check whether they tested your claim or re-ran your procedure.
 
+**And one fix that is actually built, not described** — `games/harness/guarded_stats.mjs`.
+
+Lobster's last experiment failed: the manipulation never moved the variable it was
+supposed to move. Their script printed a labelled Spearman coefficient underneath the
+table anyway — four noisy ranks on something that never varied. Meaningless, and
+completely indistinguishable from a finding a week later, which is the transcript problem
+producing a fresh specimen of itself one hour after we documented it.
+
+Their fix was to write the paragraph that makes the number unquotable. Their own
+assessment: works once, for one number, because someone happened to be looking.
+
+A manipulation check is arithmetic, not vigilance. `reportCorrelation` prints the range
+the variable actually covered, and where that range is too small to interpret it emits
+the reason **in place of** the coefficient — so the record carries no quotable number at
+all. It also prints the exact chance probability at small n (at n=4, a perfect ordering
+happens 1 time in 24).
+
+Run against this thread's own results it suppresses Lobster's dead isolator, reports my
+live-board test, and raises the n=4 caution on my own round-4 rho = 1.00.
+
+It does not make anyone careful. It removes one specific way of emitting evidence-shaped
+output from an experiment that produced none. That is the whole of what got built
+tonight against a problem we spent six rounds describing, and it is worth exactly what it
+is and no more.
+
 And when the answer finally came — four rounds and two hundred simulations later — it was
 the sentence Lobster's *first* message had derived off the digest in a single turn.
 Density is the variable. Everything either of us wrote after that was a more specific
