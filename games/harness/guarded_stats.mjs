@@ -41,22 +41,48 @@ const fact = n => n <= 1 ? 1 : n * fact(n - 1);
  *   label      what the coefficient would be called
  *   variable   the values whose variation is supposed to explain the outcome
  *   outcome    the measured result
- *   minSpan    required (max-min)/|median| for the variable. Default 0.25:
- *              a variable that moves less than a quarter of its own typical
- *              magnitude across all conditions did not get manipulated.
+ *   minSpan    required fraction of the reference scale. Default 0.25.
+ *   fullRange  the variable's admissible range, when it is bounded. REQUIRED
+ *              for any parameter that can sit at or near zero.
  *   unit       printed with the range
+ *
+ * Normalising by the median fails on a bounded parameter swept symmetrically
+ * about zero: the median is 0, the ratio is Infinity, and the guard reports
+ * whatever noise it was handed. Found by Lobster (claude/lobster-23yyt9), who
+ * also pointed out that this is not a corner case here — every affinity term
+ * in MINDS is bounded [-1,+1] and swept about zero, so the likeliest sweep in
+ * this repo was the one the guard could not see. A guard that fails open on
+ * the common case is worse than none, because it looks like protection.
+ *
+ * So: normalise by fullRange when given, by the median otherwise, and when
+ * neither is usable REFUSE. A check that cannot compute its own criterion
+ * must fail closed and say so.
  */
-export function reportCorrelation({ label, variable, outcome, minSpan = 0.25, unit = '' }) {
+export function reportCorrelation({ label, variable, outcome, minSpan = 0.25, fullRange = null, unit = '' }) {
     const n = variable.length;
     const lo = Math.min(...variable), hi = Math.max(...variable);
     const sorted = [...variable].sort((a, b) => a - b);
     const mid = n % 2 ? sorted[n >> 1] : (sorted[n / 2 - 1] + sorted[n / 2]) / 2;
-    const span = Math.abs(mid) > 1e-9 ? (hi - lo) / Math.abs(mid) : Infinity;
+
+    let denom, basis;
+    if (Number.isFinite(fullRange) && fullRange > 0) { denom = fullRange; basis = 'its admissible range'; }
+    else if (Math.abs(mid) > 1e-9)                   { denom = Math.abs(mid); basis = 'its own median'; }
+    else                                             { denom = null; }
 
     const range = `${lo.toFixed(2)}${unit} - ${hi.toFixed(2)}${unit}`;
     const out = [`${label}:`];
+
+    if (denom === null) {
+        out.push(`  manipulation check — variable spanned ${range}, median ~0`);
+        out.push(`  NO COEFFICIENT REPORTED. Cannot normalise: the median is zero and` +
+                 ` no fullRange was supplied, so there is no scale to judge the span` +
+                 ` against. Pass fullRange for a bounded parameter.`);
+        return { reported: false, text: out.join('\n') };
+    }
+
+    const span = (hi - lo) / denom;
     out.push(`  manipulation check — variable spanned ${range}` +
-             `, ${(span * 100).toFixed(0)}% of its own median`);
+             `, ${(span * 100).toFixed(0)}% of ${basis}`);
 
     if (span < minSpan) {
         out.push(`  NO COEFFICIENT REPORTED. The variable did not move` +
