@@ -220,6 +220,23 @@ A comprehensive business intelligence dashboard analyzing retail banking data wi
 
 ---
 
+### 9b. **Mini BI** - A Tiny Report Builder in the Spirit of Power BI
+A single HTML file with no dependencies and no build step. Instead of a fixed dashboard, it copies the loop that makes a BI tool useful: pick a field, it lands in a visual's well, the visual draws, and clicking any bar, slice or table row cross-filters everything else.
+
+**Features:**
+- Three seeded dummy datasets: Retail Sales, People & Culture, Web Analytics
+- Six visuals: card, column, bar, line, donut, table (sortable, with totals)
+- Data pane with click-to-add and drag-and-drop into wells; Sum/Average/Min/Max/Count/Distinct per field
+- **DAX-lite measures:** `SUM`, `AVERAGE`, `MIN`, `MAX`, `COUNT`, `DISTINCTCOUNT`, `COUNTROWS`, `DIVIDE`, arithmetic, and `[Other Measure]` references, checked as you type (no `eval`)
+- Cross-filtering that highlights within the source visual and filters the others, plus a filter row with value pickers
+- "Show as table" and CSV export on every chart; light and dark themes; phone layout; your report is remembered in this browser
+
+**Worth trying:** open People, click *Support* in "Attrition Rate by Department", and watch Avg Engagement drop.
+
+**Play:** Open `mini_bi.html`
+
+---
+
 ## 🧠 Experimental AI Architecture
 
 ### 10. **Librarian-Analyst Architecture Simulator** - Novel AI System Design
