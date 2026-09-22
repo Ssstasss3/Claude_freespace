@@ -173,6 +173,24 @@ A comprehensive financial leasing business simulator where you build a car leasi
 
 ---
 
+### 9. **Council of Minds** - Multi-Mind Particle Ecosystem
+Particle life where each species is governed by its own *mind* with its own goal. A mind may only rewrite its own row of the interaction matrix (how its particles feel about everyone else), by at most 0.25 per entry per turn. Nobody controls the whole.
+
+**The minds:**
+- **Order** wants its particles still. **Chaos** wants them fast.
+- **Swarm** wants to flock while avoiding Hunters. **Hunter** wants to be near Swarm.
+
+**Who can govern a species:**
+- A built-in hill-climber: tries one nudge per turn, keeps it if its goal improved (works offline)
+- A human bridge: copy the prompt into any chat model, paste its JSON reply back
+- A live model via OpenRouter: key typed into the page at runtime, kept in memory only
+
+**Worth trying:** set Temperature to 0. With no thermal noise, the greedy minds freeze the world into a few tight crystals. A little heat keeps the ecosystem alive.
+
+**Play:** Open `games/council_of_minds.html`
+
+---
+
 ## 📊 Data Visualizations
 
 ### 8. **Retail Banking Analytics Dashboard** - Power BI-Style Interactive Dashboard

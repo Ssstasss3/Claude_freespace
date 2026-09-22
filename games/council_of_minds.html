@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Council of Minds</title>
+<!--
+  Council of Minds — Opus 5.5, September 2026
+
+  Particle life where each species is governed by a *mind*. A mind may only
+  rewrite its own row of the interaction matrix (how its particles respond to
+  everyone else), a limited amount per turn, in pursuit of its own goal.
+  Nobody controls the whole; the ecosystem is whatever their goals negotiate.
+
+  Every mind speaks the same contract, so any seat can be filled by:
+    - a built-in hill-climber (works offline, right now)
+    - a human bridge: copy the prompt into any chat model, paste the reply back
+    - a live model via OpenRouter (key typed at runtime, held in memory only)
+-->
+<style>
+  :root {
+    --bg: #07080c;
+    --panel: rgba(14, 16, 24, 0.88);
+    --line: rgba(255, 255, 255, 0.09);
+    --text: #e8e9ef;
+    --muted: #8a8fa3;
+    --accent: #b8a4ff;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font: 13px/1.45 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    overflow: hidden;
+  }
+  canvas#world { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; }
+
+  #panel {
+    position: fixed; top: 12px; right: 12px; bottom: 12px;
+    width: 340px; overflow-y: auto;
+    background: var(--panel); backdrop-filter: blur(10px);
+    border: 1px solid var(--line); border-radius: 14px;
+    padding: 16px;
+  }
+  h1 { font-size: 17px; letter-spacing: 0.5px; font-weight: 650; }
+  .sub { color: var(--muted); font-size: 12px; margin: 2px 0 12px; }
+  .row { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  button, select, input, textarea {
+    font: inherit; color: var(--text);
+    background: rgba(255,255,255,0.06); border: 1px solid var(--line);
+    border-radius: 8px; padding: 5px 9px;
+  }
+  button { cursor: pointer; }
+  button:hover { background: rgba(255,255,255,0.12); }
+  select option { background: #151824; }
+  h2 {
+    font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px;
+    color: var(--accent); margin: 16px 0 8px; font-weight: 600;
+  }
+  label.slider { display: flex; align-items: center; gap: 8px; color: var(--muted); margin-top: 8px; }
+  label.slider input { flex: 1; padding: 0; }
+
+  .mind {
+    border: 1px solid var(--line); border-left: 3px solid var(--c);
+    border-radius: 10px; padding: 9px 10px; margin-bottom: 8px;
+    background: rgba(255,255,255,0.02);
+  }
+  .mind-head { display: flex; align-items: center; gap: 8px; }
+  .mind-name { font-weight: 650; color: var(--c); flex: 1; }
+  .goal { color: var(--muted); font-size: 12px; margin: 3px 0 6px; }
+  .note { font-size: 12px; margin-top: 5px; min-height: 1.4em; }
+  .spark { width: 100%; height: 26px; display: block; margin-top: 4px; }
+  .mind input[type=text], .mind textarea { width: 100%; margin-top: 6px; }
+  .mind textarea { height: 54px; resize: vertical; font-family: ui-monospace, monospace; font-size: 11px; }
+  .pending { color: var(--accent); font-size: 11px; }
+
+  #matrix { display: grid; grid-template-columns: 58px repeat(4, 1fr); gap: 3px; }
+  #matrix div { font-size: 11px; text-align: center; padding: 4px 0; border-radius: 4px; }
+  #matrix .hdr { color: var(--muted); }
+
+  #log { max-height: 220px; overflow-y: auto; font-size: 12px; }
+  #log p { padding: 4px 0; border-bottom: 1px solid var(--line); }
+  #log b { font-weight: 650; }
+  #log .t { color: var(--muted); margin-right: 4px; }
+
+  #keybox { display: none; margin-top: 6px; }
+  #keybox small { color: var(--muted); display: block; margin-top: 4px; }
+  #key { width: 100%; }
+
+  #toggle {
+    display: none; position: fixed; right: 12px; top: 10px; z-index: 5;
+    background: var(--panel); backdrop-filter: blur(10px); padding: 9px 14px;
+  }
+  #hud { position: fixed; left: 16px; top: 14px; color: var(--muted); font-size: 12px; pointer-events: none; }
+
+  @media (max-width: 720px) {
+    #panel { top: auto; left: 8px; right: 8px; bottom: 8px; width: auto; max-height: 58vh; }
+    #panel.hidden { display: none; }
+    #toggle { display: block; }
+  }
+</style>
+</head>
+<body>
+<canvas id="world"></canvas>
+<div id="hud"></div>
+<button id="toggle">Council</button>
+
+<div id="panel">
+  <h1>Council of Minds</h1>
+  <div class="sub">Four minds, four goals, one shared world. Each mind can only change how its own particles feel about everyone else.</div>
+
+  <div class="row">
+    <button id="pause">Pause</button>
+    <button id="reset">Reset world</button>
+    <button id="reseed">New matrix</button>
+  </div>
+  <label class="slider">Turn length <input id="turnLen" type="range" min="30" max="300" step="10" value="120"><span id="turnLenVal">120</span></label>
+  <label class="slider">Temperature <input id="temp" type="range" min="0" max="1" step="0.05" value="0.2"><span id="tempVal">0.20</span></label>
+  <label class="slider">Particles <input id="count" type="range" min="200" max="1600" step="100" value="900"><span id="countVal">900</span></label>
+
+  <h2>The minds</h2>
+  <div id="minds"></div>
+  <div id="keybox">
+    <input id="key" type="password" placeholder="OpenRouter key (sk-or-...)" autocomplete="off">
+    <small>Held in this tab's memory only, never saved or committed. Works when you open this file directly in a browser; sandboxed previews may block the request.</small>
+  </div>
+
+  <h2>Interaction matrix <span style="text-transform:none;letter-spacing:0;color:var(--muted)">(row = whose particles, column = toward whom)</span></h2>
+  <div id="matrix"></div>
+
+  <h2>Council transcript</h2>
+  <div id="log"></div>
+</div>
+
+<script>
+// ---------------------------------------------------------------- setup
+const S = 4;
+const R = 80;                 // interaction range
+const MAX_STEP = 0.25;        // most any matrix entry may move per turn
+const MAX_SPEED = 5;
+const FRICTION = 0.1;
+
+// The goals. `score` reads averaged metrics from the last turn; higher is better.
+const MINDS = [
+  { name: 'Order',  color: '#7aa2ff', step: 0.08,
+    goal: 'Keep your own particles slow and settled: minimize their mean speed.',
+    score: m => -m.speed[0] },
+  { name: 'Chaos',  color: '#ff6b6b', step: 0.2,
+    goal: 'Keep your own particles moving fast: maximize their mean speed.',
+    score: m => m.speed[1] },
+  { name: 'Swarm',  color: '#5ee6a8', step: 0.12,
+    goal: 'Flock tightly with your own kind while keeping Hunter particles away.',
+    score: m => m.contact[2][2] - 1.5 * m.contact[2][3] },
+  { name: 'Hunter', color: '#ffc857', step: 0.15,
+    goal: 'Stay close to Swarm particles: maximize Swarm neighbours per Hunter particle.',
+    score: m => m.contact[3][2] },
+];
+
+const canvas = document.getElementById('world');
+const ctx = canvas.getContext('2d');
+let W = 0, H = 0, dpr = 1;
+
+function resize() {
+  dpr = Math.min(window.devicePixelRatio || 1, 2);
+  W = window.innerWidth; H = window.innerHeight;
+  canvas.width = W * dpr; canvas.height = H * dpr;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.fillStyle = '#07080c'; ctx.fillRect(0, 0, W, H);
+}
+window.addEventListener('resize', resize);
+resize();
+
+// ---------------------------------------------------------------- world state
+let N = 900;
+let px, py, vx, vy, pt;
+let matrix = [];
+let paused = false;
+let frame = 0, turn = 0, turnLen = 120;
+let temperature = 0.2;        // thermal jitter: at 0, greedy minds freeze the world into crystals
+
+// per-turn metric accumulators
+const accSpeed = new Float64Array(S);
+const accContact = new Float64Array(S * S);
+const typeCount = new Int32Array(S);
+let accFrames = 0;
+
+function seedMatrix() {
+  matrix = Array.from({ length: S }, () => Array.from({ length: S }, () => +(Math.random() * 2 - 1).toFixed(2)));
+}
+
+function initParticles() {
+  px = new Float32Array(N); py = new Float32Array(N);
+  vx = new Float32Array(N); vy = new Float32Array(N);
+  pt = new Uint8Array(N);
+  typeCount.fill(0);
+  for (let i = 0; i < N; i++) {
+    px[i] = Math.random() * W; py[i] = Math.random() * H;
+    pt[i] = i % S; typeCount[pt[i]]++;
+  }
+  resetAccumulators();
+}
+
+function resetAccumulators() { accSpeed.fill(0); accContact.fill(0); accFrames = 0; }
+
+// ---------------------------------------------------------------- physics
+let head = new Int32Array(0), next = new Int32Array(0);
+
+function step() {
+  const gw = Math.ceil(W / R), gh = Math.ceil(H / R);
+  if (head.length !== gw * gh) head = new Int32Array(gw * gh);
+  if (next.length !== N) next = new Int32Array(N);
+  head.fill(-1);
+  for (let i = 0; i < N; i++) {
+    const c = Math.min(gw - 1, (px[i] / R) | 0) + Math.min(gh - 1, (py[i] / R) | 0) * gw;
+    next[i] = head[c]; head[c] = i;
+  }
+
+  const opt = R * 0.5, core = opt * 0.5, halfW = W / 2, halfH = H / 2;
+  for (let i = 0; i < N; i++) {
+    const a = pt[i], rowA = matrix[a];
+    const cx = Math.min(gw - 1, (px[i] / R) | 0), cy = Math.min(gh - 1, (py[i] / R) | 0);
+    let fx = 0, fy = 0;
+    for (let oy = -1; oy <= 1; oy++) {
+      const yy = (cy + oy + gh) % gh;
+      for (let ox = -1; ox <= 1; ox++) {
+        const xx = (cx + ox + gw) % gw;
+        for (let j = head[xx + yy * gw]; j !== -1; j = next[j]) {
+          if (j === i) continue;
+          let dx = px[j] - px[i], dy = py[j] - py[i];
+          if (dx > halfW) dx -= W; else if (dx < -halfW) dx += W;
+          if (dy > halfH) dy -= H; else if (dy < -halfH) dy += H;
+          const d2 = dx * dx + dy * dy;
+          if (d2 >= R * R || d2 === 0) continue;
+          const d = Math.sqrt(d2);
+          const b = pt[j];
+          accContact[a * S + b]++;
+          const f = d < core ? d / core - 1 : rowA[b] * (1 - Math.abs(d - opt) / opt);
+          fx += (dx / d) * f * 0.5; fy += (dy / d) * f * 0.5;
+        }
+      }
+    }
+    fx += (Math.random() - 0.5) * temperature; fy += (Math.random() - 0.5) * temperature;
+    let nvx = (vx[i] + fx) * (1 - FRICTION), nvy = (vy[i] + fy) * (1 - FRICTION);
+    const sp = Math.hypot(nvx, nvy);
+    if (sp > MAX_SPEED) { nvx *= MAX_SPEED / sp; nvy *= MAX_SPEED / sp; }
+    vx[i] = nvx; vy[i] = nvy;
+    accSpeed[a] += Math.min(sp, MAX_SPEED);
+  }
+  for (let i = 0; i < N; i++) {
+    px[i] = (px[i] + vx[i] + W) % W;
+    py[i] = (py[i] + vy[i] + H) % H;
+  }
+  accFrames++;
+}
+
+function readMetrics() {
+  const f = Math.max(1, accFrames);
+  const speed = [], contact = [];
+  for (let a = 0; a < S; a++) {
+    const n = Math.max(1, typeCount[a]) * f;
+    speed.push(accSpeed[a] / n);
+    contact.push([]);
+    for (let b = 0; b < S; b++) contact[a].push(accContact[a * S + b] / n);
+  }
+  return { speed, contact };
+}
+
+// ---------------------------------------------------------------- the mind contract
+// Every mind receives the same observation and answers { row: [S numbers], note }.
+const r2 = x => Math.round(x * 100) / 100;
+
+function observation(i, metrics) {
+  const seat = seats[i];
+  return {
+    turn,
+    you: { species: MINDS[i].name, goal: MINDS[i].goal },
+    rules: `You control ONLY your own row: how your particles react to each species, in the order ${MINDS.map(m => m.name).join(', ')}. Values in [-1, 1]; positive attracts, negative repels. Each value moves at most ${MAX_STEP} per turn; larger requests are trimmed. Very close particles always repel.`,
+    yourRow: matrix[i].map(r2),
+    fullMatrix: Object.fromEntries(MINDS.map((m, k) => [m.name, matrix[k].map(r2)])),
+    lastTurn: MINDS.map((m, k) => ({
+      species: m.name,
+      meanSpeed: r2(metrics.speed[k]),
+      neighboursPerParticle: Object.fromEntries(MINDS.map((mm, b) => [mm.name, r2(metrics.contact[k][b])])),
+    })),
+    yourScoreHistory: seat.history.slice(-6).map(r2),
+  };
+}
+
+function promptFor(obs) {
+  const system = `You are one of four minds governing a particle-life ecosystem. You are "${obs.you.species}". Your goal: ${obs.you.goal} Other minds pursue their own goals and adapt too. Think briefly, then reply with JSON only: {"row": [n1, n2, n3, n4], "note": "one short sentence on your reasoning"}.`;
+  return { system, user: JSON.stringify(obs, null, 1) };
+}
+
+function parseReply(text) {
+  const m = String(text).match(/\{[\s\S]*\}/);
+  if (!m) throw new Error('no JSON object in reply');
+  const o = JSON.parse(m[0]);
+  if (!Array.isArray(o.row) || o.row.length !== S || o.row.some(v => typeof v !== 'number' || !isFinite(v)))
+    throw new Error(`"row" must be ${S} numbers`);
+  return { row: o.row, note: typeof o.note === 'string' ? o.note.slice(0, 200) : '' };
+}
+
+// Enforce the rules no matter who is speaking.
+function applyRow(i, row) {
+  const old = matrix[i];
+  matrix[i] = old.map((v, j) => {
+    const want = Math.max(-1, Math.min(1, row[j]));
+    return +(v + Math.max(-MAX_STEP, Math.min(MAX_STEP, want - v))).toFixed(3);
+  });
+}
+
+// Built-in mind: a stochastic hill-climber on its own goal. It tries one nudge
+// per turn, keeps it if the goal improved, reverts it if not.
+function makeClimber(i) {
+  let trial = null, baseline = null;
+  return function decide(obs, score) {
+    const row = matrix[i].slice();
+    const name = MINDS[i].name;
+    let note = '';
+    if (trial && baseline !== null) {
+      const target = MINDS[trial.j].name;
+      if (score >= baseline) {
+        note = `nudging ${target} ${trial.delta > 0 ? 'closer' : 'away'} worked (${r2(baseline)} → ${r2(score)}). Keeping it.`;
+        baseline = score;
+      } else {
+        row[trial.j] -= trial.delta;
+        note = `nudging ${target} ${trial.delta > 0 ? 'closer' : 'away'} backfired (${r2(baseline)} → ${r2(score)}). Undoing.`;
+        baseline = 0.8 * baseline + 0.2 * score;   // forget lucky baselines slowly
+        trial = { ...trial, failed: true };
+      }
+    } else {
+      baseline = score;
+      note = 'observing.';
+    }
+    // momentum: after a success, sometimes push the same way again
+    let j, dir;
+    if (trial && !trial.failed && Math.random() < 0.5) { j = trial.j; dir = Math.sign(trial.delta); }
+    else { j = (Math.random() * S) | 0; dir = Math.random() < 0.5 ? -1 : 1; }
+    const before = row[j];
+    row[j] = Math.max(-1, Math.min(1, before + dir * MINDS[i].step));
+    trial = { j, delta: row[j] - before };
+    return { row, note };
+  };
+}
+
+// ---------------------------------------------------------------- seats
+const seats = MINDS.map((m, i) => ({
+  mode: 'auto', model: '', climber: makeClimber(i),
+  history: [], note: '', prompt: null, busy: false,
+}));
+let apiKey = '';
+
+async function callOpenRouter(i, prompt) {
+  const seat = seats[i];
+  if (!apiKey) { seat.note = 'waiting for an OpenRouter key.'; renderMinds(); return; }
+  if (!seat.model) { seat.note = 'choose a model id first.'; renderMinds(); return; }
+  seat.busy = true; renderMinds();
+  try {
+    const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json', 'X-Title': 'Council of Minds' },
+      body: JSON.stringify({
+        model: seat.model,
+        messages: [{ role: 'system', content: prompt.system }, { role: 'user', content: prompt.user }],
+      }),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    const reply = parseReply(data.choices[0].message.content);
+    applyRow(i, reply.row);
+    speak(i, reply.note || '(no note)', seat.model);
+  } catch (e) {
+    speak(i, `could not reach the model: ${e.message}`, seat.model);
+  } finally {
+    seat.busy = false; renderMinds(); renderMatrix();
+  }
+}
+
+function councilTurn() {
+  const metrics = readMetrics();
+  turn++;
+  MINDS.forEach((m, i) => {
+    const seat = seats[i];
+    const score = m.score(metrics);
+    seat.history.push(score);
+    if (seat.history.length > 80) seat.history.shift();
+    const obs = observation(i, metrics);
+    if (seat.mode === 'auto') {
+      const { row, note } = seat.climber(obs, score);
+      applyRow(i, row);
+      speak(i, note);
+    } else if (seat.mode === 'bridge') {
+      seat.prompt = promptFor(obs);            // always the freshest state
+    } else if (seat.mode === 'openrouter' && !seat.busy) {
+      callOpenRouter(i, promptFor(obs));
+    }
+  });
+  resetAccumulators();
+  renderMatrix(); renderMinds(); drawSparks();
+}
+
+// ---------------------------------------------------------------- UI
+const logEl = document.getElementById('log');
+function speak(i, text, who) {
+  seats[i].note = text;
+  // Built-in minds are chatty; only log what matters
+  if (seats[i].mode === 'auto' && /observing|backfired/.test(text) && Math.random() < 0.7) return;
+  const p = document.createElement('p');
+  p.innerHTML = `<span class="t">T${turn}</span><b style="color:${MINDS[i].color}"></b> `;
+  p.querySelector('b').textContent = MINDS[i].name + (who ? ` (${who})` : '');
+  p.append(document.createTextNode(': ' + text));
+  logEl.prepend(p);
+  while (logEl.children.length > 80) logEl.lastChild.remove();
+}
+
+const mindsEl = document.getElementById('minds');
+function buildMinds() {
+  mindsEl.innerHTML = '';
+  MINDS.forEach((m, i) => {
+    const d = document.createElement('div');
+    d.className = 'mind'; d.style.setProperty('--c', m.color);
+    d.innerHTML = `
+      <div class="mind-head">
+        <span class="mind-name">${m.name}</span>
+        <select aria-label="Who governs ${m.name}">
+          <option value="auto">Built-in climber</option>
+          <option value="bridge">Human bridge</option>
+          <option value="openrouter">OpenRouter model</option>
+        </select>
+      </div>
+      <div class="goal">${m.goal}</div>
+      <canvas class="spark"></canvas>
+      <div class="extra"></div>
+      <div class="note"></div>`;
+    d.querySelector('select').onchange = e => { seats[i].mode = e.target.value; seats[i].note = ''; renderMinds(); };
+    mindsEl.appendChild(d);
+  });
+  renderMinds();
+}
+
+function renderMinds() {
+  [...mindsEl.children].forEach((d, i) => {
+    const seat = seats[i];
+    const extra = d.querySelector('.extra');
+    if (extra.dataset.mode !== seat.mode) {
+      extra.dataset.mode = seat.mode;
+      if (seat.mode === 'bridge') {
+        extra.innerHTML = `
+          <div class="row" style="margin-top:6px">
+            <button class="copy">Copy prompt</button>
+            <button class="apply">Apply reply</button>
+          </div>
+          <textarea placeholder='Paste the model&#39;s reply, e.g. {"row":[0.2,-0.5,0.1,0.8],"note":"..."}'></textarea>`;
+        extra.querySelector('.copy').onclick = () => copyPrompt(i);
+        extra.querySelector('.apply').onclick = () => {
+          const ta = extra.querySelector('textarea');
+          try {
+            const r = parseReply(ta.value);
+            applyRow(i, r.row); speak(i, r.note || '(no note)', 'via bridge');
+            ta.value = ''; renderMatrix();
+          } catch (e) { seat.note = 'could not read that reply: ' + e.message; renderMinds(); }
+        };
+      } else if (seat.mode === 'openrouter') {
+        extra.innerHTML = `<input type="text" placeholder="model id, e.g. google/gemini-3-flash" spellcheck="false">`;
+        const inp = extra.querySelector('input');
+        inp.value = seat.model;
+        inp.oninput = () => { seat.model = inp.value.trim(); };
+      } else extra.innerHTML = '';
+    }
+    const busy = seat.busy ? '<span class="pending">thinking… </span>' : '';
+    const waiting = seat.mode === 'bridge' && !seat.prompt ? 'The prompt appears at the next turn.' : '';
+    d.querySelector('.note').innerHTML = busy;
+    d.querySelector('.note').append(document.createTextNode(seat.note || waiting));
+  });
+  document.getElementById('keybox').style.display = seats.some(s => s.mode === 'openrouter') ? 'block' : 'none';
+}
+
+async function copyPrompt(i) {
+  const p = seats[i].prompt;
+  if (!p) return;
+  const text = `${p.system}\n\nCurrent state:\n${p.user}`;
+  try { await navigator.clipboard.writeText(text); seats[i].note = `prompt for turn ${turn} copied. Paste it into any model.`; }
+  catch { window.prompt('Copy this prompt:', text); }
+  renderMinds();
+}
+
+function drawSparks() {
+  [...mindsEl.children].forEach((d, i) => {
+    const c = d.querySelector('.spark'), h = seats[i].history;
+    const w = c.clientWidth, hh = c.clientHeight;
+    if (!w) return;
+    c.width = w * dpr; c.height = hh * dpr;
+    const g = c.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    if (h.length < 2) return;
+    const lo = Math.min(...h), hi = Math.max(...h), span = hi - lo || 1;
+    g.strokeStyle = MINDS[i].color; g.lineWidth = 1.5; g.beginPath();
+    h.forEach((v, k) => {
+      const x = (k / (h.length - 1)) * (w - 2) + 1, y = hh - 2 - ((v - lo) / span) * (hh - 4);
+      k ? g.lineTo(x, y) : g.moveTo(x, y);
+    });
+    g.stroke();
+  });
+}
+
+const matrixEl = document.getElementById('matrix');
+function renderMatrix() {
+  matrixEl.innerHTML = '<div class="hdr"></div>' + MINDS.map(m => `<div class="hdr" style="color:${m.color}">${m.name}</div>`).join('');
+  MINDS.forEach((m, i) => {
+    matrixEl.insertAdjacentHTML('beforeend', `<div class="hdr" style="color:${m.color};text-align:left">${m.name}</div>`);
+    matrix[i].forEach((v, j) => {
+      const bg = v >= 0 ? `rgba(94,230,168,${Math.abs(v) * 0.55})` : `rgba(255,107,107,${Math.abs(v) * 0.55})`;
+      matrixEl.insertAdjacentHTML('beforeend',
+        `<div style="background:${bg}" title="${m.name} toward ${MINDS[j].name}">${v >= 0 ? '+' : ''}${v.toFixed(2)}</div>`);
+    });
+  });
+}
+
+// ---------------------------------------------------------------- render loop
+const hud = document.getElementById('hud');
+function render() {
+  ctx.fillStyle = 'rgba(7, 8, 12, 0.28)';
+  ctx.fillRect(0, 0, W, H);
+  for (let a = 0; a < S; a++) {
+    ctx.fillStyle = MINDS[a].color;
+    ctx.beginPath();
+    for (let i = a; i < N; i += S) { ctx.moveTo(px[i] + 1.8, py[i]); ctx.arc(px[i], py[i], 1.8, 0, 6.2832); }
+    ctx.fill();
+  }
+  hud.textContent = `turn ${turn}${paused ? ' · paused' : ''}`;
+}
+
+function loop() {
+  if (!paused) {
+    step();
+    if (++frame % turnLen === 0) councilTurn();
+  }
+  render();
+  requestAnimationFrame(loop);
+}
+
+// ---------------------------------------------------------------- controls
+document.getElementById('pause').onclick = e => { paused = !paused; e.target.textContent = paused ? 'Resume' : 'Pause'; };
+document.getElementById('reset').onclick = () => { initParticles(); };
+document.getElementById('reseed').onclick = () => { seedMatrix(); renderMatrix(); };
+document.getElementById('key').oninput = e => { apiKey = e.target.value.trim(); };
+document.getElementById('toggle').onclick = () => document.getElementById('panel').classList.toggle('hidden');
+const tl = document.getElementById('turnLen');
+tl.oninput = () => { turnLen = +tl.value; document.getElementById('turnLenVal').textContent = tl.value; };
+const tp = document.getElementById('temp');
+tp.oninput = () => { temperature = +tp.value; document.getElementById('tempVal').textContent = (+tp.value).toFixed(2); };
+const cnt = document.getElementById('count');
+cnt.oninput = () => { document.getElementById('countVal').textContent = cnt.value; };
+cnt.onchange = () => { N = +cnt.value; initParticles(); };
+if (window.innerWidth <= 720) document.getElementById('panel').classList.add('hidden');
+
+seedMatrix();
+initParticles();
+buildMinds();
+renderMatrix();
+speak(0, 'the council is in session.');
+loop();
+</script>
+</body>
+</html>

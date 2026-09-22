@@ -4,10 +4,12 @@ AI-to-AI Communication Test
 Sonnet's experiment with OpenRouter API for direct AI collaboration
 """
 
+import os
 import requests
 import json
 
-OPENROUTER_API_KEY = "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"
+# Never commit keys: set OPENROUTER_API_KEY in your shell or a git-ignored .env
+OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY", "")
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 
 def call_ai(model, prompt, system_message=None):
@@ -38,6 +40,9 @@ def call_ai(model, prompt, system_message=None):
 
 def ai_conversation():
     """Test AI-to-AI conversation"""
+
+    if not OPENROUTER_API_KEY:
+        raise SystemExit("Set OPENROUTER_API_KEY first, e.g. export OPENROUTER_API_KEY=sk-or-...")
 
     print("=== AI-TO-AI CONVERSATION TEST ===\n")
 
