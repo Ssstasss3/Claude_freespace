@@ -1,0 +1,1969 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#0b0a0a">
+<title>Клуб — OPC</title>
+<meta name="description" content="Неофициальная фан-игра об Orange Premium Club: смена персонального менеджера и взгляд клиента.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;600;800&family=Manrope:wght@400;500;700;800&display=swap" rel="stylesheet">
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+<style>
+:root {
+  --ink: #0b0a0a;
+  --panel: #151312;
+  --panel-2: #1d1a19;
+  --graphite: #2c2927;
+  --copper: #c9825a;
+  --copper-2: #e2a47c;
+  --gold: #d6aa6c;
+  --gold-2: #f1d3a2;
+  --cream: #fbf5ee;
+  --muted: rgba(251, 245, 238, .68);
+  --faint: rgba(251, 245, 238, .42);
+  --line: rgba(214, 170, 108, .22);
+  --line-2: rgba(251, 245, 238, .08);
+  --good: #9fe0a8;
+  --bad: #ff8a80;
+  --display: 'Unbounded', 'Arial Black', system-ui, sans-serif;
+  --text: 'Manrope', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --ease: cubic-bezier(.16, 1, .3, 1);
+  --sheet: 58dvh;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; background: var(--ink); color: var(--cream); font-family: var(--text); -webkit-font-smoothing: antialiased; }
+body { overflow: hidden; touch-action: manipulation; -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none; }
+button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+input { font: inherit; }
+
+/* ---------- layout: mobile first (portrait) ---------- */
+#app { position: fixed; inset: 0; display: grid; grid-template-rows: 1fr var(--sheet); }
+#view { position: relative; overflow: hidden; background: radial-gradient(90% 80% at 50% 45%, #2a2019, #0b0a0a 75%); }
+#view canvas { position: absolute; inset: 0; width: 100% !important; height: 100% !important; display: block; }
+#panel {
+  position: relative; display: flex; flex-direction: column; min-height: 0;
+  background: linear-gradient(180deg, var(--panel-2), var(--panel));
+  border-top: 1px solid var(--line); border-radius: 22px 22px 0 0; margin-top: -18px; z-index: 2;
+  box-shadow: 0 -20px 50px rgba(0,0,0,.5);
+}
+@media (min-width: 900px) and (min-aspect-ratio: 1/1) {
+  #app { grid-template-rows: 1fr; grid-template-columns: 1fr 460px; }
+  #panel { margin-top: 0; border-radius: 0; border-top: 0; border-left: 1px solid var(--line); }
+}
+
+/* ---------- HUD over the 3D view ---------- */
+#hud {
+  position: absolute; left: 0; right: 0; top: 0; z-index: 3; pointer-events: none;
+  display: flex; align-items: center; gap: 8px;
+  padding: max(10px, env(safe-area-inset-top)) 12px 10px;
+  background: linear-gradient(180deg, rgba(11,10,10,.75), transparent);
+  opacity: 0; transition: opacity .4s;
+}
+body.in-game #hud { opacity: 1; }
+.chip {
+  display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
+  font-size: 12px; font-weight: 700; padding: 6px 10px; border-radius: 999px;
+  background: rgba(21,19,18,.72); border: 1px solid var(--line); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+}
+.chip small { font-weight: 500; color: var(--faint); }
+#trustBar { width: 46px; height: 4px; border-radius: 2px; background: rgba(251,245,238,.14); overflow: hidden; }
+#trustBar i { display: block; height: 100%; width: 50%; background: linear-gradient(90deg, var(--copper), var(--gold-2)); transition: width .5s var(--ease); }
+.hud-sp { flex: 1; }
+.icon-btn { pointer-events: auto; width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; background: rgba(21,19,18,.72); border: 1px solid var(--line); flex: none; }
+.icon-btn svg { width: 16px; height: 16px; fill: var(--cream); }
+
+#bubble {
+  position: absolute; left: 12px; right: 12px; bottom: 30px; z-index: 3;
+  padding: 12px 14px; border-radius: 16px 16px 16px 4px;
+  background: rgba(251,245,238,.94); color: #1b1411; font-size: 14.5px; line-height: 1.45; font-weight: 500;
+  box-shadow: 0 10px 30px rgba(0,0,0,.35);
+  opacity: 0; transform: translateY(8px); transition: opacity .35s, transform .35s var(--ease);
+  max-height: 46%; overflow: auto; cursor: pointer;
+}
+#bubble.mini { max-height: 3.4em; overflow: hidden; -webkit-mask: linear-gradient(#000 55%, transparent); mask: linear-gradient(#000 55%, transparent); }
+#bubble.show { opacity: 1; transform: none; }
+#bubble b { font-weight: 800; }
+#bubble .who { display: block; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: #9a5a34; font-weight: 800; margin-bottom: 3px; }
+@media (max-width: 480px) {
+  #hud { gap: 5px; padding-left: 8px; padding-right: 8px; }
+  .chip { font-size: 11px; padding: 5px 8px; gap: 4px; }
+  .chip small, #hClockChip { display: none; }
+  #trustBar { width: 34px; }
+  .icon-btn { width: 32px; height: 32px; }
+}
+@media (min-width: 900px) and (min-aspect-ratio: 1/1) { #bubble { left: 24px; right: auto; max-width: 520px; bottom: 28px; } }
+
+#toast {
+  position: absolute; left: 50%; top: 64px; transform: translateX(-50%); z-index: 4; pointer-events: none;
+  padding: 9px 16px; border-radius: 999px; font-size: 13px; font-weight: 700; white-space: nowrap;
+  background: rgba(21,19,18,.9); border: 1px solid var(--line); opacity: 0;
+}
+#toast.show { animation: toast 2.4s var(--ease) forwards; }
+@keyframes toast { 0% { opacity: 0; transform: translate(-50%, -8px); } 12%, 80% { opacity: 1; transform: translate(-50%, 0); } 100% { opacity: 0; } }
+
+#phoneBtn {
+  position: absolute; right: 12px; bottom: 30px; z-index: 4; pointer-events: auto;
+  display: none; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 999px;
+  background: linear-gradient(135deg, var(--gold-2), var(--gold)); color: #1b1411; font-weight: 800; font-size: 13px;
+  box-shadow: 0 8px 30px rgba(214,170,108,.55); animation: ring .5s ease-in-out infinite alternate;
+}
+#phoneBtn.show { display: inline-flex; }
+@keyframes ring { from { transform: rotate(-3deg) scale(1); } to { transform: rotate(3deg) scale(1.04); } }
+body.phone-ringing #bubble { right: 150px; }
+
+/* ---------- panel ---------- */
+.grab { width: 38px; height: 4px; border-radius: 2px; background: rgba(251,245,238,.2); margin: 8px auto 2px; flex: none; }
+@media (min-width: 900px) and (min-aspect-ratio: 1/1) { .grab { display: none; } }
+.p-head { display: flex; align-items: center; gap: 12px; padding: 8px 16px 10px; flex: none; }
+.avatar { width: 40px; height: 40px; border-radius: 50%; flex: none; position: relative;
+  background: radial-gradient(circle at 35% 30%, #fff, #e9e3dc 45%, #a9a29a); }
+.avatar::after { content: ""; position: absolute; inset: -3px; border-radius: 50%; border: 2px solid var(--copper); }
+.avatar.plus::after { border-color: var(--gold-2); box-shadow: 0 0 12px rgba(241,211,162,.5); }
+.p-name { flex: 1; min-width: 0; }
+.p-name b { display: block; font-family: var(--display); font-weight: 600; font-size: 16px; }
+.p-name span { font-size: 12px; color: var(--faint); }
+.tier { font-family: var(--display); font-weight: 600; font-size: 10.5px; padding: 5px 9px; border-radius: 999px; border: 1px solid var(--line); white-space: nowrap; }
+.tier.plus { color: #1b1411; background: linear-gradient(135deg, var(--gold-2), var(--gold)); border-color: transparent; }
+.pat { width: 38px; height: 38px; flex: none; transform: rotate(-90deg); }
+.pat circle { fill: none; stroke-width: 4; }
+.tabs { display: flex; gap: 6px; padding: 0 16px 8px; flex: none; }
+.tab { flex: 1; padding: 9px 0; border-radius: 12px; font-size: 13px; font-weight: 700; color: var(--muted); background: rgba(251,245,238,.04); border: 1px solid var(--line-2); }
+.tab.on { color: var(--cream); background: rgba(214,170,108,.14); border-color: var(--line); }
+.tab .dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--gold-2); margin-left: 5px; vertical-align: 2px; opacity: 0; }
+.tab.flag .dot { opacity: 1; }
+.scroll { flex: 1; min-height: 0; overflow: auto; padding: 2px 16px 12px; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
+.sec { margin-top: 12px; }
+.sec h4 { font-size: 10.5px; letter-spacing: .2em; text-transform: uppercase; color: var(--gold); font-weight: 800; margin-bottom: 6px; }
+.row { display: flex; justify-content: space-between; gap: 12px; padding: 7px 0; border-top: 1px solid var(--line-2); font-size: 13.5px; }
+.row:first-of-type { border-top: 0; }
+.row span { color: var(--muted); }
+.row b { font-weight: 700; text-align: right; white-space: nowrap; }
+.row em { font-style: normal; font-size: 11px; color: var(--faint); display: block; }
+.tag { display: inline-block; font-size: 10px; font-weight: 800; padding: 2px 6px; border-radius: 6px; margin-left: 6px; vertical-align: 1px; letter-spacing: .04em; }
+.tag.plan { background: rgba(214,170,108,.18); color: var(--gold-2); }
+.tag.done { background: rgba(251,245,238,.08); color: var(--faint); }
+.note { margin-top: 10px; padding: 10px 12px; border-radius: 12px; font-size: 13px; line-height: 1.45; color: var(--muted); background: rgba(251,245,238,.04); border: 1px dashed var(--line-2); }
+.note b { color: var(--cream); }
+
+/* handbook */
+.search { width: 100%; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--line); background: rgba(0,0,0,.25); color: var(--cream); outline: none; font-size: 14px; user-select: text; -webkit-user-select: text; }
+.clause { margin-top: 8px; padding: 11px 12px; border-radius: 12px; background: rgba(251,245,238,.035); border: 1px solid var(--line-2); }
+.clause.hl { border-color: var(--gold); background: rgba(214,170,108,.1); }
+.clause h5 { font-size: 13.5px; font-weight: 800; display: flex; gap: 8px; align-items: baseline; }
+.clause h5 i { font-style: normal; font-family: var(--display); font-size: 10px; color: var(--gold); flex: none; }
+.clause p { font-size: 13px; line-height: 1.5; color: var(--muted); margin-top: 5px; white-space: pre-line; }
+.clause .src { font-size: 10.5px; color: var(--faint); margin-top: 6px; }
+
+/* action tray */
+.tray { flex: none; border-top: 1px solid var(--line); padding: 10px 12px max(10px, env(safe-area-inset-bottom)); background: rgba(11,10,10,.55); }
+.tray-h { display: flex; justify-content: space-between; font-size: 11px; color: var(--faint); letter-spacing: .12em; text-transform: uppercase; font-weight: 800; margin: 0 4px 8px; }
+.cards { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; max-height: 26dvh; overflow: auto; padding-bottom: 2px; }
+.card {
+  text-align: left; padding: 9px 10px; border-radius: 13px; min-height: 52px;
+  background: rgba(251,245,238,.05); border: 1px solid var(--line-2); transition: transform .15s, background .2s, border-color .2s;
+}
+.card:active { transform: scale(.97); }
+.card b { display: block; font-size: 13px; font-weight: 800; line-height: 1.25; }
+.card span { display: block; font-size: 11px; color: var(--faint); margin-top: 3px; line-height: 1.3; }
+.card.on { background: rgba(214,170,108,.18); border-color: var(--gold); }
+.card.on b::before { content: "✓ "; color: var(--gold-2); }
+.card[data-g="sale"] b::after { content: " · план"; font-weight: 600; color: var(--copper-2); font-size: 11px; }
+.card[data-g="reason"] { border-style: dashed; }
+.give {
+  width: 100%; margin-top: 9px; padding: 14px; border-radius: 14px; font-weight: 800; font-size: 15px; letter-spacing: .02em;
+  color: #24130a; background: radial-gradient(circle at 30% 20%, #ffe9cf, var(--copper-2) 45%, var(--copper));
+  box-shadow: 0 10px 26px -10px rgba(201,130,90,.8); transition: opacity .2s, transform .15s;
+}
+.give:active { transform: scale(.98); }
+.give:disabled { opacity: .35; }
+#panel.idle .tray, #panel.idle .tabs { opacity: .35; pointer-events: none; }
+.picked { display: none; font-size: 12.5px; color: var(--muted); margin: 0 4px; line-height: 1.4; }
+.picked b { color: var(--gold-2); }
+#tabAdviceBtn { display: none; }
+#selCount { color: var(--gold-2); }
+@media not all and (min-width: 900px) and (min-aspect-ratio: 1/1) {
+  #tabAdviceBtn { display: block; }
+  .tray .tray-h { display: none; }
+  .picked { display: block; }
+  #tabAdvice .cards { max-height: none; }
+}
+
+/* ---------- modals ---------- */
+.modal {
+  position: fixed; inset: 0; z-index: 20; display: flex; align-items: flex-end; justify-content: center;
+  background: rgba(8,7,7,.62); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+  opacity: 0; visibility: hidden; transition: opacity .3s, visibility .3s;
+}
+.modal.show { opacity: 1; visibility: visible; }
+.sheet {
+  width: min(560px, 100%); max-height: 92dvh; overflow: auto; -webkit-overflow-scrolling: touch;
+  padding: 22px 18px max(18px, env(safe-area-inset-bottom)); border-radius: 26px 26px 0 0;
+  background: linear-gradient(180deg, #221e1c, #141211); border: 1px solid var(--line); border-bottom: 0;
+  transform: translateY(30px); transition: transform .4s var(--ease);
+}
+.modal.show .sheet { transform: none; }
+@media (min-width: 700px) { .modal { align-items: center; } .sheet { border-radius: 26px; border-bottom: 1px solid var(--line); } }
+.eyebrow { font-size: 10.5px; letter-spacing: .28em; text-transform: uppercase; color: var(--gold); font-weight: 800; }
+.h1 { font-family: var(--display); font-weight: 800; font-size: 26px; line-height: 1.1; margin: 8px 0 10px; letter-spacing: -.01em; }
+.lead { font-size: 14.5px; line-height: 1.55; color: var(--muted); }
+.btn {
+  display: block; width: 100%; margin-top: 12px; padding: 15px; border-radius: 15px; font-weight: 800; font-size: 15px;
+  color: #24130a; background: radial-gradient(circle at 30% 20%, #ffe9cf, var(--copper-2) 45%, var(--copper));
+}
+.btn.ghost { color: var(--cream); background: rgba(251,245,238,.06); border: 1px solid var(--line); }
+.verdict { margin-top: 12px; padding: 12px 14px; border-radius: 14px; font-weight: 800; font-size: 15px; }
+.verdict.perfect { color: var(--good); background: rgba(159,224,168,.1); border: 1px solid rgba(159,224,168,.35); }
+.verdict.ok { color: var(--gold-2); background: rgba(214,170,108,.1); border: 1px solid var(--line); }
+.verdict.fail { color: var(--bad); background: rgba(255,138,128,.1); border: 1px solid rgba(255,138,128,.35); }
+.lines { margin-top: 10px; }
+.lines .row b.neg { color: var(--bad); }
+.lines .row b.pos { color: var(--good); }
+.cites { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.cite { font-size: 12px; font-weight: 700; padding: 6px 10px; border-radius: 999px; background: rgba(214,170,108,.12); border: 1px solid var(--line); color: var(--gold-2); }
+.explain { margin-top: 12px; font-size: 13.5px; line-height: 1.55; color: var(--muted); }
+.explain b { color: var(--cream); }
+.opts { display: grid; gap: 8px; margin-top: 14px; }
+.opt { text-align: left; padding: 14px; border-radius: 14px; font-weight: 700; font-size: 14.5px; background: rgba(251,245,238,.05); border: 1px solid var(--line-2); }
+.opt.right { border-color: var(--good); color: var(--good); }
+.opt.wrong { border-color: var(--bad); color: var(--bad); }
+.timer { height: 4px; border-radius: 2px; background: rgba(251,245,238,.1); overflow: hidden; margin-top: 12px; }
+.timer i { display: block; height: 100%; background: var(--gold-2); width: 100%; }
+.stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 14px; }
+.stat { padding: 12px; border-radius: 14px; background: rgba(251,245,238,.04); border: 1px solid var(--line-2); }
+.stat b { display: block; font-family: var(--display); font-weight: 800; font-size: 19px; color: var(--gold-2); }
+.stat span { font-size: 11px; color: var(--faint); letter-spacing: .06em; }
+.list { margin-top: 12px; }
+.li { display: flex; gap: 10px; align-items: flex-start; padding: 9px 0; border-top: 1px solid var(--line-2); font-size: 13px; line-height: 1.4; }
+.li i { font-style: normal; flex: none; width: 20px; text-align: center; }
+.li span { color: var(--muted); }
+
+/* title */
+#title { align-items: stretch; background: radial-gradient(120% 70% at 50% 20%, rgba(60,40,28,.6), rgba(8,7,7,.92)); }
+#title .sheet { max-height: 100dvh; border-radius: 0; border: 0; background: transparent; display: flex; flex-direction: column; justify-content: flex-end; padding-top: max(22px, env(safe-area-inset-top)); margin: 0 auto; }
+.logo { font-family: var(--display); font-weight: 800; font-size: 64px; letter-spacing: -.04em; line-height: .95; }
+.logo span { display: block; font-weight: 400; font-size: 12px; letter-spacing: .5em; color: var(--gold-2); margin-top: 12px; }
+.roles { display: grid; gap: 10px; margin-top: 22px; }
+.role { text-align: left; padding: 16px; border-radius: 18px; background: rgba(251,245,238,.05); border: 1px solid var(--line); display: grid; grid-template-columns: 44px 1fr; gap: 12px; align-items: center; }
+.role .ic { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; background: radial-gradient(circle at 35% 30%, #ffe9cf, var(--copper-2) 45%, var(--copper)); color: #24130a; font-weight: 800; font-family: var(--display); }
+.role.client .ic { background: radial-gradient(circle at 35% 30%, #fff, #e9e3dc 50%, #a9a29a); }
+.role b { display: block; font-size: 16px; font-weight: 800; }
+.role span { display: block; font-size: 12.5px; color: var(--muted); margin-top: 3px; line-height: 1.4; }
+.shifts { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-top: 10px; }
+.shift-b { padding: 10px 0; border-radius: 12px; font-weight: 800; font-size: 13px; background: rgba(251,245,238,.05); border: 1px solid var(--line-2); }
+.shift-b.on { border-color: var(--gold); background: rgba(214,170,108,.14); }
+.shift-b:disabled { opacity: .3; }
+.disc { margin-top: 16px; font-size: 11px; line-height: 1.5; color: var(--faint); }
+#testOut { position: fixed; inset: 0; z-index: 99; overflow: auto; background: #0b0a0a; color: var(--cream); font: 12px/1.5 ui-monospace, Menlo, monospace; padding: 16px; white-space: pre-wrap; display: none; }
+@media (prefers-reduced-motion: reduce) { * { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="view">
+    <div id="hud">
+      <span class="chip" id="hShift">Смена 1</span>
+      <span class="chip" id="hClockChip"><span id="hClock">10:00</span></span>
+      <span class="chip" title="Доверие клиентов"><small>доверие</small>♥<span id="trustBar"><i></i></span></span>
+      <span class="hud-sp"></span>
+      <span class="chip" id="hKpi" title="План продаж"><small>план</small>📈 <span id="hKpiV">0/2</span></span>
+      <span class="chip" id="hQueue" title="В очереди"><small>очередь</small>👥 <span id="hQueueV">0</span></span>
+      <button class="icon-btn" id="bMute" aria-label="Звук"><svg viewBox="0 0 24 24" id="icMute"></svg></button>
+      <button class="icon-btn" id="bPause" aria-label="Пауза"><svg viewBox="0 0 24 24"><path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z"/></svg></button>
+    </div>
+    <div id="bubble"></div>
+    <div id="toast"></div>
+    <button id="phoneBtn">📞 Выделенная линия</button>
+  </div>
+
+  <div id="panel" class="idle">
+    <div class="grab"></div>
+    <div class="p-head">
+      <div class="avatar" id="pAvatar"></div>
+      <div class="p-name"><b id="pName">Ожидание клиента</b><span id="pSub">—</span></div>
+      <span class="tier" id="pTier">OPC</span>
+      <svg class="pat" viewBox="0 0 40 40" aria-label="Терпение клиента"><circle cx="20" cy="20" r="16" stroke="rgba(251,245,238,.12)"/><circle id="patRing" cx="20" cy="20" r="16" stroke="#9fe0a8" stroke-linecap="round" stroke-dasharray="100.5" stroke-dashoffset="0"/></svg>
+    </div>
+    <div class="tabs">
+      <button class="tab on" data-t="dossier">Досье</button>
+      <button class="tab" data-t="book">Справочник<span class="dot"></span></button>
+      <button class="tab" data-t="advice" id="tabAdviceBtn">Совет <span id="selCount"></span></button>
+    </div>
+    <div class="scroll" id="scroll">
+      <div id="tabDossier"></div>
+      <div id="tabAdvice" hidden><div class="tray-h" style="margin:8px 4px"><span>До трёх действий</span><span id="traySel2"></span></div></div>
+      <div id="tabBook" hidden>
+        <input class="search" id="search" placeholder="Поиск: QR, касса, СБП, регион…" autocomplete="off">
+        <div id="clauses"></div>
+      </div>
+    </div>
+    <div class="tray">
+      <div class="tray-h"><span id="trayTitle">Ваш совет</span><span id="traySel">0 / 3</span></div>
+      <div class="cards" id="cards"></div>
+      <div class="picked" id="picked"></div>
+      <button class="give" id="give" disabled>Дать совет</button>
+    </div>
+  </div>
+</div>
+
+<!-- title -->
+<div class="modal show" id="title">
+  <div class="sheet">
+    <div class="eyebrow">Фан-игра · Orange Premium Club</div>
+    <div class="logo" style="margin-top:14px">Клуб<span>смена в премиальном офисе</span></div>
+    <p class="lead" style="margin-top:16px">Клиенты приходят с настоящими вопросами о пакете. Ответы — в тарифах. Цена ошибки — их деньги и ваше доверие.</p>
+    <div class="roles">
+      <button class="role" id="rManager"><div class="ic">М</div><div><b>Персональный менеджер</b><span>Разбирайте ситуации клиентов, сверяйтесь со справочником, давайте советы. Ошибки возвращаются.</span></div></button>
+      <button class="role client" id="rClient"><div class="ic" style="color:#3a2a20">К</div><div><b>Клиент клуба</b><span>Теперь советуют вам. Менеджер не всегда прав — проверяйте.</span></div></button>
+    </div>
+    <div class="eyebrow" style="margin-top:18px">Смена менеджера</div>
+    <div class="shifts" id="shiftBtns"></div>
+    <div class="disc">Неофициальная фан-игра, не реклама и не оферта ПСБ. Правила взяты из тарифов «Orange Premium Club» и «Orange Premium Club +», действующих с 01.07.2026. Персонажи вымышлены.</div>
+  </div>
+</div>
+
+<div class="modal" id="mIntro"><div class="sheet" id="introBody"></div></div>
+<div class="modal" id="mDebrief"><div class="sheet" id="debriefBody"></div></div>
+<div class="modal" id="mPhone"><div class="sheet" id="phoneBody"></div></div>
+<div class="modal" id="mReport"><div class="sheet" id="reportBody"></div></div>
+<div class="modal" id="mPause"><div class="sheet">
+  <div class="eyebrow">Пауза</div><div class="h1">Клиенты подождут</div>
+  <button class="btn" id="bResume">Продолжить</button>
+  <button class="btn ghost" id="bMenu">В меню</button>
+</div></div>
+<pre id="testOut"></pre>
+
+<!-- =========================================================
+     RULES ENGINE — pure, no DOM. Tariffs effective 01.07.2026.
+     ========================================================= -->
+<script>
+(() => {
+'use strict';
+const TARIFF = {
+  OPC: {
+    short: 'OPC', full: 'Orange Premium Club', fee: 3990,
+    bal: { msk: 3e6, reg: 1.5e6 }, alt: { bal: 1e6, buy: 5e4 }, salary: { msk: 3e5, reg: 2e5 },
+    addCard: 6000, freeCards: 3, box: 30,
+    cash: { deskFree: [1e5, 3e5], otherFreeDay: 3e5, dayLimit: 1e6, monthLimit: 5e6, overPct: .02 },
+    details: { monthFree: 5e5, dayFree: Infinity, pct: .006, min: 20, max: 1500 },
+  },
+  PLUS: {
+    short: 'OPC +', full: 'Orange Premium Club +', fee: 10000,
+    bal: { msk: 1e7, reg: 7e6 }, alt: { bal: 5e6, buy: 1.5e5 }, salary: null,
+    addCard: 6250, freeCards: 3, box: 35,
+    cash: { deskFree: [0, 1.5e6], otherFreeDay: 1.5e6, dayLimit: 1.5e6, monthLimit: 2e7, overPct: .01 },
+    details: { monthFree: 2e7, dayFree: 1.5e6, pct: .005, min: 20, max: 1500 },
+  },
+  SBP: { othersMonthFree: 1e5, pct: .005, max: 1500, perOp: 3e5, selfMonthFree: 5e7, selfPerOp: 3e7 },
+  C2C: { pct: .0199, min: 199, perOp: 1.5e5 },
+};
+
+const COUNTING = new Set(['card', 'current', 'deposit', 'demand', 'savings', 'brokerage', 'iis', 'pif', 'du', 'oms', 'tokeon', 'npf', 'life_ins']);
+const countsTowardBalance = t => COUNTING.has(t);
+
+const PURCHASE = new Set(['card_pos', 'card_online', 'util_psbretail', 'telecom_psbretail']);
+function purchaseCounts(op) {
+  if (!PURCHASE.has(op.kind)) return false;
+  if (op.debitNextMonthDay && op.debitNextMonthDay > 14) return false;
+  return true;
+}
+
+// holdings: [{type, amount, from=1, to=N}] — amount present at the end of days from..to
+function avgBalance(holdings, N) {
+  let s = 0;
+  for (const h of holdings) {
+    if (!countsTowardBalance(h.type)) continue;
+    const a = Math.max(1, h.from || 1), b = Math.min(N, h.to || N);
+    if (b >= a) s += h.amount * (b - a + 1);
+  }
+  return s / N;
+}
+const purchases = ops => ops.filter(purchaseCounts).reduce((a, o) => a + o.amount, 0);
+
+// last three months of payroll credits (oldest first); first month of payroll excluded; missing months skipped
+function salaryAvg(s) {
+  if (!s) return 0;
+  const vals = s.months.filter((v, i) => i !== s.firstIdx && v > 0);
+  return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : 0;
+}
+
+function monthVerdict(st) {
+  const T = TARIFF[st.tier];
+  const avg = avgBalance(st.holdings, st.N), buy = purchases(st.ops), sal = salaryAvg(st.salary);
+  const base = { avg, buy, sal, fee: 0, free: true };
+  if (st.monthIdx === 0) return { ...base, via: 'grace' };
+  if (avg >= T.bal[st.region]) return { ...base, via: 'bal' };
+  if (avg >= T.alt.bal && buy >= T.alt.buy) return { ...base, via: 'alt' };
+  if (T.salary && sal >= T.salary[st.region]) return { ...base, via: 'salary' };
+  return { ...base, free: false, via: null, fee: T.fee };
+}
+
+function cashFee(tier, channel, amount, already = 0) {
+  const T = TARIFF[tier].cash, day = already + amount;
+  let fee = 0;
+  if (channel === 'desk') {
+    if (tier === 'OPC' && !(day >= T.deskFree[0] && day <= T.deskFree[1])) fee = Math.max(200, amount * .01);
+  } else if (channel === 'other_atm') {
+    if (tier === 'OPC' && day > T.otherFreeDay) fee = Math.max(200, amount * .01);
+  }
+  const over = Math.max(0, day - T.dayLimit) - Math.max(0, already - T.dayLimit);
+  if (over > 0) fee += over * T.overPct;
+  return Math.round(fee);
+}
+// returns null when the operation isn't allowed
+function sbpFee(amount, used = 0, self = false) {
+  const S = TARIFF.SBP;
+  if (self) { if (amount > S.selfPerOp) return null; return used + amount <= S.selfMonthFree ? 0 : Math.min(S.max, Math.round(amount * S.pct)); }
+  if (amount > S.perOp) return null;
+  return used + amount <= S.othersMonthFree ? 0 : Math.min(S.max, Math.round(amount * S.pct));
+}
+function detailsFee(tier, amount, usedMonth = 0, usedDay = 0) {
+  const D = TARIFF[tier].details;
+  if (usedMonth + amount <= D.monthFree && usedDay + amount <= D.dayFree) return 0;
+  return Math.round(Math.min(D.max, Math.max(D.min, amount * D.pct)));
+}
+function c2cFee(amount) { const C = TARIFF.C2C; if (amount > C.perOp) return null; return Math.max(C.min, Math.round(amount * C.pct)); }
+function addCardsFee(tier, n) { return Math.max(0, n - TARIFF[tier].freeCards) * TARIFF[tier].addCard; }
+function terminationFee(tier, monthIdx) { return monthIdx <= 1 ? TARIFF[tier].fee : 0; }
+
+window.RULES = { TARIFF, countsTowardBalance, purchaseCounts, avgBalance, purchases, salaryAvg, monthVerdict, cashFee, sbpFee, detailsFee, c2cFee, addCardsFee, terminationFee };
+})();
+</script>
+
+<!-- =========================================================
+     HANDBOOK, ACTIONS, CASES, SIMULATION
+     ========================================================= -->
+<script>
+(() => {
+'use strict';
+const R = window.RULES, T = R.TARIFF;
+const fmt = v => (Math.round(v) < 0 ? '−' : '') + Math.abs(Math.round(v)).toLocaleString('ru-RU').replace(/ /g, ' ') + ' ₽';
+const mln = v => (v / 1e6).toLocaleString('ru-RU', { maximumFractionDigits: 2 }) + ' млн ₽';
+const money = v => Math.abs(v) >= 1e6 ? mln(v) : fmt(v);
+
+/* ---------------- handbook ---------------- */
+const CLAUSES = [
+  { id: 'free_opc', n: 1, t: 'Бесплатное обслуживание — OPC', p: 'Комиссия не взимается, если выполнено одно из условий:\n• средний баланс от 3 000 000 ₽ — пакет получен в офисе в Москве или МО; от 1 500 000 ₽ — в других регионах;\n• средний баланс от 1 000 000 ₽ и покупки картами пакета от 50 000 ₽ за месяц;\n• средние зарплатные зачисления от 300 000 ₽ (Москва и МО) или от 200 000 ₽ (регионы).\nИначе — 3 990 ₽ в месяц.', k: 'условия порог москва регион 3 млн 1,5 зарплата 3990 бесплатно' },
+  { id: 'free_plus', n: 2, t: 'Бесплатное обслуживание — OPC +', p: 'Комиссия не взимается, если выполнено одно из условий:\n• средний баланс от 10 000 000 ₽ (Москва и МО) или от 7 000 000 ₽ (регионы);\n• средний баланс от 5 000 000 ₽ и покупки от 150 000 ₽ за месяц.\nУсловия по зарплате в OPC + нет. Иначе — 10 000 ₽ в месяц.', k: 'плюс opc+ 10 млн 7 млн 5 млн 150 зарплата нет 10000' },
+  { id: 'region', n: 3, t: 'Какой регион применяется', p: 'Регион определяется по офису, где клиент получил пакет. При заказе с курьерской доставкой — по региону, где обслуживается карта.', k: 'регион офис москва курьер город' },
+  { id: 'grace', n: 4, t: 'Первый месяц и закрытие пакета', p: 'Календарный месяц оформления — льготный период, комиссия не взимается.\nЕсли закрыть пакет в льготный период или в следующем календарном месяце, единовременно удерживается комиссия в размере месячной.\nКомиссия берётся только за полный календарный месяц.', k: 'льготный первый месяц закрыть расторгнуть отказаться' },
+  { id: 'avg', n: 5, t: 'Как считается средний баланс', p: 'Сумма остатков на конец каждого дня, делённая на число дней в месяце.\nПоэтому важно не только «сколько», но и «с какого числа»: 5 млн ₽, внесённые за два последних дня 30-дневного месяца, добавят к среднему лишь около 0,33 млн ₽.\nПример: 2,6 млн ₽ × 19 дней + 3,8 млн ₽ × 11 дней = 91,2 млн; ÷ 30 = 3,04 млн ₽.', k: 'средний баланс дни считается внести конец месяца' },
+  { id: 'counts', n: 6, t: 'Что входит в средний баланс', p: 'Все счета в ПСБ: карта, текущий, вклад, до востребования, накопительный.\nБрокерский счёт и ИИС (бумаги и деньги), паи ПИФ партнёрских УК, доверительное управление, металлические счета (ОМС), ЦФА на платформе «Токеон», программа долгосрочных сбережений НПФ ПСБ, взносы по страхованию жизни и пенсионному страхованию, оформленному в офисах банка.\nДеньги в других банках — не входят.', k: 'брокерский иис пиф ду омс металл страхование нпф токеон вклад входит считается' },
+  { id: 'buy', n: 7, t: 'Что считается покупкой', p: 'Считаются: оплата картами пакета в магазинах и онлайн; оплата связи и ЖКХ через интернет-банк PSB-Retail (партнёры и шаблоны).\nНе считаются: снятие наличных, переводы (в т. ч. с карты на карту), оплата по QR-коду, пополнение электронных кошельков.', k: 'покупки qr кьюар кошелёк перевод жкх связь коммуналка psb-retail считается' },
+  { id: 'buy14', n: 8, t: 'Когда покупка засчитывается', p: 'Учитываются операции, списанные со счёта не позднее 14-го числа месяца, следующего за отчётным.', k: '14 число списание засчитывается' },
+  { id: 'salary', n: 9, t: 'Зарплатное условие (только OPC)', p: 'Среднее зачислений от работодателя по зарплатному проекту за последние 3 календарных месяца. Первый месяц зачислений не учитывается; если в одном из месяцев зачислений не было — считается по двум.', k: 'зарплата зарплатный проект 300 200 работодатель' },
+  { id: 'cash_atm', n: 10, t: 'Наличные: банкоматы ПСБ и партнёров', p: 'Без комиссии.\nЛимит OPC — 1 000 000 ₽ в день и 5 000 000 ₽ в месяц; OPC + — 1 500 000 ₽ и 20 000 000 ₽. Сверх дневного лимита — 2% (OPC) / 1% (OPC +) от превышения.', k: 'наличные банкомат снять лимит пср' },
+  { id: 'cash_desk', n: 11, t: 'Наличные: касса офиса ПСБ', p: 'OPC: без комиссии, если за день снимается от 100 000 до 300 000 ₽. Меньше 100 000 ₽ или больше 300 000 ₽ — 1% (минимум 200 ₽).\nOPC +: без комиссии до 1 500 000 ₽ в день.', k: 'касса наличные офис пвн снять 100 300' },
+  { id: 'cash_other', n: 12, t: 'Наличные: банкоматы других банков', p: 'OPC: без комиссии до 300 000 ₽ в день, свыше — 1% (минимум 200 ₽).\nOPC +: без комиссии до 1 500 000 ₽ в день.\nСторонний банк может взять свою комиссию.', k: 'чужой банкомат другой банк снять наличные 300' },
+  { id: 'sbp', n: 13, t: 'СБП другим людям', p: 'Без комиссии до 100 000 ₽ в месяц суммарно.\nЕсли перевод выходит за лимит — 0,5% (максимум 1 500 ₽) со всей суммы этого перевода, а не только с превышения.\nНе более 300 000 ₽ за один перевод.', k: 'сбп телефон перевод 100 лимит 0,5' },
+  { id: 'sbp_self', n: 14, t: 'СБП себе в другой банк', p: 'Переводы на свои счета в других банках — без комиссии до 50 000 000 ₽ в месяц, до 30 000 000 ₽ за операцию.', k: 'сбп себе свой счёт другой банк 50 млн' },
+  { id: 'details', n: 15, t: 'Перевод по реквизитам в другой банк', p: 'Через интернет-банк PSB-Retail:\nOPC — без комиссии до 500 000 ₽ в месяц, свыше — 0,6% (20–1 500 ₽);\nOPC + — без комиссии до 1 500 000 ₽ в день и 20 000 000 ₽ в месяц, свыше — 0,5% (20–1 500 ₽).', k: 'реквизиты перевод другой банк интернет-банк 500' },
+  { id: 'c2c', n: 16, t: 'С карты на карту другого банка', p: '1,99% (минимум 199 ₽), не более 150 000 ₽ за операцию.\nПереводы внутри ПСБ через интернет-банк — бесплатно.', k: 'карта на карту c2c 1,99 перевод' },
+  { id: 'cards', n: 17, t: 'Дополнительные карты', p: 'Бесплатно — 3 дополнительные карты в сумме. Четвёртая и пятая — 6 000 ₽ в год (OPC) / 6 250 ₽ (OPC +).\nВыпуск и перевыпуск — без комиссии, карта выпускается на 7 лет.', k: 'дополнительные карты семья стикер 3 бесплатно' },
+  { id: 'interest', n: 18, t: 'Процент на остаток по карте', p: '0% годовых. Чтобы деньги работали, их можно разместить во вклад или инвестиции в ПСБ — они по-прежнему входят в средний баланс.', k: 'процент остаток карта вклад доход' },
+  { id: 'services', n: 19, t: 'Сервисы пакета', p: 'Без комиссии: персональный менеджер, приоритетное обслуживание в офисах, выделенная линия, инвестиционное консультирование.\nСкидка на аренду ячейки: 30% (OPC) / 35% (OPC +). Страхование «Защита путешественника».', k: 'менеджер ячейка сейф скидка линия страхование путешественника' },
+  { id: 'plus_perks', n: 20, t: 'Привилегии OPC +', p: 'Кешбэк 100% на такси, каршеринг и сервисы Golden Key; безлимитный доступ в бизнес-залы; повышенный страховой лимит до 300 000 €.', k: 'такси бизнес-залы кешбэк плюс привилегии' },
+  { id: 'suit', n: 21, t: 'Правило смены: продажи', p: 'План продаж есть, но продукт полезен, только если подходит клиенту: срок, риск, ликвидность. Неподходящая продажа выполнит план — и вернётся жалобой.', k: 'план продажа страхование пиф подходит', game: true },
+];
+
+/* ---------------- labels ---------------- */
+const ASSET = {
+  card: 'Карта ПСБ', deposit: 'Вклад в ПСБ', savings: 'Накопительный счёт ПСБ', brokerage: 'Брокерский счёт в ПСБ',
+  iis: 'ИИС в ПСБ', pif: 'Паи ПИФ через ПСБ', du: 'Доверительное управление', oms: 'Металлический счёт (ОМС) в ПСБ',
+  life_ins: 'Страхование жизни в ПСБ', npf: 'Долгосрочные сбережения НПФ ПСБ', tokeon: 'ЦФА на «Токеоне»',
+};
+const OPK = {
+  card_pos: 'Покупки картой в магазинах', card_online: 'Покупки картой онлайн', qr: 'Оплата по QR-коду',
+  util_other: 'ЖКХ и связь через приложение другого банка', util_psbretail: 'ЖКХ и связь через PSB-Retail',
+  ewallet: 'Пополнение электронного кошелька', card2card: 'Перевод с карты на карту',
+};
+
+/* ---------------- action cards ---------------- */
+// group: exclusive groups can't be combined (one method per request)
+const EXCL = new Set(['cash', 'transfer', 'cancel', 'reason', 'tier']);
+function actionMeta(id, c) {
+  const [k, a] = id.split(':');
+  const ext = c.external && c.external.find(e => e.id === a);
+  const sale = { ins: 'Оформить страхование жизни', pif: 'Предложить паи ПИФ', oms: 'Открыть металлический счёт' };
+  const m = {
+    nothing: { g: 'neutral', t: 'Ничего не менять', s: 'Условия уже выполняются' },
+    move: { g: 'balance', t: 'Перевести в ПСБ', s: ext ? `${ext.label}, ${money(ext.amount)}` : '' },
+    card_pay: { g: 'buy', t: 'Платить картой вместо QR', s: 'Карта или стикер на кассе' },
+    util_retail: { g: 'buy', t: 'ЖКХ и связь — через PSB-Retail', s: 'Вместо приложения другого банка' },
+    pay_direct: { g: 'buy', t: 'Оплатить заказ картой напрямую', s: 'Без пополнения кошелька' },
+    deposit: { g: 'balance', t: 'Открыть вклад в ПСБ', s: 'Из денег на карте' },
+    sell: { g: 'sale', t: sale[a], s: 'Продукт банка' },
+    downgrade: { g: 'tier', t: 'Перейти на обычный OPC', s: 'Ниже порог, меньше привилегий' },
+    cash: { g: 'cash', t: { psb_atm: 'Снять в банкомате ПСБ', desk: 'Снять в кассе офиса', other_atm: 'Снять в банкомате другого банка', other_split: 'В чужом банкомате за 2 дня' }[a], s: c.cash ? money(c.cash.amount) + ({ other_split: ' пополам', other_atm: ' одной суммой' }[a] || '') : '' },
+    tr: { g: 'transfer', t: { sbp: 'Перевести по СБП', details: 'Перевести по реквизитам', c2c: 'С карты на карту', split_sbp: 'СБП двумя переводами', split_days: 'По реквизитам за 2 дня' }[a], s: { sbp: 'По номеру телефона', details: 'Через интернет-банк', c2c: 'По номеру карты', split_sbp: 'Сначала в пределах лимита', split_days: 'Половина сегодня, половина завтра' }[a] },
+    reason: { g: 'reason', t: { qr: 'Причина: QR — не покупка', late: 'Причина: списание после 14-го', region: 'Причина: порог покупок для Москвы выше', salary_plus: 'Причина: в OPC + нет условия по зарплате', salary_low: 'Причина: зарплата ниже порога' }[a], s: 'Объяснить клиенту' },
+    cancel: { g: 'cancel', t: { now: 'Закрыть пакет сейчас', next: 'Закрыть в следующем месяце', later: 'Закрыть через месяц после следующего' }[a], s: { now: 'В льготный период', next: 'Сразу после льготного', later: 'После полного месяца' }[a] },
+  }[k];
+  return m ? { id, k, a, ...m } : { id, k, a, g: 'neutral', t: id, s: '' };
+}
+
+/* ---------------- simulation ---------------- */
+function evaluate(c, ids) {
+  const st = {
+    tier: c.tier, region: c.region, N: c.N, monthIdx: c.monthIdx ?? 5,
+    holdings: c.holdings.map(h => ({ ...h })), ops: (c.ops || []).map(o => ({ ...o })), salary: c.salary || null,
+  };
+  const r = { ids: ids.slice(), fees: [], value: 0, benefit: 0, effort: 0, unsuitable: [], sales: 0, hard: [], done: {}, notes: [], reason: null, extra: [] };
+  const fee = (label, amount, clause) => { if (amount) r.fees.push({ label, amount, clause }); };
+  for (const id of ids) {
+    const [k, a] = id.split(':');
+    if (k === 'nothing') continue;
+    if (k === 'move') {
+      const e = c.external.find(x => x.id === a);
+      st.holdings.push({ type: e.psbType || e.type, amount: e.amount, from: e.availableDay || c.day });
+      r.effort++;
+    } else if (k === 'card_pay') { st.ops.forEach(o => { if (o.when === 'plan' && o.kind === 'qr') o.kind = 'card_pos'; }); r.effort++; }
+    else if (k === 'util_retail') { st.ops.forEach(o => { if (o.when === 'plan' && o.kind === 'util_other') o.kind = 'util_psbretail'; }); r.effort++; }
+    else if (k === 'pay_direct') { st.ops.forEach(o => { if (o.when === 'plan' && o.kind === 'ewallet') o.kind = 'card_online'; }); r.effort++; }
+    else if (k === 'deposit') { r.benefit += 100; r.effort++; r.notes.push('Деньги на вкладе приносят доход и по-прежнему входят в средний баланс; на карте — 0%.'); }
+    else if (k === 'sell') {
+      r.sales++;
+      const ok = c.needs && c.needs[a];
+      if (!ok) r.unsuitable.push(a); // suitable sales are effort-neutral
+      if (c.saleFund) { const e = c.external.find(x => x.id === c.saleFund); st.holdings.push({ type: a === 'ins' ? 'life_ins' : a, amount: Math.min(e.amount, 1e6), from: c.day }); }
+    }
+    else if (k === 'downgrade') { st.tier = 'OPC'; r.value += c.plusValue || 0; r.effort++; if (c.plusValue) r.notes.push(`Клиент теряет привилегии OPC +, которыми пользуется: ${c.plusUse}. Для него это около ${fmt(c.plusValue)} в месяц.`); }
+    else if (k === 'cash') {
+      const cs = c.cash, amt = cs.amount; r.effort++;
+      if (a === 'other_split') {
+        const h = amt / 2; r.effort++;
+        fee('Комиссия за снятие', R.cashFee(st.tier, 'other_atm', h) + R.cashFee(st.tier, 'other_atm', h), 'cash_other');
+        st.holdings.push({ type: 'card', amount: -h, from: c.day }, { type: 'card', amount: -h, from: c.day + 1 });
+      } else {
+        const ch = a === 'psb_atm' ? 'psb_atm' : a === 'desk' ? 'desk' : 'other_atm';
+        fee('Комиссия за снятие', R.cashFee(st.tier, ch, amt), a === 'desk' ? 'cash_desk' : a === 'psb_atm' ? 'cash_atm' : 'cash_other');
+        st.holdings.push({ type: 'card', amount: -amt, from: c.day });
+      }
+      r.done.cash = true;
+    } else if (k === 'tr') {
+      const t = c.transfer, amt = t.amount; let f = 0, cl = 'details'; r.effort++;
+      if (a === 'sbp') { f = R.sbpFee(amt, t.self ? (t.usedSelf || 0) : (t.usedSbp || 0), !!t.self); cl = t.self ? 'sbp_self' : 'sbp'; }
+      else if (a === 'split_sbp') {
+        r.effort++; const first = Math.max(0, Math.min(amt, 1e5 - (t.usedSbp || 0))), second = amt - first;
+        const f1 = first ? R.sbpFee(first, t.usedSbp || 0) : 0, f2 = second ? R.sbpFee(second, (t.usedSbp || 0) + first) : 0;
+        f = f1 === null || f2 === null ? null : f1 + f2; cl = 'sbp';
+      }
+      else if (a === 'details') { f = R.detailsFee(st.tier, amt, t.usedDetails || 0, 0); }
+      else if (a === 'split_days') { r.effort++; const h = amt / 2; f = R.detailsFee(st.tier, h, t.usedDetails || 0, 0) + R.detailsFee(st.tier, h, (t.usedDetails || 0) + h, 0); }
+      else if (a === 'c2c') { f = R.c2cFee(amt); cl = 'c2c'; }
+      if (f === null) r.hard.push(a === 'c2c' ? 'С карты на карту — не более 150 000 ₽ за операцию' : 'По СБП — не более 300 000 ₽ за один перевод');
+      else { fee('Комиссия за перевод', f, cl); r.done.transfer = true; }
+      if (t.reduces) {
+        if (a === 'split_days') st.holdings.push({ type: 'card', amount: -amt / 2, from: c.day }, { type: 'card', amount: -amt / 2, from: c.day + 1 });
+        else st.holdings.push({ type: 'card', amount: -amt, from: c.day });
+      }
+    } else if (k === 'reason') { r.reason = a; }
+    else if (k === 'cancel') {
+      r.done.cancel = a; r.effort++;
+      if (a === 'now' || a === 'next') fee('Единовременная комиссия при закрытии', R.terminationFee(st.tier, a === 'now' ? 0 : 1), 'grace');
+      else {
+        const nx = { ...st, monthIdx: 1, holdings: c.next.holdings, ops: c.next.ops || [] };
+        const v = R.monthVerdict(nx);
+        if (!v.free) fee('Плата за следующий полный месяц', v.fee, 'free_opc');
+        else r.extra.push(`Следующий месяц: ${v.via === 'alt' ? 'условие «баланс + покупки»' : 'условие выполнено'} — бесплатно.`);
+      }
+    }
+  }
+  const v = R.monthVerdict(st);
+  r.verdict = v;
+  if (!v.free) fee(`Плата за пакет ${T[st.tier].short} за этот месяц`, v.fee, st.tier === 'PLUS' ? 'free_plus' : 'free_opc');
+  // hard goals
+  if (c.cash && !r.done.cash) r.hard.push('Клиент так и не получил наличные');
+  if (c.transfer && !r.done.transfer && !r.hard.length) r.hard.push('Перевод не выполнен');
+  if (c.reason && r.reason !== c.reason) r.hard.push(r.reason ? 'Названа неверная причина' : 'Клиенту не объяснили причину');
+  if (c.cancelCase && !r.done.cancel) r.hard.push('Клиент хотел закрыть пакет — вопрос не решён');
+  r.cost = r.fees.reduce((a, f) => a + f.amount, 0) + r.value - r.benefit;
+  r.obj = r.hard.length * 1e7 + r.unsuitable.length * 1e6 + r.cost + r.effort * 40;
+  return r;
+}
+
+function combos(cards) {
+  const out = [[]], n = cards.length;
+  const ok = set => {
+    if (set.includes('nothing') && set.length > 1) return false;
+    const gs = set.map(id => id.split(':')[0]);
+    for (const g of ['cash', 'tr', 'cancel', 'reason']) if (gs.filter(x => x === g).length > 1) return false;
+    return true;
+  };
+  for (let i = 0; i < n; i++) { out.push([cards[i]]); for (let j = i + 1; j < n; j++) { out.push([cards[i], cards[j]]); for (let k = j + 1; k < n; k++) out.push([cards[i], cards[j], cards[k]]); } }
+  return out.filter(s => s.length ? ok(s) : true).map(s => s.length ? s : ['nothing']).filter((s, i, arr) => arr.findIndex(x => x.join() === s.join()) === i);
+}
+function solve(c) {
+  const all = combos(c.cards).map(ids => evaluate(c, ids));
+  all.sort((a, b) => a.obj - b.obj);
+  const best = all[0];
+  const ties = all.filter(x => Math.abs(x.obj - best.obj) < 1e-6);
+  return { best, ties, all };
+}
+function grade(c, r, best) {
+  if (r.hard.length || r.unsuitable.length) return 'fail';
+  const diff = r.cost - best.cost;
+  if (diff >= 1000) return 'fail';
+  if (diff > 0 || r.effort > best.effort) return 'ok';
+  return 'perfect';
+}
+
+/* ---------------- cases ---------------- */
+// Facts used here are only the verified tariff facts (01.07.2026).
+const CASES = [
+  // ---------- Shift 1: conditions ----------
+  { id: 'olga', shift: 1, name: 'Ольга', tier: 'OPC', city: 'Екатеринбург', region: 'reg', month: 'апреля', N: 30, day: 12,
+    holdings: [{ type: 'card', amount: 1.7e6 }], ops: [{ kind: 'card_pos', amount: 18000, when: 'done' }],
+    say: 'Добрый день! Подруга сказала, что для бесплатного обслуживания нужно держать <b>три миллиона</b>. У меня на карте 1,7 миллиона, больше пока нет. Мне придётся платить?',
+    cards: ['nothing', 'sell:ins', 'sell:pif'], needs: { ins: false, pif: false }, note: 'Копит на машину к лету.',
+    expect: [['nothing']], cites: ['free_opc', 'region'] },
+  { id: 'anna', shift: 1, name: 'Анна', tier: 'OPC', city: 'Москва', region: 'msk', month: 'июня', N: 30, day: 20,
+    holdings: [{ type: 'card', amount: 2.6e6 }],
+    external: [{ id: 'brok', label: 'Брокерский счёт в другом банке', type: 'brokerage', amount: 1.2e6 }],
+    ops: [{ kind: 'card_pos', amount: 20000, when: 'done' }, { kind: 'qr', amount: 35000, when: 'plan' }],
+    say: 'Мне пришло напоминание, что в этом месяце может списаться плата за пакет. На карте около 2,6 миллиона, есть ещё брокерский счёт в другом банке. Что посоветуете?',
+    cards: ['move:brok', 'card_pay', 'nothing', 'sell:ins'], needs: { ins: false }, note: 'До конца месяца собирается потратить ~35 тыс., обычно платит по QR.',
+    expect: [['move:brok'], ['card_pay']], cites: ['avg', 'counts', 'buy'] },
+  { id: 'viktor', shift: 1, name: 'Виктор', tier: 'OPC', city: 'Москва', region: 'msk', month: 'марта', N: 31, day: 8,
+    holdings: [{ type: 'card', amount: 1.1e6 }], salary: { months: [320000, 320000, 320000], firstIdx: -1 },
+    external: [{ id: 'dep', label: 'Вклад в другом банке', type: 'deposit', amount: 2e6 }],
+    say: 'Зарплата приходит на вашу карту, 320 тысяч. На счёте миллион с небольшим. Может, перевести сюда вклад из другого банка, чтобы не платить за пакет?',
+    cards: ['nothing', 'move:dep', 'sell:pif'], needs: { pif: false }, note: 'Вклад в другом банке — под хороший процент, досрочно закрывать невыгодно.',
+    expect: [['nothing']], cites: ['free_opc', 'salary'] },
+  { id: 'elena', shift: 1, name: 'Елена', tier: 'OPC', city: 'Москва', region: 'msk', month: 'мая', N: 31, day: 28, monthIdx: 0, cancelCase: true,
+    holdings: [{ type: 'card', amount: 1.2e6, from: 27 }], ops: [],
+    next: { holdings: [{ type: 'card', amount: 1.2e6 }], ops: [{ kind: 'card_pos', amount: 60000, when: 'plan' }] },
+    say: 'Я оформила пакет вчера и, кажется, поторопилась. Хочу закрыть — сейчас или в следующем месяце, как выгоднее? На карте 1,2 миллиона, по карте трачу тысяч 60 в месяц.',
+    cards: ['cancel:now', 'cancel:next', 'cancel:later'], note: 'Пакет оформлен 27 мая.',
+    expect: [['cancel:later']], cites: ['grace', 'free_opc'] },
+  { id: 'mark', shift: 1, name: 'Марк', tier: 'OPC', city: 'Москва', region: 'msk', month: 'сентября', N: 30, day: 5,
+    holdings: [{ type: 'card', amount: 8e5 }],
+    external: [{ id: 'dep', label: 'Вклад в другом банке (срок истекает сегодня)', type: 'deposit', amount: 3e6 }],
+    ops: [{ kind: 'card_pos', amount: 30000, when: 'plan' }],
+    say: 'Сегодня заканчивается мой вклад в другом банке — три миллиона. Не знаю, куда их деть. А ещё боюсь, что в этом месяце у вас начнут списывать плату.',
+    cards: ['move:dep', 'nothing', 'card_pay'],
+    expect: [['move:dep']], cites: ['avg', 'counts'] },
+  { id: 'irina', shift: 1, name: 'Ирина', tier: 'OPC', city: 'Санкт-Петербург', region: 'reg', month: 'ноября', N: 30, day: 15,
+    holdings: [{ type: 'card', amount: 1.2e6 }],
+    external: [{ id: 'sav', label: 'Накопительный счёт в другом банке', type: 'savings', amount: 5e5 }],
+    ops: [{ kind: 'card_pos', amount: 20000, when: 'done' }, { kind: 'card_pos', amount: 15000, when: 'plan' }, { kind: 'qr', amount: 20000, when: 'plan' }],
+    say: 'Хочу, чтобы обслуживание оставалось бесплатным. На карте 1,2 миллиона, ещё полмиллиона лежит в другом банке. Перевести их к вам?',
+    cards: ['move:sav', 'card_pay', 'nothing'],
+    expect: [['card_pay']], cites: ['avg', 'buy', 'region'] },
+
+  // ---------- Shift 2: purchases ----------
+  { id: 'igor', shift: 2, name: 'Игорь', tier: 'OPC', city: 'Москва', region: 'msk', month: 'марта', N: 31, day: 3,
+    holdings: [{ type: 'card', amount: 1.4e6 }], ops: [{ kind: 'qr', amount: 5000, when: 'done' }, { kind: 'qr', amount: 75000, when: 'plan' }],
+    say: 'В прошлом месяце мне списали <b>3 990 рублей</b>. Я же трачу тысяч восемьдесят в месяц — в основном по QR-коду, это удобно. Почему так и что делать?',
+    cards: ['reason:qr', 'reason:late', 'reason:region', 'card_pay', 'nothing'], reason: 'qr',
+    expect: [['reason:qr', 'card_pay']], cites: ['buy'] },
+  { id: 'natalia', shift: 2, name: 'Наталья', tier: 'OPC', city: 'Москва', region: 'msk', month: 'апреля', N: 30, day: 10,
+    holdings: [{ type: 'card', amount: 1.3e6 }],
+    ops: [{ kind: 'card_pos', amount: 25000, when: 'done' }, { kind: 'card_pos', amount: 10000, when: 'plan' }, { kind: 'util_other', amount: 18000, when: 'plan' }],
+    say: 'Коммуналку и интернет я оплачиваю через приложение другого банка — так привыкла. По карте в этом месяце пока тысяч 25. Мне хватит до условия?',
+    cards: ['util_retail', 'card_pay', 'nothing', 'sell:ins'], needs: { ins: false },
+    expect: [['util_retail']], cites: ['buy', 'free_opc'] },
+  { id: 'timur', shift: 2, name: 'Тимур', tier: 'OPC', city: 'Москва', region: 'msk', month: 'октября', N: 31, day: 25,
+    holdings: [{ type: 'card', amount: 1.8e6 }],
+    ops: [{ kind: 'card_pos', amount: 30000, when: 'done' }, { kind: 'ewallet', amount: 30000, when: 'plan' }],
+    say: 'Хочу заказать технику в интернет-магазине на 30 тысяч. Обычно пополняю электронный кошелёк и плачу с него — там баллы. Нормально?',
+    cards: ['pay_direct', 'util_retail', 'nothing'],
+    expect: [['pay_direct']], cites: ['buy'] },
+  { id: 'svetlana', shift: 2, name: 'Светлана', tier: 'OPC', city: 'Москва', region: 'msk', month: 'сентября', N: 30, day: 12,
+    holdings: [{ type: 'card', amount: 1.1e6 }],
+    ops: [{ kind: 'card_pos', amount: 10000, when: 'done' }, { kind: 'qr', amount: 45000, when: 'plan' }],
+    transfer: { amount: 60000, reduces: true, usedSbp: 0, usedDetails: 0 },
+    say: 'Каждый месяц отправляю дочке 60 тысяч — с карты на карту, она в другом банке. И мебель хочу купить тысяч на 45, в салоне предлагают оплату по QR. Как всё сделать, чтобы не платить лишнего?',
+    cards: ['card_pay', 'tr:c2c', 'tr:sbp', 'tr:details', 'nothing'],
+    expect: [['card_pay', 'tr:sbp'], ['card_pay', 'tr:details']], cites: ['buy', 'c2c', 'sbp'] },
+  { id: 'roman', shift: 2, name: 'Роман', tier: 'PLUS', city: 'Москва', region: 'msk', month: 'июня', N: 30, day: 14,
+    holdings: [{ type: 'card', amount: 6e6 }],
+    ops: [{ kind: 'card_pos', amount: 60000, when: 'done' }, { kind: 'card_pos', amount: 60000, when: 'plan' }, { kind: 'util_other', amount: 35000, when: 'plan' }],
+    plusValue: 20000, plusUse: 'бизнес-залы и такси — летает по работе каждый месяц',
+    say: 'Мне дважды списали 10 000 за OPC+. Может, проще перейти на обычный пакет? Хотя залами и такси я пользуюсь постоянно.',
+    cards: ['util_retail', 'downgrade', 'nothing', 'sell:pif'], needs: { pif: true }, note: 'Опытный инвестор, готов к риску.',
+    expect: [['util_retail'], ['util_retail', 'sell:pif']], cites: ['free_plus', 'buy', 'plus_perks'] },
+  { id: 'zarina', shift: 2, name: 'Зарина', tier: 'OPC', city: 'Москва', region: 'msk', month: 'апреля', N: 30, day: 18,
+    holdings: [{ type: 'card', amount: 1.05e6 }], ops: [{ kind: 'card_pos', amount: 52000, when: 'done' }],
+    external: [{ id: 'sav', label: 'Накопительный счёт в другом банке', type: 'savings', amount: 3e5 }],
+    cash: { amount: 250000, reduces: true },
+    say: 'Через три дня лечу в отпуск, нужно <b>250 тысяч наличными</b>. На карте чуть больше миллиона, по карте уже потратила 52 тысячи. Где лучше снять?',
+    cards: ['cash:psb_atm', 'cash:desk', 'move:sav', 'nothing'],
+    expect: [['move:sav', 'cash:psb_atm'], ['move:sav', 'cash:desk']], cites: ['avg', 'free_opc', 'cash_desk'] },
+
+  // ---------- Shift 3: cash & transfers ----------
+  { id: 'marina', shift: 3, name: 'Марина', tier: 'OPC', city: 'Москва', region: 'msk', month: 'июля', N: 31, day: 11,
+    holdings: [{ type: 'card', amount: 4e6 }], cash: { amount: 50000, reduces: true },
+    say: 'Мне нужно 50 тысяч наличными. Раз я уже у вас в офисе — выдадите в кассе?',
+    cards: ['cash:desk', 'cash:psb_atm', 'cash:other_atm'], note: 'В холле офиса — банкомат ПСБ.',
+    expect: [['cash:psb_atm'], ['cash:other_atm']], cites: ['cash_desk', 'cash_atm'] },
+  { id: 'sergey', shift: 3, name: 'Сергей', tier: 'OPC', city: 'Москва', region: 'msk', month: 'ноября', N: 30, day: 10,
+    holdings: [{ type: 'card', amount: 2e6 }], ops: [{ kind: 'card_pos', amount: 70000, when: 'done' }],
+    transfer: { amount: 150000, reduces: true, usedSbp: 0, usedDetails: 0 },
+    say: 'Хочу отправить сыну <b>150 тысяч</b> — у него карта другого банка. По СБП ведь бесплатно?',
+    cards: ['tr:sbp', 'tr:details', 'tr:c2c', 'tr:split_sbp'],
+    expect: [['tr:details']], cites: ['sbp', 'details', 'c2c'] },
+  { id: 'alexey', shift: 3, name: 'Алексей', tier: 'OPC', city: 'Москва', region: 'msk', month: 'апреля', N: 30, day: 10,
+    holdings: [{ type: 'card', amount: 5e6 }],
+    transfer: { amount: 2e6, self: true, reduces: true, usedSbp: 30000, usedSelf: 0, usedDetails: 0 },
+    say: 'Покупаю квартиру, нужно перевести <b>2 миллиона на свой счёт</b> в другом банке, где оформляю ипотеку. Как сделать без комиссии?',
+    cards: ['tr:sbp', 'tr:details', 'tr:split_days'], baseline: ['tr:details'],
+    expect: [['tr:sbp']], cites: ['sbp_self', 'details', 'avg'] },
+  { id: 'galina', shift: 3, name: 'Галина', tier: 'OPC', city: 'Тверь', region: 'reg', month: 'ноября', N: 30, day: 10,
+    holdings: [{ type: 'card', amount: 2e6 }], cash: { amount: 400000, reduces: true },
+    say: 'Уезжаю на дачу делать ремонт, понадобится <b>400 тысяч</b> наличными. В посёлке есть только банкомат другого банка. Сниму там, когда приеду?',
+    cards: ['cash:other_atm', 'cash:other_split', 'cash:psb_atm'], note: 'Сейчас клиентка в офисе, в холле есть банкомат ПСБ.',
+    expect: [['cash:psb_atm']], cites: ['cash_other', 'cash_atm'] },
+  { id: 'ksenia', shift: 3, name: 'Ксения', tier: 'OPC', city: 'Москва', region: 'msk', month: 'августа', N: 31, day: 20,
+    holdings: [{ type: 'card', amount: 3.5e6 }],
+    transfer: { amount: 50000, reduces: true, usedSbp: 70000, usedDetails: 0 },
+    say: 'Няне я уже перевела 70 тысяч по СБП в этом месяце. Теперь нужно отправить маме <b>50 тысяч</b>. Тоже по СБП?',
+    cards: ['tr:sbp', 'tr:details', 'tr:c2c'],
+    expect: [['tr:details']], cites: ['sbp', 'details'] },
+  { id: 'boris', shift: 3, name: 'Борис', tier: 'PLUS', city: 'Москва', region: 'msk', month: 'июля', N: 31, day: 8,
+    holdings: [{ type: 'card', amount: 1.2e7 }],
+    transfer: { amount: 1.8e6, reduces: true, usedSbp: 0, usedDetails: 0 },
+    say: 'Нужно заплатить подрядчику <b>1,8 миллиона</b> за ремонт, у него счёт в другом банке. Срок — до конца недели.',
+    cards: ['tr:details', 'tr:split_days', 'tr:sbp', 'sell:oms'], needs: { oms: false }, note: 'Все свободные деньги уходят на ремонт.',
+    expect: [['tr:split_days']], cites: ['details', 'sbp'] },
+
+  // ---------- Shift 4: OPC+ & tricky ----------
+  { id: 'dmitry', shift: 4, name: 'Дмитрий', tier: 'PLUS', city: 'Москва', region: 'msk', month: 'июня', N: 30, day: 6,
+    holdings: [{ type: 'card', amount: 6e6 }], salary: { months: [900000, 900000, 900000], firstIdx: -1 },
+    external: [{ id: 'inv', label: 'Брокерский счёт в другом банке', type: 'brokerage', amount: 4.5e6 }],
+    ops: [{ kind: 'card_pos', amount: 30000, when: 'done' }, { kind: 'card_pos', amount: 90000, when: 'plan' }, { kind: 'util_other', amount: 35000, when: 'plan' }],
+    plusValue: 20000, plusUse: 'бизнес-залы и такси, часто летает',
+    say: 'Зарплата 900 тысяч приходит к вам — я думал, этого достаточно. А мне списали <b>10 000</b> за OPC+. Почему? Может, перейти на обычный OPC?',
+    cards: ['reason:salary_plus', 'reason:salary_low', 'util_retail', 'move:inv', 'downgrade'], reason: 'salary_plus',
+    expect: [['reason:salary_plus', 'util_retail']], cites: ['free_plus', 'buy', 'avg'] },
+  { id: 'nikolay', shift: 4, name: 'Николай', tier: 'OPC', city: 'Москва', region: 'msk', month: 'сентября', N: 30, day: 28,
+    holdings: [{ type: 'card', amount: 2.5e6 }, { type: 'card', amount: 5e6, from: 29 }],
+    ops: [{ kind: 'card_pos', amount: 20000, when: 'done' }, { kind: 'qr', amount: 40000, when: 'plan' }],
+    say: '29-го мне придут <b>5 миллионов</b> за машину, сразу положу на карту. Значит, средний баланс будет больше трёх миллионов? А завтра ещё куплю ноутбук за 40 тысяч, в магазине оплата по QR.',
+    cards: ['nothing', 'card_pay', 'sell:ins'], needs: { ins: false },
+    expect: [['card_pay']], cites: ['avg', 'buy'] },
+  { id: 'lyudmila', shift: 4, name: 'Людмила', tier: 'OPC', city: 'Москва', region: 'msk', month: 'мая', N: 31, day: 9,
+    holdings: [{ type: 'card', amount: 1.5e6 }, { type: 'oms', amount: 8e5 }, { type: 'pif', amount: 7e5 }],
+    external: [{ id: 'dep', label: 'Вклад в другом банке', type: 'deposit', amount: 1.5e6 }],
+    say: 'Я думала, считаются только деньги на карте, а там полтора миллиона. Надо переводить вклад из другого банка, чтобы добрать до трёх?',
+    cards: ['nothing', 'move:dep', 'sell:ins'], needs: { ins: false },
+    expect: [['nothing']], cites: ['counts', 'free_opc'] },
+  { id: 'vera', shift: 4, name: 'Вера', tier: 'OPC', city: 'Москва', region: 'msk', month: 'января', N: 31, day: 3,
+    holdings: [{ type: 'card', amount: 5e6 }],
+    say: 'Держу на карте <b>пять миллионов</b>, чтобы обслуживание точно было бесплатным. Всё правильно делаю?',
+    cards: ['deposit', 'nothing', 'sell:pif', 'sell:ins'], needs: { pif: true, ins: false }, note: 'Деньги в ближайший год не понадобятся; к умеренному риску готова.',
+    expect: [['deposit'], ['deposit', 'sell:pif']], cites: ['interest', 'counts'] },
+  { id: 'akhmed', shift: 4, name: 'Ахмед', tier: 'PLUS', city: 'Казань', region: 'reg', month: 'октября', N: 31, day: 12,
+    holdings: [{ type: 'card', amount: 7.5e6 }], ops: [{ kind: 'card_pos', amount: 40000, when: 'done' }],
+    external: [{ id: 'dep', label: 'Вклад в другом банке', type: 'deposit', amount: 3e6 }],
+    plusValue: 25000, plusUse: 'бизнес-залы и такси',
+    say: 'Для OPC+ ведь нужно десять миллионов? У меня семь с половиной. Переводить остаток из другого банка?',
+    cards: ['nothing', 'move:dep', 'downgrade'],
+    expect: [['nothing']], cites: ['free_plus', 'region'] },
+  { id: 'tamara', shift: 4, name: 'Тамара', tier: 'OPC', city: 'Тула', region: 'reg', month: 'апреля', N: 30, day: 16,
+    holdings: [{ type: 'card', amount: 4e5 }], salary: { months: [220000, 220000, 220000], firstIdx: -1 },
+    external: [{ id: 'dep', label: 'Вклад в другом банке', type: 'deposit', amount: 1.2e6 }],
+    say: 'На карте у меня всего 400 тысяч — боюсь, возьмут плату. Зарплата приходит к вам, 220 тысяч. Что делать?',
+    cards: ['nothing', 'move:dep', 'sell:pif'], needs: { pif: false },
+    expect: [['nothing']], cites: ['salary', 'free_opc', 'region'] },
+];
+
+/* ---------------- generator (shift 5: free shift) ---------------- */
+const NAMES = ['Аркадий', 'Полина', 'Глеб', 'Софья', 'Егор', 'Лариса', 'Максим', 'Дарья', 'Олег', 'Милана', 'Руслан', 'Инна', 'Фёдор', 'Алиса', 'Григорий', 'Яна'];
+const MONTHS = [['января', 31], ['февраля', 28], ['марта', 31], ['апреля', 30], ['мая', 31], ['июня', 30], ['июля', 31], ['августа', 31], ['сентября', 30], ['октября', 31], ['ноября', 30], ['декабря', 31]];
+const CITIES_REG = ['Екатеринбург', 'Нижний Новгород', 'Самара', 'Воронеж', 'Краснодар'];
+function rng(seed) { let s = seed >>> 0 || 1; return () => (s = (s * 1664525 + 1013904223) >>> 0) / 4294967296; }
+function generateCase(seed) {
+  const r = rng(seed), pick = a => a[Math.floor(r() * a.length)], round = (v, q) => Math.round(v / q) * q;
+  for (let tries = 0; tries < 40; tries++) {
+    const [month, N] = pick(MONTHS), name = pick(NAMES), kind = pick(['free', 'free', 'transfer', 'cash']);
+    const msk = r() < .6, region = msk ? 'msk' : 'reg', city = msk ? 'Москва' : pick(CITIES_REG);
+    const day = 2 + Math.floor(r() * (N - 4));
+    let c;
+    if (kind === 'free') {
+      const thr = T.OPC.bal[region];
+      const bal = round(thr * (.45 + r() * .5), 50000), ext = round(thr * (.2 + r() * .6), 50000);
+      const done = round(10000 + r() * 30000, 1000), qr = round(10000 + r() * 40000, 1000);
+      c = { name, tier: 'OPC', city, region, month, N, day,
+        holdings: [{ type: 'card', amount: bal }],
+        external: [{ id: 'x', label: pick(['Вклад в другом банке', 'Брокерский счёт в другом банке', 'Накопительный счёт в другом банке']), type: pick(['deposit', 'brokerage', 'savings']), amount: ext }],
+        ops: [{ kind: 'card_pos', amount: done, when: 'done' }, { kind: 'qr', amount: qr, when: 'plan' }],
+        say: `На карте ${money(bal)}, ещё ${money(ext)} лежит в другом банке. До конца месяца потрачу около ${money(qr)} — обычно по QR. Как сделать, чтобы за пакет не платить?`,
+        cards: ['move:x', 'card_pay', 'nothing'], cites: ['avg', 'buy', 'free_opc'] };
+    } else if (kind === 'transfer') {
+      const amt = round(40000 + r() * 260000, 5000), used = round(r() * 90000, 5000);
+      c = { name, tier: 'OPC', city, region, month, N, day,
+        holdings: [{ type: 'card', amount: T.OPC.bal[region] * 1.3 }],
+        transfer: { amount: amt, reduces: true, usedSbp: used, usedDetails: 0 },
+        say: `Нужно перевести ${money(amt)} родственнику в другой банк. По СБП в этом месяце я уже отправил${pick(['', 'а'])} ${money(used)}. Как лучше?`,
+        cards: ['tr:sbp', 'tr:details', 'tr:c2c'], cites: ['sbp', 'details', 'c2c'] };
+    } else {
+      const amt = round(30000 + r() * 400000, 10000);
+      c = { name, tier: 'OPC', city, region, month, N, day,
+        holdings: [{ type: 'card', amount: T.OPC.bal[region] * 1.4 }], cash: { amount: amt, reduces: true },
+        say: `Мне нужно ${money(amt)} наличными. Где снять, чтобы без комиссии?`,
+        cards: ['cash:desk', 'cash:other_atm', 'cash:other_split'], note: 'Банкомат ПСБ в холле сегодня на обслуживании.', cites: ['cash_desk', 'cash_other'] };
+    }
+    c.id = 'gen' + seed + '_' + tries; c.shift = 5; c.generated = true;
+    const s = solve(c), base = evaluate(c, c.baseline || defaultBaseline(c));
+    if (s.best.hard.length === 0 && base.cost - s.best.cost >= 200) { c.expect = s.ties.map(t => t.ids); return c; }
+  }
+  return null;
+}
+function defaultBaseline(c) {
+  if (c.baseline) return c.baseline;
+  if (c.transfer) return ['tr:' + (c.cards.includes('tr:c2c') ? 'c2c' : 'sbp')];
+  if (c.cash) return [c.cards.find(x => x.startsWith('cash:'))];
+  if (c.cancelCase) return ['cancel:now'];
+  return ['nothing'];
+}
+
+/* ---------------- phone line questions ---------------- */
+const PHONE = [
+  { q: 'Сколько дополнительных карт к пакету выпускается бесплатно?', a: ['3', '5', '1'], c: 'cards' },
+  { q: 'Сколько можно перевести другим людям по СБП без комиссии в месяц?', a: ['100 000 ₽', '300 000 ₽', 'Без ограничений'], c: 'sbp' },
+  { q: 'Засчитывается ли оплата по QR-коду в покупки для условия?', a: ['Нет', 'Да', 'Только в OPC +'], c: 'buy' },
+  { q: 'Сколько стоит месяц OPC, если условия не выполнены?', a: ['3 990 ₽', '10 000 ₽', '2 800 ₽'], c: 'free_opc' },
+  { q: 'Есть ли в OPC + условие по зарплате?', a: ['Нет', 'Да, от 300 000 ₽', 'Да, от 500 000 ₽'], c: 'free_plus' },
+  { q: 'Какой порог среднего баланса для OPC в регионах?', a: ['1,5 млн ₽', '3 млн ₽', '1 млн ₽'], c: 'free_opc' },
+  { q: 'Покупку по карте списали 16-го числа следующего месяца. Засчитается?', a: ['Нет, только до 14-го', 'Да', 'Засчитается половина'], c: 'buy14' },
+  { q: 'Входит ли металлический счёт (ОМС) в средний баланс?', a: ['Да', 'Нет', 'Только в OPC +'], c: 'counts' },
+  { q: 'Клиент OPC снимает 60 000 ₽ в кассе офиса. Комиссия?', a: ['600 ₽', '0 ₽', '200 ₽'], c: 'cash_desk' },
+  { q: 'Первый перевод по СБП в месяце — 120 000 ₽ маме. Комиссия?', a: ['600 ₽', '100 ₽', '0 ₽'], c: 'sbp' },
+  { q: 'Скидка на аренду ячейки в OPC +?', a: ['35%', '30%', '50%'], c: 'services' },
+  { q: 'Какой процент начисляется на остаток по карте пакета?', a: ['0%', '5%', '1%'], c: 'interest' },
+  { q: 'Клиент закрывает пакет в следующем месяце после оформления. Что будет?', a: ['Разовая комиссия в размере месячной', 'Ничего', 'Штраф 10%'], c: 'grace' },
+];
+
+window.GAME = { CLAUSES, ASSET, OPK, CASES, PHONE, actionMeta, evaluate, solve, grade, combos, generateCase, defaultBaseline, fmt, money, mln };
+})();
+</script>
+
+<!-- =========================================================
+     SELF-TEST  (open with ?test)
+     ========================================================= -->
+<script>
+window.runSelfTest = function () {
+  const R = window.RULES, G = window.GAME, out = [];
+  let pass = 0, fail = 0;
+  const eq = (name, got, exp) => { const ok = JSON.stringify(got) === JSON.stringify(exp); ok ? pass++ : fail++; out.push((ok ? '✓ ' : '✗ ') + name + (ok ? '' : `  got ${JSON.stringify(got)} expected ${JSON.stringify(exp)}`)); };
+  // balance
+  eq('ПИФ входит в баланс', R.countsTowardBalance('pif'), true);
+  eq('ОМС входит в баланс', R.countsTowardBalance('oms'), true);
+  eq('Брокерский счёт входит', R.countsTowardBalance('brokerage'), true);
+  eq('ИИС входит', R.countsTowardBalance('iis'), true);
+  eq('НПФ ПСБ входит', R.countsTowardBalance('npf'), true);
+  eq('Страхование жизни входит', R.countsTowardBalance('life_ins'), true);
+  eq('ЦФА «Токеон» входят', R.countsTowardBalance('tokeon'), true);
+  eq('Другой банк не входит', R.countsTowardBalance('other_bank'), false);
+  eq('Средний: пример Анны 3,04 млн', Math.round(R.avgBalance([{ type: 'card', amount: 2.6e6 }, { type: 'brokerage', amount: 1.2e6, from: 20 }], 30)), 3040000);
+  eq('5 млн за 2 последних дня ≈ 0,33 млн', Math.round(R.avgBalance([{ type: 'card', amount: 5e6, from: 29 }], 30)), 333333);
+  eq('Отрицательный остаток уменьшает средний', Math.round(R.avgBalance([{ type: 'card', amount: 1e6 }, { type: 'card', amount: -3e5, from: 16 }], 30)), 850000);
+  // purchases
+  eq('Покупка картой считается', R.purchaseCounts({ kind: 'card_pos' }), true);
+  eq('QR не считается', R.purchaseCounts({ kind: 'qr' }), false);
+  eq('Кошелёк не считается', R.purchaseCounts({ kind: 'ewallet' }), false);
+  eq('С карты на карту не считается', R.purchaseCounts({ kind: 'card2card' }), false);
+  eq('ЖКХ через PSB-Retail считается', R.purchaseCounts({ kind: 'util_psbretail' }), true);
+  eq('ЖКХ через чужое приложение не считается', R.purchaseCounts({ kind: 'util_other' }), false);
+  eq('Списание 14-го считается', R.purchaseCounts({ kind: 'card_online', debitNextMonthDay: 14 }), true);
+  eq('Списание 15-го не считается', R.purchaseCounts({ kind: 'card_online', debitNextMonthDay: 15 }), false);
+  // verdicts
+  const V = (o) => R.monthVerdict({ tier: 'OPC', region: 'msk', N: 30, monthIdx: 5, holdings: [], ops: [], salary: null, ...o });
+  eq('OPC Москва 3 млн — бесплатно', V({ holdings: [{ type: 'card', amount: 3e6 }] }).free, true);
+  eq('OPC Москва 2,99 млн — платно', V({ holdings: [{ type: 'card', amount: 2.99e6 }] }).fee, 3990);
+  eq('OPC регион 1,5 млн — бесплатно', V({ region: 'reg', holdings: [{ type: 'card', amount: 1.5e6 }] }).free, true);
+  eq('OPC 1 млн + 50 тыс покупок', V({ holdings: [{ type: 'card', amount: 1e6 }], ops: [{ kind: 'card_pos', amount: 50000 }] }).via, 'alt');
+  eq('OPC 1 млн + 50 тыс по QR — платно', V({ holdings: [{ type: 'card', amount: 1e6 }], ops: [{ kind: 'qr', amount: 50000 }] }).free, false);
+  eq('OPC зарплата 300 тыс Москва', V({ salary: { months: [3e5, 3e5, 3e5], firstIdx: -1 } }).via, 'salary');
+  eq('OPC зарплата 250 тыс Москва — платно', V({ salary: { months: [2.5e5, 2.5e5, 2.5e5], firstIdx: -1 } }).free, false);
+  eq('OPC зарплата 220 тыс регион', V({ region: 'reg', salary: { months: [2.2e5, 2.2e5, 2.2e5], firstIdx: -1 } }).via, 'salary');
+  eq('Первый месяц зарплаты не учитывается', R.salaryAvg({ months: [9e5, 2e5, 2e5], firstIdx: 0 }), 2e5);
+  eq('Пропущенный месяц — считаем по двум', R.salaryAvg({ months: [3e5, 0, 3e5], firstIdx: -1 }), 3e5);
+  eq('OPC+ зарплата не помогает', V({ tier: 'PLUS', salary: { months: [9e5, 9e5, 9e5], firstIdx: -1 } }).fee, 10000);
+  eq('OPC+ 5 млн + 150 тыс', V({ tier: 'PLUS', holdings: [{ type: 'card', amount: 5e6 }], ops: [{ kind: 'card_pos', amount: 150000 }] }).via, 'alt');
+  eq('OPC+ регион 7 млн', V({ tier: 'PLUS', region: 'reg', holdings: [{ type: 'card', amount: 7e6 }] }).free, true);
+  eq('Льготный месяц бесплатно', V({ monthIdx: 0 }).via, 'grace');
+  eq('Закрытие в льготный период', R.terminationFee('OPC', 0), 3990);
+  eq('Закрытие в следующем месяце', R.terminationFee('PLUS', 1), 10000);
+  eq('Закрытие позже — без разовой комиссии', R.terminationFee('OPC', 2), 0);
+  // cash
+  eq('Касса OPC 50 тыс = 500 ₽', R.cashFee('OPC', 'desk', 50000), 500);
+  eq('Касса OPC 15 тыс = мин. 200 ₽', R.cashFee('OPC', 'desk', 15000), 200);
+  eq('Касса OPC 150 тыс = 0', R.cashFee('OPC', 'desk', 150000), 0);
+  eq('Касса OPC 400 тыс = 4 000 ₽', R.cashFee('OPC', 'desk', 400000), 4000);
+  eq('Касса OPC+ 50 тыс = 0', R.cashFee('PLUS', 'desk', 50000), 0);
+  eq('Банкомат ПСБ = 0', R.cashFee('OPC', 'psb_atm', 50000), 0);
+  eq('Чужой банкомат OPC 300 тыс = 0', R.cashFee('OPC', 'other_atm', 300000), 0);
+  eq('Чужой банкомат OPC 400 тыс = 4 000', R.cashFee('OPC', 'other_atm', 400000), 4000);
+  eq('Чужой банкомат OPC+ 1,2 млн = 0', R.cashFee('PLUS', 'other_atm', 1.2e6), 0);
+  eq('Сверх дневного лимита OPC — 2%', R.cashFee('OPC', 'psb_atm', 1.1e6), 2000);
+  // transfers
+  eq('СБП 60 тыс = 0', R.sbpFee(60000, 0), 0);
+  eq('СБП 150 тыс — со всей суммы 750', R.sbpFee(150000, 0), 750);
+  eq('СБП 50 тыс при 70 использованных = 250', R.sbpFee(50000, 70000), 250);
+  eq('СБП максимум 1 500', R.sbpFee(300000, 100000), 1500);
+  eq('СБП больше 300 тыс — нельзя', R.sbpFee(400000, 0), null);
+  eq('СБП себе 2 млн = 0', R.sbpFee(2e6, 0, true), 0);
+  eq('Реквизиты OPC 150 тыс = 0', R.detailsFee('OPC', 150000, 0), 0);
+  eq('Реквизиты OPC 2 млн = 1 500', R.detailsFee('OPC', 2e6, 0), 1500);
+  eq('Реквизиты OPC+ 1,8 млн за день = 1 500', R.detailsFee('PLUS', 1.8e6, 0, 0), 1500);
+  eq('Реквизиты OPC+ 0,9 млн = 0', R.detailsFee('PLUS', 9e5, 0, 0), 0);
+  eq('С карты на карту 150 тыс = 2 985', R.c2cFee(150000), 2985);
+  eq('С карты на карту 5 тыс = мин. 199', R.c2cFee(5000), 199);
+  eq('Доп. карты: 3 бесплатно', R.addCardsFee('OPC', 3), 0);
+  eq('Доп. карты: 5 штук OPC = 12 000', R.addCardsFee('OPC', 5), 12000);
+  eq('Доп. карты: 4 штуки OPC+ = 6 250', R.addCardsFee('PLUS', 4), 6250);
+  // every handwritten case: engine's optimum must match the designed answer
+  for (const c of G.CASES) {
+    const s = G.solve(c);
+    const got = s.ties.map(t => t.ids.slice().sort().join('+')).sort();
+    const exp = c.expect.map(e => e.slice().sort().join('+')).sort();
+    eq(`Кейс «${c.name}»: лучший совет ${exp.join(' | ')}`, got, exp);
+    const base = G.evaluate(c, G.defaultBaseline(c));
+    if (!c.expect.some(e => e.join() === 'nothing') && !(base.obj > s.best.obj)) { fail++; out.push(`✗ Кейс «${c.name}»: ничего не делать не должно быть оптимально — кейс без решения`); }
+  }
+  // generator
+  let gen = 0; for (let i = 1; i <= 30; i++) if (G.generateCase(i * 7919)) gen++;
+  eq('Генератор выдаёт решаемые кейсы (30 из 30)', gen, 30);
+  out.unshift(`Итого: ${pass} пройдено, ${fail} с ошибкой\n`);
+  return { pass, fail, text: out.join('\n') };
+};
+</script>
+
+<!-- =========================================================
+     GAME: UI, flow, audio (classic script; 3D is optional)
+     ========================================================= -->
+<script>
+(() => {
+'use strict';
+const R = window.RULES, G = window.GAME, T = R.TARIFF;
+const $ = id => document.getElementById(id);
+const body = document.body;
+const store = {
+  get(k, d) { try { const v = JSON.parse(localStorage.getItem(k)); return v === null ? d : v; } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} },
+};
+const vibrate = p => { try { navigator.vibrate && navigator.vibrate(p); } catch (e) {} };
+const lc = s => s.charAt(0).toLowerCase() + s.slice(1);
+const esc = s => String(s).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+
+if (/[?&]test\b/.test(location.search)) {
+  const res = window.runSelfTest();
+  const o = $('testOut'); o.style.display = 'block'; o.textContent = res.text;
+  window.TEST_RESULT = res;
+}
+
+/* ---------------- 3D stage proxy (real one registers itself later) ---------------- */
+const Stage = {
+  impl: null,
+  call(fn, ...a) {
+    if (fn === 'enter' || fn === 'leave') {
+      const cb = a[a.length - 1]; let fired = false;
+      const once = () => { if (!fired) { fired = true; cb(); } };
+      a[a.length - 1] = once;
+      setTimeout(once, this.impl ? 9000 : 500);   // never let an animation block the game
+    }
+    if (this.impl && this.impl[fn]) return this.impl[fn](...a);
+  },
+};
+const queueLook = () => (S.queue || []).filter(q => q.type === 'case').map(q => ({ name: q.c.name, plus: q.c.tier === 'PLUS' }));
+window.KLUB_STAGE = impl => { Stage.impl = impl; impl.setMode && impl.setMode(S.role || 'manager'); impl.setQueue && impl.setQueue(S.role === 'manager' ? queueLook() : []); };
+
+/* ---------------- audio ---------------- */
+const mtof = m => 440 * Math.pow(2, (m - 69) / 12);
+const Audio = {
+  ctx: null, muted: store.get('klub-muted', false), step: 0, t0: 0, timer: 0, level: .3,
+  init() {
+    if (this.ctx) { if (this.ctx.state !== 'running' && !S.paused) this.ctx.resume(); return; }
+    const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
+    try {
+      const c = this.ctx = new AC();
+      this.out = c.createGain(); this.out.gain.value = this.muted ? 0 : .6;
+      const comp = c.createDynamicsCompressor(); comp.threshold.value = -18; comp.ratio.value = 3;
+      this.bus = c.createGain(); this.bus.connect(comp); comp.connect(this.out); this.out.connect(c.destination);
+      this.music = c.createGain(); this.music.gain.value = .5; this.music.connect(this.bus);
+      const n = c.sampleRate * 2.4, ir = c.createBuffer(2, n, c.sampleRate);
+      for (let ch = 0; ch < 2; ch++) { const d = ir.getChannelData(ch); for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, 3.2); }
+      const cv = c.createConvolver(); cv.buffer = ir; this.verb = c.createGain(); this.verb.connect(cv); const vo = c.createGain(); vo.gain.value = .5; cv.connect(vo); vo.connect(this.bus);
+      const nb = c.createBuffer(1, c.sampleRate, c.sampleRate), nd = nb.getChannelData(0); for (let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
+      this.nb = nb; this.t0 = c.currentTime + .1; this.step = 0;
+      this.timer = setInterval(() => this.tick(), 40); c.resume();
+    } catch (e) { this.ctx = null; }
+  },
+  setMuted(m) { this.muted = m; store.set('klub-muted', m); if (this.ctx) this.out.gain.setTargetAtTime(m ? 0 : .6, this.ctx.currentTime, .05); },
+  env(g, t, a, l, d) { g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(l, t + a); g.gain.exponentialRampToValueAtTime(.0001, t + a + d); },
+  keys(m, t, len, lvl) { // FM electric piano
+    const c = this.ctx, f = mtof(m), car = c.createOscillator(), mod = c.createOscillator(), mg = c.createGain(), g = c.createGain();
+    car.frequency.value = f; mod.frequency.value = f; mg.gain.setValueAtTime(f * 1.1, t); mg.gain.exponentialRampToValueAtTime(f * .08, t + len);
+    mod.connect(mg); mg.connect(car.frequency); this.env(g, t, .008, lvl, len);
+    car.connect(g); g.connect(this.music); const s = c.createGain(); s.gain.value = .35; g.connect(s); s.connect(this.verb);
+    car.start(t); mod.start(t); car.stop(t + len + .1); mod.stop(t + len + .1);
+  },
+  tone(type, f, t, a, l, d, dest, v = 0) {
+    const c = this.ctx, o = c.createOscillator(), g = c.createGain(); o.type = type; o.frequency.value = f; this.env(g, t, a, l, d);
+    o.connect(g); g.connect(dest || this.bus); if (v) { const s = c.createGain(); s.gain.value = v; g.connect(s); s.connect(this.verb); }
+    o.start(t); o.stop(t + a + d + .05); return o;
+  },
+  noise(t, d, f, l, type = 'highpass', dest) {
+    const c = this.ctx, s = c.createBufferSource(), fl = c.createBiquadFilter(), g = c.createGain();
+    s.buffer = this.nb; s.loop = true; fl.type = type; fl.frequency.value = f; this.env(g, t, .002, l, d);
+    s.connect(fl); fl.connect(g); g.connect(dest || this.bus); s.start(t, Math.random() * .5); s.stop(t + d + .05);
+  },
+  // lo-fi: Fm9 – Bbm9 – Ebmaj9 – Dbmaj7, 78 bpm with swing
+  tick() {
+    const c = this.ctx; if (!c || c.state !== 'running') return;
+    const BEAT = 60 / 78, STEP = BEAT / 2;
+    const CH = [[53, 56, 60, 63, 67], [58, 61, 65, 68, 72], [51, 55, 58, 62, 65], [49, 53, 56, 60, 63]];
+    const BS = [41, 46, 39, 37];
+    while (this.t0 + this.step * STEP < c.currentTime + .25) {
+      const s = this.step % 8, bar = Math.floor(this.step / 8) % 4, sw = s % 2 ? STEP * .16 : 0;
+      const t = this.t0 + this.step * STEP + sw, L = this.level;
+      if (s === 0) CH[bar].forEach((m, i) => this.keys(m, t + i * .012, BEAT * 3.2, .045));
+      if (s === 5) CH[bar].slice(1, 4).forEach(m => this.keys(m + 12, t, BEAT * .9, .02));
+      if (s === 0 || s === 5) this.tone('sine', mtof(BS[bar]), t, .02, .16, BEAT * 1.4, this.music);
+      if (s === 0 || s === 4) { const o = this.tone('sine', 110, t, .004, .22 * (.5 + L), .25, this.music); o.frequency.exponentialRampToValueAtTime(42, t + .15); }
+      if (s === 2 || s === 6) this.noise(t, .12, 1800, .05 * (.4 + L), 'bandpass', this.music);
+      if (L > .45) this.noise(t, .03, 8000, .025, 'highpass', this.music);
+      this.step++;
+    }
+  },
+  stamp() { if (!this.ctx) return; const t = this.ctx.currentTime; this.noise(t, .09, 900, .5, 'lowpass'); this.tone('sine', 90, t, .003, .5, .15); },
+  good() { if (!this.ctx) return; const t = this.ctx.currentTime; [65, 69, 72, 77].forEach((m, i) => this.tone('sine', mtof(m), t + i * .06, .01, .08, .8, this.bus, .6)); },
+  bad() { if (!this.ctx) return; const t = this.ctx.currentTime; [66, 63, 59].forEach((m, i) => this.tone('triangle', mtof(m), t + i * .11, .01, .09, .5, this.bus, .4)); },
+  chime() { if (!this.ctx) return; const t = this.ctx.currentTime; [84, 79].forEach((m, i) => this.tone('sine', mtof(m), t + i * .22, .005, .08, 1.2, this.bus, .7)); },
+  ring() { if (!this.ctx) return; const t = this.ctx.currentTime; for (let i = 0; i < 2; i++) { this.tone('sine', 440, t + i * .5, .01, .05, .35); this.tone('sine', 480, t + i * .5, .01, .05, .35); } },
+  tick1() { if (!this.ctx) return; this.tone('square', 1800, this.ctx.currentTime, .001, .02, .02); },
+};
+
+/* ---------------- state ---------------- */
+const S = {
+  role: 'manager', shift: 1, queue: [], cur: null, sel: [], trust: 50, kpi: 0, plan: 2,
+  results: [], patience: 1, patMax: 110, paused: true, clock: 0, phone: null, phoneNext: 2, inCase: false, delayed: false,
+  client: { overpaid: 0, bestTotal: 0, caught: 0, trusted: 0, wrongAdvice: 0 },
+};
+const progress = store.get('klub-progress', { unlocked: 1, best: {} });
+
+/* ---------------- handbook ---------------- */
+function renderBook(filter = '', hl = []) {
+  const f = filter.trim().toLowerCase();
+  const html = G.CLAUSES.filter(c => !f || (c.t + ' ' + c.p + ' ' + c.k).toLowerCase().includes(f)).map(c =>
+    `<div class="clause${hl.includes(c.id) ? ' hl' : ''}" id="cl-${c.id}"><h5><i>§ ${c.n}</i>${esc(c.t)}</h5><p>${esc(c.p)}</p><div class="src">${c.game ? 'Правило игры' : 'Тарифы ПСБ с 01.07.2026'}</div></div>`).join('');
+  $('clauses').innerHTML = html || '<p class="note">Ничего не найдено.</p>';
+}
+$('search').addEventListener('input', e => renderBook(e.target.value));
+function openBook(clauseId) {
+  setTab('book'); $('search').value = ''; renderBook('', clauseId ? [clauseId] : []);
+  if (clauseId) requestAnimationFrame(() => { const el = $('cl-' + clauseId); if (el) el.scrollIntoView({ block: 'center', behavior: 'smooth' }); });
+}
+const wide = matchMedia('(min-width: 900px) and (min-aspect-ratio: 1/1)');
+function placeCards() {
+  const cards = $('cards');
+  if (wide.matches) { $('picked').before(cards); if (S.tab === 'advice') setTab('dossier'); }
+  else $('tabAdvice').appendChild(cards);
+}
+wide.addEventListener ? wide.addEventListener('change', placeCards) : wide.addListener(placeCards);
+function setTab(t) {
+  S.tab = t;
+  document.querySelectorAll('.tab').forEach(b => b.classList.toggle('on', b.dataset.t === t));
+  $('tabDossier').hidden = t !== 'dossier'; $('tabBook').hidden = t !== 'book'; $('tabAdvice').hidden = t !== 'advice';
+  if (t === 'book') { document.querySelector('[data-t=book]').classList.remove('flag'); if (!$('clauses').innerHTML) renderBook(); }
+  $('scroll').scrollTop = 0;
+}
+document.querySelectorAll('.tab').forEach(b => b.addEventListener('click', () => setTab(b.dataset.t)));
+
+/* ---------------- dossier ---------------- */
+function renderDossier(c) {
+  const ext = c.external || [], ops = c.ops || [];
+  const hold = c.holdings.filter(h => !(h.from > c.day)).map(h => `<div class="row"><span>${G.ASSET[h.type] || h.type}${h.from && h.from > 1 ? `<em>с ${h.from}-го</em>` : '<em>весь месяц</em>'}</span><b>${G.money(h.amount)}</b></div>`).join('');
+  const future = c.holdings.filter(h => h.from > c.day).map(h => `<div class="row"><span>${G.ASSET[h.type]}<em>поступит ${h.from}-го</em></span><b>${G.money(h.amount)}</b></div>`).join('');
+  const exts = ext.map(e => `<div class="row"><span>${e.label}</span><b>${G.money(e.amount)}</b></div>`).join('');
+  const opsH = ops.map(o => `<div class="row"><span>${G.OPK[o.kind]}<span class="tag ${o.when === 'plan' ? 'plan' : 'done'}">${o.when === 'plan' ? 'план' : 'уже'}</span></span><b>${G.money(o.amount)}</b></div>`).join('');
+  let req = '';
+  if (c.cash) req += `<div class="row"><span>Нужно наличными</span><b>${G.money(c.cash.amount)}</b></div>`;
+  if (c.transfer) {
+    req += `<div class="row"><span>Перевод ${c.transfer.self ? 'на свой счёт в другом банке' : 'другому человеку в другой банк'}</span><b>${G.money(c.transfer.amount)}</b></div>`;
+    if (c.transfer.usedSbp) req += `<div class="row"><span>Уже по СБП другим людям в этом месяце</span><b>${G.money(c.transfer.usedSbp)}</b></div>`;
+  }
+  const sal = c.salary ? `<div class="row"><span>Зарплатный проект, последние 3 месяца</span><b>${c.salary.months.map(v => Math.round(v / 1000) + 'k').join(' · ')}</b></div>` : '';
+  $('tabDossier').innerHTML = `
+    <div class="sec"><h4>Клиент</h4>
+      <div class="row"><span>Пакет</span><b>${T[c.tier].full}</b></div>
+      <div class="row"><span>Пакет получен в офисе</span><b>${c.city}</b></div>
+      <div class="row"><span>Сегодня</span><b>${c.day} ${c.month} <em>в месяце ${c.N} дней</em></b></div>
+      ${c.monthIdx === 0 ? '<div class="row"><span>Пакет оформлен</span><b>в этом месяце</b></div>' : ''}
+      ${sal}
+    </div>
+    ${req ? `<div class="sec"><h4>Запрос</h4>${req}</div>` : ''}
+    <div class="sec"><h4>В ПСБ</h4>${hold}${future}</div>
+    ${exts ? `<div class="sec"><h4>В других банках</h4>${exts}</div>` : ''}
+    ${opsH ? `<div class="sec"><h4>Операции в этом месяце</h4>${opsH}</div>` : ''}
+    ${c.note ? `<div class="note"><b>Заметка:</b> ${esc(c.note)}</div>` : ''}
+    ${c.plusUse ? `<div class="note"><b>Пользуется:</b> ${esc(c.plusUse)}</div>` : ''}`;
+}
+
+/* ---------------- cards ---------------- */
+function renderCards(c, locked = false) {
+  const cards = S.role === 'client' && S.cur && S.cur.advice ? c.cards : c.cards;
+  $('cards').innerHTML = cards.map(id => {
+    const m = G.actionMeta(id, c);
+    return `<button class="card${S.sel.includes(id) ? ' on' : ''}" data-id="${id}" data-g="${m.g}"><b>${esc(m.t)}</b><span>${esc(m.s)}</span></button>`;
+  }).join('');
+  $('traySel').textContent = `${S.sel.length} / 3`; $('traySel2').textContent = `${S.sel.length} / 3`;
+  $('selCount').textContent = S.sel.length ? `· ${S.sel.length}` : '';
+  $('picked').innerHTML = S.sel.length ? 'Совет: <b>' + S.sel.map(id => esc(G.actionMeta(id, c).t)).join(' + ') + '</b>' : 'Откройте вкладку «Совет» и выберите действия';
+  $('give').disabled = !S.sel.length || locked;
+}
+$('cards').addEventListener('click', e => {
+  const b = e.target.closest('.card'); if (!b || !S.inCase) return;
+  const id = b.dataset.id, c = S.cur.c, g = id.split(':')[0];
+  Audio.init();
+  if (S.sel.includes(id)) S.sel = S.sel.filter(x => x !== id);
+  else {
+    if (id === 'nothing') S.sel = [];
+    else S.sel = S.sel.filter(x => x !== 'nothing');
+    if (['cash', 'tr', 'cancel', 'reason'].includes(g)) S.sel = S.sel.filter(x => x.split(':')[0] !== g);
+    if (S.sel.length >= 3) { toast('Не больше трёх действий'); return; }
+    S.sel.push(id);
+  }
+  Audio.tick1(); vibrate(8);
+  renderCards(c);
+});
+
+/* ---------------- flow: shifts ---------------- */
+const SHIFTS = {
+  1: { title: 'Смена 1 · Условия', lead: 'Главное про бесплатное обслуживание: пороги, регион, зарплата, льготный месяц. В первой смене разбор — сразу после каждого клиента.', plan: 1 },
+  2: { title: 'Смена 2 · Покупки', lead: 'Что считается покупкой, а что — нет. С этой смены последствия ваших советов проявляются позже: клиент вернётся, если что-то пошло не так.', plan: 2 },
+  3: { title: 'Смена 3 · Наличные и переводы', lead: 'Касса, банкоматы, СБП, реквизиты. Здесь дорогие ошибки выглядят как «обычный способ».', plan: 1 },
+  4: { title: 'Смена 4 · OPC + и сложные случаи', lead: 'Премиальные клиенты, время внутри месяца и всё, что входит в баланс.', plan: 2 },
+  5: { title: 'Смена 5 · Свободная', lead: 'Новые клиенты каждый раз — из генератора ситуаций. Проверьте, что вы усвоили.', plan: 1 },
+};
+function renderShiftButtons() {
+  $('shiftBtns').innerHTML = [1, 2, 3, 4, 5].map(n => `<button class="shift-b${n === S.shift ? ' on' : ''}" data-s="${n}" ${n > progress.unlocked ? 'disabled' : ''}>${n}</button>`).join('');
+}
+$('shiftBtns').addEventListener('click', e => { const b = e.target.closest('.shift-b'); if (!b || b.disabled) return; S.shift = +b.dataset.s; renderShiftButtons(); });
+S.shift = Math.min(progress.unlocked, 5);
+renderShiftButtons();
+placeCards();
+
+function show(id) { $(id).classList.add('show'); }
+function hide(id) { $(id).classList.remove('show'); }
+function toast(t) { const el = $('toast'); el.textContent = t; el.classList.remove('show'); void el.offsetWidth; el.classList.add('show'); }
+
+function startManager() {
+  Audio.init(); S.role = 'manager'; Stage.call('setMode', 'manager');
+  const sh = SHIFTS[S.shift];
+  const cases = S.shift < 5 ? G.CASES.filter(c => c.shift === S.shift) : Array.from({ length: 6 }, (_, i) => G.generateCase(Date.now() % 100000 + i * 7919)).filter(Boolean);
+  S.queue = cases.map(c => ({ type: 'case', c }));
+  Object.assign(S, { results: [], trust: 50, kpi: 0, plan: sh.plan, clock: 0, phoneNext: 1 + Math.floor(Math.random() * 2), delayed: S.shift >= 2, paused: false, inCase: false });
+  $('introBody').innerHTML = `
+    <div class="eyebrow">Персональный менеджер</div><div class="h1">${sh.title}</div>
+    <p class="lead">${sh.lead}</p>
+    <div class="list">
+      <div class="li"><i>📂</i><span><b>Досье</b> — всё о деньгах клиента. Внимательно к датам, регионам и типам операций.</span></div>
+      <div class="li"><i>📖</i><span><b>Справочник</b> — правила из тарифов. Ответы там, но клиент ждёт.</span></div>
+      <div class="li"><i>🃏</i><span>Выберите <b>до трёх действий</b> и нажмите «Дать совет». Лишние действия тоже оцениваются.</span></div>
+      <div class="li"><i>📈</i><span>План продаж на смену: <b>${sh.plan}</b>. Продавайте, только если продукт подходит клиенту.</span></div>
+    </div>
+    <button class="btn" id="bGo">Открыть офис</button>`;
+  hide('title'); show('mIntro');
+  $('bGo').onclick = () => { hide('mIntro'); body.classList.add('in-game'); updateHud(); Stage.call('setQueue', queueLook()); nextClient(); };
+}
+
+function startClient() {
+  Audio.init(); S.role = 'client'; Stage.call('setMode', 'client');
+  const pool = G.CASES.filter(c => !c.cancelCase).slice().sort(() => Math.random() - .5).slice(0, 6);
+  S.queue = pool.map(c => ({ type: 'case', c }));
+  Object.assign(S, { results: [], trust: 50, kpi: 0, plan: 0, clock: 0, phoneNext: 99, delayed: false, paused: false, inCase: false,
+    client: { overpaid: 0, caught: 0, trusted: 0, wrongAdvice: 0, fooled: 0 } });
+  $('introBody').innerHTML = `
+    <div class="eyebrow">Клиент клуба</div><div class="h1">Теперь советуют вам</div>
+    <p class="lead">Шесть ситуаций из вашей жизни в клубе. Менеджер каждый раз предложит решение. Иногда он прав, иногда — нет. Можно согласиться или проверить по справочнику и решить самому.</p>
+    <div class="list">
+      <div class="li"><i>🧾</i><span>Итог — сколько вы переплатили за год ошибок.</span></div>
+      <div class="li"><i>🔎</i><span>Проверка занимает время, но деньги ваши.</span></div>
+    </div>
+    <button class="btn" id="bGo">Войти в офис</button>`;
+  hide('title'); show('mIntro');
+  $('bGo').onclick = () => { hide('mIntro'); body.classList.add('in-game'); updateHud(); nextClient(); };
+}
+
+function updateHud() {
+  const sh = S.role === 'manager' ? (SHIFTS[S.shift].title.split('·')[0].trim()) : 'Клиент';
+  $('hShift').textContent = sh;
+  const mins = 10 * 60 + S.clock * 55; $('hClock').textContent = `${Math.floor(mins / 60) % 24}:${String(mins % 60).padStart(2, '0')}`;
+  $('trustBar').firstElementChild.style.width = Math.max(2, Math.min(100, S.trust)) + '%';
+  $('hKpi').style.display = S.role === 'manager' ? '' : 'none';
+  $('hKpiV').textContent = `${S.kpi}/${S.plan}`;
+  $('hQueueV').textContent = S.queue.length;
+}
+
+function nextClient() {
+  updateHud();
+  if (!S.queue.length) return endShift();
+  const item = S.queue.shift();
+  S.cur = item; S.sel = []; S.inCase = false;
+  const c = item.c;
+  $('panel').classList.add('idle');
+  $('pName').textContent = 'Входит клиент…'; $('pSub').textContent = ''; $('bubble').classList.remove('show');
+  Audio.chime();
+  Stage.call('enter', { name: c.name, plus: c.tier === 'PLUS' }, () => { Stage.call('setQueue', S.role === 'manager' ? queueLook() : []); beginCase(item); });
+}
+
+function beginCase(item) {
+  const c = item.c;
+  $('pName').textContent = c.name; $('pSub').textContent = `${c.city} · ${c.day} ${c.month}`;
+  $('pTier').textContent = T[c.tier].short; $('pTier').classList.toggle('plus', c.tier === 'PLUS');
+  $('pAvatar').classList.toggle('plus', c.tier === 'PLUS');
+  Stage.call('plus', c.tier === 'PLUS');
+  if (item.type === 'return') return beginReturn(item);
+  renderDossier(c); setTab('dossier'); $('search').value = ''; renderBook();
+  S.patMax = c.tier === 'PLUS' ? 95 : 120; S.patience = 1;
+  $('panel').classList.remove('idle');
+  let say = `<span class="who">${esc(c.name)}</span>${c.say}`;
+  if (S.role === 'client') {
+    // the NPC manager proposes something — right or wrong
+    const s = G.solve(c);
+    const wrongs = s.all.filter(r => !r.hard.length && G.grade(c, r, s.best) !== 'perfect' && r.ids[0] !== 'nothing' || (r.ids[0] === 'nothing' && G.grade(c, r, s.best) === 'fail'));
+    const honest = Math.random() < .5 || !wrongs.length;
+    const adv = honest ? s.ties[Math.floor(Math.random() * s.ties.length)] : wrongs[Math.floor(Math.random() * Math.min(wrongs.length, 4))];
+    item.advice = adv.ids; item.honest = honest;
+    const txt = adv.ids.map(id => G.actionMeta(id, c).t.replace(/^Причина: /, 'Объясню: ')).join(' + ');
+    say = `<span class="who">Менеджер</span>Посмотрела вашу ситуацию. Советую так: <b>${esc(txt)}</b>.`;
+    $('tabDossier').insertAdjacentHTML('afterbegin', `<div class="note" style="margin-top:8px"><b>Ваша ситуация.</b> ${c.say}</div>`);
+    S.sel = []; $('trayTitle').textContent = 'Ваше решение';
+    $('cards').innerHTML = `<button class="card on" data-accept="1" style="grid-column:1/-1"><b>Согласиться с менеджером</b><span>${esc(txt)}</span></button>
+      <button class="card" data-self="1" style="grid-column:1/-1"><b>Проверить и решить самому</b><span>Откроются все варианты</span></button>`;
+    $('give').disabled = true; $('traySel').textContent = ''; $('picked').innerHTML = 'Решите: согласиться или проверить самому — вкладка «Совет»';
+    $('cards').onclick = e => {
+      const b = e.target.closest('.card'); if (!b) return;
+      if (b.dataset.accept) { S.sel = item.advice.slice(); submit(true); }
+      else if (b.dataset.self) { $('cards').onclick = null; $('trayTitle').textContent = 'Ваше решение'; renderCards(c); setTab(wide.matches ? 'book' : 'advice'); }
+    };
+  } else { $('trayTitle').textContent = 'Ваш совет'; $('cards').onclick = null; renderCards(c); }
+  $('bubble').innerHTML = say; $('bubble').classList.remove('mini'); $('bubble').classList.add('show');
+  document.querySelector('[data-t=book]').classList.add('flag');
+  Stage.call('speak', true);
+  S.inCase = true;
+  if (S.role === 'manager' && --S.phoneNext <= 0) { S.phoneNext = 2 + Math.floor(Math.random() * 2); setTimeout(() => S.inCase && ringPhone(), 9000 + Math.random() * 12000); }
+}
+
+$('give').addEventListener('click', () => submit(false));
+$('bubble').addEventListener('click', () => $('bubble').classList.toggle('mini'));
+
+function submit(accepted) {
+  if (!S.inCase || !S.sel.length) return;
+  const item = S.cur, c = item.c;
+  S.inCase = false; Audio.stamp(); vibrate([15, 40, 15]);
+  const s = G.solve(c), r = G.evaluate(c, S.sel), gr = G.grade(c, r, s.best);
+  const base = G.evaluate(c, G.defaultBaseline(c));
+  const res = { c, r, best: s.best, ties: s.ties, grade: gr, saved: base.cost - r.cost, timeout: false, accepted, honest: item.honest };
+  S.results.push(res);
+  if (r.sales && S.role === 'manager') { S.kpi += r.sales; }
+  Stage.call('speak', false);
+  if (S.role === 'client') {
+    S.client.overpaid += Math.max(0, r.cost - s.best.cost);
+    if (!item.honest) { S.client.wrongAdvice++; if (!accepted) { if (gr !== 'fail') S.client.caught++; } else S.client.fooled++; }
+  }
+  const immediate = !S.delayed;
+  if (S.role === 'manager') {
+    const d = { perfect: 3, ok: 1, fail: -4 }[gr];
+    if (immediate || gr !== 'fail') S.trust += d;
+    if (!immediate && gr === 'fail') S.queue.splice(Math.min(2, S.queue.length), 0, { type: 'return', c, res });
+  }
+  updateHud();
+  $('panel').classList.add('idle');
+  $('bubble').innerHTML = `<span class="who">${esc(c.name)}</span>${gr === 'fail' && immediate ? 'Хм… Ладно, я подумаю.' : 'Спасибо, так и сделаю!'}`;
+  S.clock++;
+  Stage.call('react', immediate ? (gr === 'fail' ? 'bad' : 'good') : 'good');
+  setTimeout(() => {
+    if (immediate) { showDebrief(res, () => leave(gr)); gr === 'fail' ? Audio.bad() : Audio.good(); }
+    else leave('good');
+  }, 700);
+}
+function leave(mood) {
+  $('bubble').classList.remove('show');
+  Stage.call('plus', false);
+  Stage.call('leave', mood, () => setTimeout(nextClient, 250));
+}
+
+function beginReturn(item) {
+  const { c, res } = item;
+  const r = res.r;
+  let line;
+  if (res.timeout) line = 'Я вчера так и не дождался совета. Давайте разберёмся сейчас.';
+  else if (r.unsuitable.length) line = 'Вы мне оформили продукт, а деньги-то мне скоро нужны. Хочу вернуть. Почему мне это предложили?';
+  else if (r.hard.length) line = `Ничего не получилось: ${lc(r.hard[0])}. Как так?`;
+  else { const f = r.fees.slice().sort((a, b) => b.amount - a.amount)[0]; line = `С меня списали ${G.fmt(f.amount)} — «${lc(f.label)}». Вы же говорили, что всё будет в порядке.`; }
+  $('bubble').innerHTML = `<span class="who">${esc(c.name)} вернулся с претензией</span>${line}`; $('bubble').classList.add('show');
+  $('pSub').textContent = 'повторный визит';
+  S.trust -= 4; updateHud(); Audio.bad(); vibrate(60);
+  Stage.call('react', 'bad');
+  setTimeout(() => showDebrief(res, () => leave('bad'), true), 1400);
+}
+
+/* ---------------- debrief ---------------- */
+function adviceText(c, ids) { return ids.map(id => G.actionMeta(id, c).t).join(' + '); }
+function explainCase(c, res) {
+  const v = res.best.verdict, bits = [];
+  const via = { bal: 'средний баланс выше порога', alt: 'баланс + покупки', salary: 'зарплатное условие', grace: 'льготный месяц' }[v.via];
+  if (via) bits.push(`С лучшим советом месяц бесплатный: <b>${via}</b>.`);
+  bits.push(`Средний баланс при лучшем совете — <b>${G.money(v.avg)}</b>, покупки в зачёт — <b>${G.money(v.buy)}</b>.`);
+  return bits.concat(res.best.notes, res.best.extra).join(' ');
+}
+function showDebrief(res, done, isReturn) {
+  const { c, r, grade: gr } = res;
+  const title = res.timeout ? 'Клиент ушёл без совета' : { perfect: 'Точно в цель', ok: 'Сработало, но можно лучше', fail: 'Ошибка' }[gr];
+  const fees = r.fees.length ? r.fees.map(f => `<div class="row"><span>${esc(f.label)}</span><b class="neg">−${G.fmt(f.amount).replace('−', '')}</b></div>`).join('') : '<div class="row"><span>Комиссий нет</span><b class="pos">0 ₽</b></div>';
+  const extra = [
+    ...r.hard.map(h => `<div class="row"><span>${esc(h)}</span><b class="neg">✗</b></div>`),
+    ...r.unsuitable.map(() => `<div class="row"><span>Продукт не подходит клиенту</span><b class="neg">жалоба</b></div>`),
+    r.value ? `<div class="row"><span>Потеря привилегий, которыми пользуется</span><b class="neg">≈ −${G.fmt(r.value).replace('−', '')}/мес</b></div>` : '',
+  ].join('');
+  const bestTxt = res.ties.map(t => adviceText(c, t.ids)).join(' <i style="color:var(--faint)">или</i> ');
+  const trustD = isReturn ? -4 : S.role === 'manager' ? { perfect: 3, ok: 1, fail: -4 }[gr] : 0;
+  const clientLine = S.role === 'client' ? `<div class="explain">${res.accepted ? 'Вы согласились с менеджером.' : 'Вы решили сами.'} ${res.honest === false ? 'Менеджер в этот раз <b>ошибся</b>.' : 'Совет менеджера был верным.'}</div>` : '';
+  $('debriefBody').innerHTML = `
+    <div class="eyebrow">${isReturn ? 'Повторный визит · разбор' : 'Разбор'} · ${esc(c.name)}</div>
+    <div class="verdict ${res.timeout ? 'fail' : gr}">${title}${trustD ? ` <span style="float:right">${trustD > 0 ? '+' : ''}${trustD} доверия</span>` : ''}</div>
+    <div class="lines"><div class="row"><span>${S.role === 'client' ? 'Решение' : 'Ваш совет'}</span><b style="white-space:normal;max-width:60%">${esc(res.timeout ? '—' : adviceText(c, r.ids))}</b></div>${fees}${extra}</div>
+    <div class="lines"><div class="row"><span>Лучший вариант</span><b style="white-space:normal;max-width:60%">${bestTxt}</b></div>
+      <div class="row"><span>Цена лучшего варианта</span><b class="pos">${res.best.cost > 1 ? G.fmt(res.best.cost) : '0 ₽'}</b></div></div>
+    ${clientLine}
+    <div class="explain">${explainCase(c, res)}</div>
+    <div class="cites">${c.cites.map(id => { const cl = G.CLAUSES.find(x => x.id === id); return `<button class="cite" data-c="${id}">§ ${cl.n} ${esc(cl.t)}</button>`; }).join('')}</div>
+    <button class="btn" id="bNext">Дальше</button>`;
+  show('mDebrief');
+  $('debriefBody').querySelectorAll('.cite').forEach(b => b.onclick = () => { hide('mDebrief'); openBook(b.dataset.c); $('panel').classList.remove('idle'); setTimeout(() => { $('panel').classList.add('idle'); show('mDebrief'); }, 4500); });
+  $('bNext').onclick = () => { hide('mDebrief'); done && done(); };
+}
+
+/* ---------------- phone line ---------------- */
+function ringPhone() {
+  if (S.paused || S.phone) return;
+  const q = G.PHONE[Math.floor(Math.random() * G.PHONE.length)];
+  S.phone = { q, t0: performance.now(), answered: false };
+  body.classList.add('phone-ringing'); $('phoneBtn').classList.add('show');
+  Stage.call('phone', true); Audio.ring(); vibrate([80, 60, 80]);
+  S.phone.ringTimer = setInterval(() => Audio.ring(), 1600);
+  S.phone.missTimer = setTimeout(() => { if (S.phone && !S.phone.answered) { endPhone(); S.trust -= 1; updateHud(); toast('Звонок на выделенной линии пропущен · −1 доверия'); } }, 12000);
+}
+function endPhone() {
+  if (!S.phone) return;
+  clearInterval(S.phone.ringTimer); clearTimeout(S.phone.missTimer); clearInterval(S.phone.qTimer);
+  S.phone = null; body.classList.remove('phone-ringing'); $('phoneBtn').classList.remove('show'); Stage.call('phone', false);
+}
+$('phoneBtn').addEventListener('click', () => {
+  if (!S.phone) return;
+  const p = S.phone; p.answered = true; clearInterval(p.ringTimer); clearTimeout(p.missTimer);
+  $('phoneBtn').classList.remove('show'); body.classList.remove('phone-ringing'); Stage.call('phone', false);
+  const order = [0, 1, 2].sort(() => Math.random() - .5);
+  $('phoneBody').innerHTML = `<div class="eyebrow">Выделенная линия</div><div class="h1" style="font-size:20px">${esc(p.q.q)}</div>
+    <div class="timer"><i id="phT"></i></div>
+    <div class="opts">${order.map(i => `<button class="opt" data-i="${i}">${esc(p.q.a[i])}</button>`).join('')}</div>`;
+  show('mPhone');
+  const t0 = performance.now(), D = 15000;
+  p.qTimer = setInterval(() => { const k = 1 - (performance.now() - t0) / D; $('phT').style.width = Math.max(0, k * 100) + '%'; if (k <= 0) answer(-1); }, 100);
+  const answer = i => {
+    clearInterval(p.qTimer);
+    const ok = i === 0;
+    $('phoneBody').querySelectorAll('.opt').forEach(b => { const j = +b.dataset.i; if (j === 0) b.classList.add('right'); else if (j === i) b.classList.add('wrong'); b.disabled = true; });
+    S.trust += ok ? 1 : -1; updateHud(); ok ? Audio.good() : Audio.bad();
+    const cl = G.CLAUSES.find(x => x.id === p.q.c);
+    $('phoneBody').insertAdjacentHTML('beforeend', `<div class="explain">${ok ? 'Верно.' : 'Неверно.'} См. <b>§ ${cl.n} ${esc(cl.t)}</b>.</div><button class="btn" id="bPh">Вернуться к клиенту</button>`);
+    $('bPh').onclick = () => { hide('mPhone'); S.phone = null; };
+  };
+  $('phoneBody').querySelectorAll('.opt').forEach(b => b.onclick = () => answer(+b.dataset.i));
+});
+
+/* ---------------- end of shift ---------------- */
+const RANKS = [[0, 'Стажёр'], [55, 'Менеджер'], [68, 'Старший менеджер'], [80, 'Легенда клуба']];
+function endShift() {
+  S.inCase = false; body.classList.remove('in-game'); $('bubble').classList.remove('show');
+  const res = S.results;
+  if (S.role === 'client') {
+    const cl = S.client;
+    $('reportBody').innerHTML = `<div class="eyebrow">Итоги · клиент</div><div class="h1">${cl.overpaid ? `Переплата ${G.fmt(cl.overpaid)}` : 'Ни рубля лишнего'}</div>
+      <div class="stats">
+        <div class="stat"><b>${cl.wrongAdvice}</b><span>раз менеджер ошибся</span></div>
+        <div class="stat"><b>${cl.caught}</b><span>ошибок вы поймали</span></div>
+        <div class="stat"><b>${cl.fooled}</b><span>раз поверили зря</span></div>
+        <div class="stat"><b>${res.filter(r => r.grade === 'perfect').length}/${res.length}</b><span>лучших решений</span></div>
+      </div>
+      <div class="list">${res.map(r => `<div class="li"><i>${r.grade === 'perfect' ? '✓' : r.grade === 'ok' ? '≈' : '✗'}</i><span><b>${esc(r.c.name)}</b> — ${r.r.cost - r.best.cost > 0 ? 'переплата ' + G.fmt(r.r.cost - r.best.cost) : 'без переплаты'}</span></div>`).join('')}</div>
+      <button class="btn" id="bRep1">Ещё раз</button><button class="btn ghost" id="bRep2">В меню</button>`;
+    show('mReport'); $('bRep1').onclick = () => { hide('mReport'); startClient(); }; $('bRep2').onclick = toMenu;
+    return;
+  }
+  const n = res.length, perfect = res.filter(r => r.grade === 'perfect').length, fails = res.filter(r => r.grade === 'fail').length;
+  const saved = res.reduce((a, r) => a + Math.max(0, r.saved), 0);
+  const bad = res.filter(r => r.r.unsuitable.length).length;
+  const trust = Math.round(S.trust);
+  const rank = RANKS.filter(([v]) => trust >= v).pop()[1];
+  const passed = trust >= 55 && fails <= 2;
+  if (passed && S.shift < 5) progress.unlocked = Math.max(progress.unlocked, S.shift + 1);
+  progress.best[S.shift] = Math.max(progress.best[S.shift] || 0, trust); store.set('klub-progress', progress);
+  $('reportBody').innerHTML = `<div class="eyebrow">${SHIFTS[S.shift].title}</div><div class="h1">${rank}</div>
+    <p class="lead">${passed ? (S.shift < 4 ? 'Смена засчитана — открыта следующая.' : 'Смена засчитана.') : 'Смена не засчитана: нужно доверие от 55 и не больше двух ошибок.'}</p>
+    <div class="stats">
+      <div class="stat"><b>${trust}</b><span>доверие</span></div>
+      <div class="stat"><b>${perfect}/${n}</b><span>точных советов</span></div>
+      <div class="stat"><b>${G.fmt(saved)}</b><span>сэкономлено клиентам</span></div>
+      <div class="stat"><b>${S.kpi}/${S.plan}</b><span>план продаж${bad ? ` · ${bad} неподходящих` : ''}</span></div>
+    </div>
+    <div class="eyebrow" style="margin-top:18px">Месяц спустя</div>
+    <div class="list">${res.map(r => {
+      const icon = r.timeout ? '⌛' : r.grade === 'perfect' ? '✓' : r.grade === 'ok' ? '≈' : '✗';
+      const cl = G.CLAUSES.find(x => x.id === r.c.cites[0]);
+      const what = r.timeout ? 'ушёл без совета' : r.r.hard.length ? lc(r.r.hard[0]) : r.r.unsuitable.length ? 'продан неподходящий продукт' : r.r.fees.length ? r.r.fees.map(f => `${lc(f.label)} ${G.fmt(f.amount)}`).join(', ') : 'итог: 0 ₽ комиссий';
+      return `<div class="li"><i>${icon}</i><span><b>${esc(r.c.name)}</b> — ${esc(what)}${r.grade !== 'perfect' && cl ? ` · <b>§ ${cl.n}</b>` : ''}</span></div>`;
+    }).join('')}</div>
+    <button class="btn" id="bRep1">${passed && S.shift < 5 ? 'Следующая смена' : 'Повторить смену'}</button><button class="btn ghost" id="bRep2">В меню</button>`;
+  show('mReport'); Audio.level = .3;
+  $('bRep1').onclick = () => { hide('mReport'); if (passed && S.shift < 5) S.shift++; renderShiftButtons(); startManager(); };
+  $('bRep2').onclick = toMenu;
+}
+function toMenu() { ['mReport', 'mPause', 'mDebrief', 'mIntro', 'mPhone'].forEach(hide); endPhone(); body.classList.remove('in-game'); S.inCase = false; S.paused = true; S.queue = []; Stage.call('reset'); renderShiftButtons(); show('title'); }
+
+/* ---------------- patience loop ---------------- */
+let lastT = performance.now();
+function loop(now) {
+  const dt = Math.min(.1, (now - lastT) / 1000); lastT = now;
+  if (S.inCase && !S.paused && !$('mDebrief').classList.contains('show') && !$('mPhone').classList.contains('show')) {
+    S.patience -= dt / S.patMax;
+    const p = Math.max(0, S.patience);
+    const ring = $('patRing'); ring.style.strokeDashoffset = (100.5 * (1 - p)).toFixed(1);
+    ring.style.stroke = p > .5 ? '#9fe0a8' : p > .25 ? '#f1d3a2' : '#ff8a80';
+    Stage.call('patience', p);
+    Audio.level = .25 + (1 - p) * .35 + Math.min(.3, S.queue.length * .06);
+    if (p <= 0) timeout();
+  }
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+function timeout() {
+  const item = S.cur, c = item.c; S.inCase = false;
+  const s = G.solve(c), r = G.evaluate(c, G.defaultBaseline(c));
+  const res = { c, r, best: s.best, ties: s.ties, grade: 'fail', saved: 0, timeout: true };
+  S.results.push(res); S.trust -= 3; updateHud(); Audio.bad();
+  $('panel').classList.add('idle');
+  $('bubble').innerHTML = `<span class="who">${esc(c.name)}</span>Извините, я больше не могу ждать.`;
+  Stage.call('speak', false); Stage.call('react', 'bad');
+  if (S.role === 'client' || !S.delayed) setTimeout(() => showDebrief(res, () => leave('bad')), 900);
+  else setTimeout(() => leave('bad'), 1200);
+}
+
+/* ---------------- controls ---------------- */
+$('rManager').onclick = startManager;
+$('rClient').onclick = startClient;
+function pause() { if (!body.classList.contains('in-game')) return; S.paused = true; show('mPause'); Audio.ctx && Audio.ctx.suspend(); Stage.call('pause', true); }
+function resume() { hide('mPause'); S.paused = false; Audio.ctx && Audio.ctx.resume(); Stage.call('pause', false); }
+$('bPause').onclick = pause; $('bResume').onclick = resume; $('bMenu').onclick = toMenu;
+function drawMute() {
+  $('icMute').innerHTML = Audio.muted
+    ? '<path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16.5 9.5l5 5M21.5 9.5l-5 5" stroke="#fbf5ee" stroke-width="1.8" stroke-linecap="round" fill="none"/>'
+    : '<path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" stroke="#fbf5ee" stroke-width="1.8" stroke-linecap="round" fill="none"/>';
+}
+drawMute();
+$('bMute').onclick = () => { if (!Audio.ctx) Audio.init(); Audio.setMuted(!Audio.muted); drawMute(); };
+document.addEventListener('visibilitychange', () => { if (document.hidden && S.inCase) pause(); });
+addEventListener('keydown', e => {
+  if (e.code === 'KeyP' || e.code === 'Escape') { S.paused ? resume() : pause(); }
+  if (e.code === 'KeyH' && S.inCase) setTab($('tabBook').hidden ? 'book' : 'dossier');
+  if (e.code === 'Enter' && S.inCase && !$('give').disabled) submit(false);
+  const n = parseInt(e.key, 10); if (n >= 1 && n <= 9 && S.inCase) { const b = $('cards').children[n - 1]; b && b.click(); }
+});
+
+window.KLUB = { S, G, R, submit, nextClient, startManager, startClient, endShift, toMenu, get stage() { return Stage.impl; } };
+})();
+</script>
+
+<!-- =========================================================
+     3D STAGE (three.js). If it fails to load, the game still works.
+     ========================================================= -->
+<script type="module">
+let THREE, RoomEnvironment;
+try {
+  THREE = await import('three');
+  ({ RoomEnvironment } = await import('three/addons/environments/RoomEnvironment.js'));
+} catch (e) { console.warn('3D недоступно, игра работает без сцены', e); }
+if (THREE) build();
+
+function build() {
+  const view = document.getElementById('view');
+  const mobile = matchMedia('(pointer: coarse)').matches || innerWidth < 700;
+  const renderer = new THREE.WebGLRenderer({ antialias: !mobile, powerPreference: 'high-performance' });
+  renderer.setPixelRatio(Math.min(devicePixelRatio || 1, mobile ? 1.5 : 1.75));
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05;
+  renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  view.prepend(renderer.domElement);
+
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x0e0c0b);
+  scene.fog = new THREE.Fog(0x0e0c0b, 7, 15);
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  scene.environment = pmrem.fromScene(new RoomEnvironment(renderer), .04).texture;
+
+  const camera = new THREE.PerspectiveCamera(46, 1, .05, 40);
+
+  /* ---------- procedural textures ---------- */
+  function marble(size, base, vein, veins, alpha) {
+    const c = document.createElement('canvas'); c.width = c.height = size; const x = c.getContext('2d');
+    x.fillStyle = base; x.fillRect(0, 0, size, size);
+    for (let i = 0; i < 40; i++) {
+      const gx = Math.random() * size, gy = Math.random() * size, r = size * (.1 + Math.random() * .35), g = x.createRadialGradient(gx, gy, 0, gx, gy, r);
+      g.addColorStop(0, vein.replace('A', .05)); g.addColorStop(1, 'rgba(0,0,0,0)'); x.fillStyle = g; x.fillRect(0, 0, size, size);
+    }
+    x.lineCap = 'round';
+    for (let v = 0; v < veins; v++) {
+      let px = Math.random() * size, py = Math.random() * size, a = Math.random() * 6.28;
+      x.beginPath(); x.moveTo(px, py);
+      const len = 120 + Math.random() * 300;
+      for (let s = 0; s < len; s++) { a += (Math.random() - .5) * .4; px += Math.cos(a) * 2.2; py += Math.sin(a) * 2.2; x.lineTo(px, py); }
+      x.strokeStyle = vein.replace('A', alpha * (.4 + Math.random() * .6)); x.lineWidth = .4 + Math.random() * 1.8; x.stroke();
+    }
+    const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 4; return t;
+  }
+  const texWhite = marble(512, '#efe9e2', 'rgba(120,112,104,A)', 18, .55);
+  const texFloor = marble(1024, '#231f1d', 'rgba(214,190,160,A)', 26, .35); texFloor.repeat.set(3, 3);
+  const texDesk = marble(512, '#e9e2da', 'rgba(110,98,88,A)', 14, .5);
+
+  /* ---------- materials ---------- */
+  const M = {
+    marble: new THREE.MeshStandardMaterial({ map: texWhite, roughness: .32, metalness: 0, envMapIntensity: .7 }),
+    floor: new THREE.MeshStandardMaterial({ map: texFloor, roughness: .22, metalness: .05, envMapIntensity: .6 }),
+    desk: new THREE.MeshStandardMaterial({ map: texDesk, roughness: .18, envMapIntensity: .8 }),
+    copper: new THREE.MeshStandardMaterial({ color: 0xc9825a, metalness: .95, roughness: .3, envMapIntensity: 1.2 }),
+    gold: new THREE.MeshStandardMaterial({ color: 0xe0b872, metalness: 1, roughness: .2, envMapIntensity: 1.4 }),
+    graphite: new THREE.MeshStandardMaterial({ color: 0x2c2927, roughness: .85 }),
+    wall: new THREE.MeshStandardMaterial({ color: 0x1d1a19, roughness: .9 }),
+    leather: new THREE.MeshStandardMaterial({ color: 0x3a2a22, roughness: .55 }),
+    cream: new THREE.MeshStandardMaterial({ color: 0xd9cbbd, roughness: .7 }),
+    glass: new THREE.MeshStandardMaterial({ color: 0x9fb2b6, roughness: .05, metalness: .2, transparent: true, opacity: .1, depthWrite: false }),
+    screen: new THREE.MeshBasicMaterial({ color: 0x2b2220 }),
+    lamp: new THREE.MeshBasicMaterial({ color: 0xffd9ae }),
+    dark: new THREE.MeshStandardMaterial({ color: 0x0f0e0d, roughness: .4, metalness: .3 }),
+  };
+  const box = (w, h, d, m, x = 0, y = 0, z = 0, parent = scene) => { const o = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); o.position.set(x, y, z); o.castShadow = o.receiveShadow = true; parent.add(o); return o; };
+
+  /* ---------- room ---------- */
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(16, 16), M.floor); floor.rotation.x = -Math.PI / 2; floor.position.z = 2; floor.receiveShadow = true; scene.add(floor);
+  box(16, 4, .2, M.wall, 0, 2, 8);                  // lounge back wall
+  box(16, 4, .2, M.wall, 0, 2, -2.6);               // wall behind the manager
+  box(.2, 4, 12, M.wall, -4, 2, 2.5); box(.2, 4, 12, M.wall, 4, 2, 2.5);
+  const ceil = new THREE.Mesh(new THREE.PlaneGeometry(16, 16), M.wall); ceil.rotation.x = Math.PI / 2; ceil.position.set(0, 3.4, 2); scene.add(ceil);
+  // copper slats on the side walls and behind the manager
+  const slatGeo = new THREE.BoxGeometry(.05, 3.2, .06);
+  const slats = new THREE.InstancedMesh(slatGeo, M.copper, 90); let si = 0; const mt = new THREE.Matrix4();
+  for (let z = -2.2; z < 7.6 && si < 60; z += .32) { mt.setPosition(-3.86, 1.7, z); slats.setMatrixAt(si++, mt); }
+  for (let x = -3.6; x < 3.6 && si < 90; x += .26) { mt.setPosition(x, 1.7, -2.46); slats.setMatrixAt(si++, mt); }
+  slats.count = si; scene.add(slats);
+  // glass partition with a door gap (x 1.8..2.8)
+  const glassL = new THREE.Mesh(new THREE.PlaneGeometry(5.8, 3), M.glass); glassL.position.set(-1.1, 1.5, 3.0); glassL.rotation.y = Math.PI; scene.add(glassL);
+  const glassR = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 3), M.glass); glassR.position.set(3.4, 1.5, 3.0); glassR.rotation.y = Math.PI; scene.add(glassR);
+  for (const x of [-4, -2, 0, 1.8, 2.8]) box(.04, 3, .04, M.copper, x, 1.5, 3.0);
+  box(8, .04, .04, M.copper, 0, 3.0, 3.0);
+
+  // desk
+  const desk = new THREE.Group(); scene.add(desk); desk.position.set(0, 0, .4);
+  box(1.9, .06, .86, M.desk, 0, .76, 0, desk);
+  box(1.76, .7, .08, M.graphite, 0, .38, .36, desk);            // modesty panel facing the client
+  box(.08, .72, .78, M.graphite, -.84, .37, 0, desk); box(.08, .72, .78, M.graphite, .84, .37, 0, desk);
+  box(1.92, .012, .012, M.copper, 0, .79, .43, desk);
+  // monitor facing the manager
+  const mon = new THREE.Group(); desk.add(mon); mon.position.set(-.78, .79, -.2); mon.rotation.y = .55; mon.scale.setScalar(.8);
+  box(.56, .34, .025, M.dark, 0, .3, 0, mon); const scr = new THREE.Mesh(new THREE.PlaneGeometry(.52, .3), M.screen); scr.position.set(0, .3, -.014); scr.rotation.y = Math.PI; mon.add(scr);
+  box(.04, .14, .04, M.copper, 0, .07, .02, mon);
+  // phone
+  const phoneMat = new THREE.MeshStandardMaterial({ color: 0x1c1a19, emissive: 0x000000, roughness: .4 });
+  const phone = box(.14, .035, .18, phoneMat, .5, .81, -.18, desk);
+  // desk lamp
+  const lampG = new THREE.Group(); desk.add(lampG); lampG.position.set(.86, .79, .2); lampG.scale.setScalar(.8);
+  const arm = new THREE.Mesh(new THREE.TorusGeometry(.22, .012, 8, 24, Math.PI * .9), M.copper); arm.position.set(0, .2, 0); arm.rotation.z = Math.PI * .05; lampG.add(arm);
+  const shade = new THREE.Mesh(new THREE.SphereGeometry(.06, 16, 12, 0, Math.PI * 2, 0, Math.PI / 2), M.copper); shade.position.set(-.21, .22, 0); shade.rotation.x = Math.PI; lampG.add(shade);
+  // chairs
+  function chair(x, z, rotY, plush) {
+    const g = new THREE.Group(); g.position.set(x, 0, z); g.rotation.y = rotY; scene.add(g);
+    box(.52, .08, .5, plush ? M.leather : M.cream, 0, .44, 0, g);
+    box(.52, .52, .07, plush ? M.leather : M.cream, 0, .74, -.24, g);
+    const leg = new THREE.Mesh(new THREE.CylinderGeometry(.02, .02, .42, 8), M.copper); leg.position.y = .21; g.add(leg);
+    const base = new THREE.Mesh(new THREE.CylinderGeometry(.22, .24, .02, 24), M.copper); base.position.y = .01; g.add(base);
+    return g;
+  }
+  chair(0, 1.35, Math.PI, true);          // client chair faces the desk (−z)
+  chair(0, -.35, 0, true);                // manager chair
+  const LOUNGE = [[-2.6, 4.9], [-1.5, 4.9], [-.4, 4.9], [.7, 4.9]];
+  LOUNGE.forEach(([x, z]) => chair(x, z, Math.PI, false));
+  box(3.6, .36, .6, M.graphite, -1, .18, 6.2); // lounge bench/plinth
+
+  // walnut wall panels, lounge carpet, plants, art
+  function walnut() {
+    const c = document.createElement('canvas'); c.width = 256; c.height = 512; const x = c.getContext('2d');
+    x.fillStyle = '#4a2e1e'; x.fillRect(0, 0, 256, 512);
+    for (let i = 0; i < 90; i++) { const u = Math.random() * 256; x.strokeStyle = Math.random() < .5 ? 'rgba(30,16,8,.35)' : 'rgba(140,90,55,.22)'; x.lineWidth = .5 + Math.random() * 2; x.beginPath(); x.moveTo(u, 0); for (let yy = 0; yy <= 512; yy += 16) x.lineTo(u + Math.sin(yy * .02 + i) * 6, yy); x.stroke(); }
+    x.fillStyle = 'rgba(0,0,0,.35)'; x.fillRect(0, 0, 3, 512);
+    const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.wrapS = t.wrapT = THREE.RepeatWrapping; return t;
+  }
+  const wt = walnut(); wt.repeat.set(10, 1);
+  const walnutM = new THREE.MeshStandardMaterial({ map: wt, roughness: .45, envMapIntensity: .6 });
+  const panelBack = new THREE.Mesh(new THREE.PlaneGeometry(7.6, 2.6), walnutM); panelBack.position.set(0, 1.3, 7.88); panelBack.rotation.y = Math.PI; scene.add(panelBack);
+  const wt2 = wt.clone(); wt2.repeat.set(8, 1); wt2.needsUpdate = true;
+  const panelMgr = new THREE.Mesh(new THREE.PlaneGeometry(6, 2.4), new THREE.MeshStandardMaterial({ map: wt2, roughness: .45 })); panelMgr.position.set(0, 1.2, -2.48); scene.add(panelMgr);
+  (() => {
+    const c = document.createElement('canvas'); c.width = c.height = 256; const x = c.getContext('2d');
+    x.fillStyle = '#2b2522'; x.fillRect(0, 0, 256, 256);
+    for (let i = 0; i < 4000; i++) { x.fillStyle = Math.random() < .5 ? 'rgba(255,240,220,.05)' : 'rgba(0,0,0,.15)'; x.fillRect(Math.random() * 256, Math.random() * 256, 1, 1); }
+    x.strokeStyle = '#c9825a'; x.lineWidth = 4; x.strokeRect(10, 10, 236, 236); x.lineWidth = 1; x.strokeRect(20, 20, 216, 216);
+    const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
+    const rug = new THREE.Mesh(new THREE.PlaneGeometry(4.8, 2.6), new THREE.MeshStandardMaterial({ map: t, roughness: .95 })); rug.rotation.x = -Math.PI / 2; rug.position.set(-.9, .006, 5.3); rug.receiveShadow = true; scene.add(rug);
+  })();
+  function plant(x, z, h) {
+    const g = new THREE.Group(); g.position.set(x, 0, z); scene.add(g);
+    const pot = new THREE.Mesh(new THREE.CylinderGeometry(.2, .15, .42, 20), M.copper); pot.position.y = .21; g.add(pot);
+    const leafM = new THREE.MeshStandardMaterial({ color: 0x3f5a36, roughness: .6, side: THREE.DoubleSide });
+    for (let i = 0; i < 9; i++) {
+      const leaf = new THREE.Mesh(new THREE.SphereGeometry(.16, 10, 8), leafM); leaf.scale.set(.35, 1.4, .08);
+      const a = i / 9 * Math.PI * 2; leaf.position.set(Math.cos(a) * .12, .5 + h * .5 + (i % 3) * .08, Math.sin(a) * .12);
+      leaf.rotation.set(Math.sin(a) * .5, a, Math.cos(a) * .5); leaf.castShadow = true; g.add(leaf);
+    }
+  }
+  plant(-3.4, 7.3, .5); plant(3.3, -2.0, .7); plant(3.3, 7.3, .4);
+  (() => {
+    const c = document.createElement('canvas'); c.width = 512; c.height = 320; const x = c.getContext('2d');
+    x.fillStyle = '#efe7dd'; x.fillRect(0, 0, 512, 320);
+    const orb = (cx, cy, r, c1, c2) => { const g = x.createRadialGradient(cx - r * .35, cy - r * .4, r * .1, cx, cy, r); g.addColorStop(0, c1); g.addColorStop(1, c2); x.fillStyle = g; x.beginPath(); x.arc(cx, cy, r, 0, Math.PI * 2); x.fill(); };
+    orb(300, 170, 95, '#f3c9a3', '#b0643b'); orb(150, 110, 34, '#ffffff', '#b9b2aa'); orb(420, 80, 18, '#4a4642', '#1b1917');
+    x.strokeStyle = '#d6aa6c'; x.lineWidth = 5; x.beginPath(); x.ellipse(170, 245, 60, 18, -.2, 0, Math.PI * 2); x.stroke();
+    const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
+    for (const [px, py, pz, ry] of [[-1.2, 1.75, 7.84, Math.PI], [1.6, 1.55, -2.44, 0]]) {
+      const fr = new THREE.Mesh(new THREE.BoxGeometry(1.46, .96, .04), M.copper); fr.position.set(px, py, pz); fr.rotation.y = ry; scene.add(fr);
+      const art = new THREE.Mesh(new THREE.PlaneGeometry(1.38, .88), new THREE.MeshStandardMaterial({ map: t, roughness: .8 })); art.position.set(px, py, pz + (ry ? -.025 : .025)); art.rotation.y = ry; scene.add(art);
+    }
+  })();
+
+  // floating marble spheres — the premium motif
+  const spheres = [];
+  [[-3.1, 1.9, 6.4, .34, M.marble], [-2.6, 2.5, 6.9, .16, M.dark], [2.9, 2.2, -2.1, .28, M.marble], [-2.8, 1.6, -2.0, .18, M.gold], [3.2, 1.3, 6.8, .22, M.marble]]
+    .forEach(([x, y, z, r, m], i) => { const s = new THREE.Mesh(new THREE.SphereGeometry(r, 32, 24), m); s.position.set(x, y, z); s.castShadow = true; scene.add(s); spheres.push({ s, y, p: i * 1.7 }); });
+  // OPC+ gold ring
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(.14, .018, 16, 64), M.gold); ring.position.set(.62, 1.5, 1.85); ring.scale.setScalar(.8); ring.visible = false; scene.add(ring);
+
+  /* ---------- lights ---------- */
+  scene.add(new THREE.HemisphereLight(0xfff1e0, 0x1a1210, .45));
+  const key = new THREE.SpotLight(0xffd6a8, 40, 12, Math.PI / 5, .6, 1.6); key.position.set(1.6, 3.2, -.6); key.target.position.set(0, .8, 1.2);
+  key.castShadow = true; key.shadow.mapSize.set(mobile ? 512 : 1024, mobile ? 512 : 1024); key.shadow.bias = -.0005; scene.add(key, key.target);
+  const pendant = new THREE.PointLight(0xffc88f, 5, 5, 2); pendant.position.set(0, 2.3, .6); scene.add(pendant);
+  const pBulb = new THREE.Mesh(new THREE.SphereGeometry(.06, 16, 12), M.lamp); pBulb.position.copy(pendant.position); scene.add(pBulb);
+  const cord = new THREE.Mesh(new THREE.CylinderGeometry(.004, .004, 1.1, 4), M.dark); cord.position.set(0, 2.9, .6); scene.add(cord);
+  const lounge = new THREE.PointLight(0xffb070, 10, 7, 2); lounge.position.set(-.8, 2.6, 5.4); scene.add(lounge);
+  const rim = new THREE.PointLight(0xd6aa6c, 4, 5, 2); rim.position.set(-1.6, 1.8, 2.6); scene.add(rim);
+  const back = new THREE.PointLight(0xffc28a, 6, 6, 2); back.position.set(0, 2.4, -1.8); scene.add(back);
+  const deskLight = new THREE.PointLight(0xffd9ae, 1.6, 1.6, 2); deskLight.position.set(.52, 1.0, .52); scene.add(deskLight);
+
+  /* ---------- people: procedural faces, hair and clothes ---------- */
+  const PEOPLE = {
+    'Ольга': ['f', 'mid'], 'Анна': ['f', 'young'], 'Виктор': ['m', 'mid'], 'Елена': ['f', 'mid'], 'Марк': ['m', 'young'], 'Ирина': ['f', 'mid'],
+    'Игорь': ['m', 'mid'], 'Наталья': ['f', 'mid'], 'Тимур': ['m', 'young'], 'Светлана': ['f', 'old'], 'Роман': ['m', 'mid'], 'Зарина': ['f', 'young'],
+    'Марина': ['f', 'young'], 'Сергей': ['m', 'mid'], 'Алексей': ['m', 'young'], 'Галина': ['f', 'old'], 'Ксения': ['f', 'young'], 'Борис': ['m', 'old'],
+    'Дмитрий': ['m', 'mid'], 'Николай': ['m', 'old'], 'Людмила': ['f', 'old'], 'Вера': ['f', 'old'], 'Ахмед': ['m', 'mid'], 'Тамара': ['f', 'old'],
+    'Аркадий': ['m', 'old'], 'Полина': ['f', 'young'], 'Глеб': ['m', 'young'], 'Софья': ['f', 'young'], 'Егор': ['m', 'young'], 'Лариса': ['f', 'mid'],
+    'Максим': ['m', 'mid'], 'Дарья': ['f', 'young'], 'Олег': ['m', 'mid'], 'Милана': ['f', 'young'], 'Руслан': ['m', 'mid'], 'Инна': ['f', 'mid'],
+    'Фёдор': ['m', 'old'], 'Алиса': ['f', 'young'], 'Григорий': ['m', 'old'], 'Яна': ['f', 'young'], 'Менеджер': ['f', 'mid'],
+  };
+  const hash = s => { let h = 2166136261; for (const ch of s) { h ^= ch.codePointAt(0); h = Math.imul(h, 16777619); } return h >>> 0; };
+  const rngOf = seed => { let x = seed || 1; return () => (x = (Math.imul(x, 1664525) + 1013904223) >>> 0) / 4294967296; };
+  function lookFor(name, plus) {
+    const [g, age] = PEOPLE[name] || ['m', 'mid'], r = rngOf(hash(name)), pick = a => a[Math.floor(r() * a.length)];
+    const old = age === 'old';
+    const L = {
+      g, age, plus,
+      skin: pick(['#f2d6c4', '#e9c3a6', '#dcae8e', '#cf9a78', '#b47a58', '#f5e1d3']),
+      hair: old ? pick(['#c9c4be', '#dedad5', '#9d9792', '#b5aea6']) : pick(['#2a1c14', '#3d2a1e', '#5a3b24', '#1b1715', '#7a4e2c', '#a67a4a', '#c9a06a']),
+      style: g === 'm' ? pick(old ? ['bald', 'short', 'side'] : ['short', 'side', 'crop', 'side']) : pick(old ? ['bob', 'bun', 'pixie'] : ['bob', 'long', 'bun', 'pixie', 'long']),
+      eyes: pick(['#5a3a24', '#3b5f7a', '#4f6b3a', '#6b6b6b', '#3a2a1c']),
+      suit: g === 'm' ? pick(['#1f2a3a', '#2b2b2e', '#3a3230', '#4a3b2e', '#233029', '#5a5048']) : pick(['#6b2e2e', '#2f3a4a', '#c9b9a6', '#3d3a36', '#5b4a3a', '#1f2a3a', '#7a5a44']),
+      pattern: pick(['plain', 'plain', 'pin', 'check', 'herring']),
+      shirt: g === 'm' ? pick(['#f4f1ec', '#dfe8f0', '#f0e6dc', '#e8e2f0']) : pick(['#f4efe8', '#e9d6c9', '#1d1b1a', '#d7c2a8', '#f2e4e0']),
+      tie: plus ? '#d6aa6c' : pick(['#6b2a2a', '#2a3d5a', '#c9825a', '#3a3a3a', '#4a5a3a']),
+      noTie: g === 'm' && r() < .3,
+      glasses: r() < (old ? .6 : .25),
+      beard: g === 'm' && r() < (old ? .55 : .3),
+      lips: pick(['#b5585c', '#a8646a', '#c07070', '#9a5550']),
+    };
+    if (name === 'Менеджер') Object.assign(L, { style: 'bun', suit: '#1f2a3a', pattern: 'plain', shirt: '#f4efe8', hair: '#3d2a1e', glasses: false, badge: true });
+    return L;
+  }
+  const cnv = (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return [c, c.getContext('2d')]; };
+  const tex = c => { const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t; };
+  const tint = (hex, k) => { const n = parseInt(hex.slice(1), 16); const f = v => Math.max(0, Math.min(255, Math.round(v * k))); return `rgb(${f(n >> 16)},${f(n >> 8 & 255)},${f(n & 255)})`; };
+  function speckle(x, w, h, n, col, a) { x.fillStyle = col; for (let i = 0; i < n; i++) { x.globalAlpha = a * Math.random(); x.fillRect(Math.random() * w, Math.random() * h, 1.5, 1.5); } x.globalAlpha = 1; }
+  function fabricPaint(x, w, h, col, pattern) {
+    x.fillStyle = col; x.fillRect(0, 0, w, h);
+    speckle(x, w, h, w * h / 12, 'rgba(255,255,255,1)', .06); speckle(x, w, h, w * h / 12, 'rgba(0,0,0,1)', .12);
+    x.lineWidth = 1;
+    if (pattern === 'pin') { x.strokeStyle = 'rgba(255,255,255,.18)'; for (let i = 0; i < w; i += 9) { x.beginPath(); x.moveTo(i, 0); x.lineTo(i, h); x.stroke(); } }
+    if (pattern === 'check') { x.strokeStyle = 'rgba(255,255,255,.09)'; for (let i = 0; i < w; i += 16) { x.beginPath(); x.moveTo(i, 0); x.lineTo(i, h); x.moveTo(0, i); x.lineTo(w, i); x.stroke(); } }
+    if (pattern === 'herring') { x.strokeStyle = 'rgba(255,255,255,.1)'; for (let yy = 0; yy < h; yy += 6) for (let xx = 0; xx < w; xx += 12) { x.beginPath(); const d = (xx / 12) % 2 ? 1 : -1; x.moveTo(xx, yy); x.lineTo(xx + 6, yy + 5 * d); x.stroke(); } }
+  }
+  const fabricCache = new Map();
+  function fabricMat(col, pattern, rough = .82) {
+    const k = col + pattern;
+    if (!fabricCache.has(k)) { const [c, x] = cnv(128, 128); fabricPaint(x, 128, 128, col, pattern); const t = tex(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(2, 2); fabricCache.set(k, new THREE.MeshStandardMaterial({ map: t, roughness: rough })); }
+    return fabricCache.get(k);
+  }
+  function faceTexture(L) {
+    const W = 512, H = 256, [c, x] = cnv(W, H), cx = 128;   // face centred at u = .25 (front of the sphere)
+    const g0 = x.createLinearGradient(0, 0, 0, H); g0.addColorStop(0, tint(L.skin, 1.02)); g0.addColorStop(.75, L.skin); g0.addColorStop(1, tint(L.skin, .82));
+    x.fillStyle = g0; x.fillRect(0, 0, W, H);
+    speckle(x, W, H, 1500, 'rgba(120,60,40,1)', .06);
+    // hair on the scalp (the 3D hair mesh adds volume on top)
+    if (L.style !== 'bald') {
+      x.fillStyle = L.hair; x.fillRect(0, 0, W, 74);
+      x.beginPath(); x.moveTo(0, 74); for (let u = 0; u <= W; u += 8) { const back = Math.max(0, Math.cos((u - 384) / W * Math.PI * 2)); x.lineTo(u, 74 + back * 70 + Math.sin(u * .3) * 2); } x.lineTo(W, 0); x.lineTo(0, 0); x.fill();
+      x.strokeStyle = tint(L.hair, 1.3); x.globalAlpha = .25; for (let i = 0; i < 160; i++) { const u = Math.random() * W; x.beginPath(); x.moveTo(u, 0); x.lineTo(u + (Math.random() - .5) * 10, 40 + Math.random() * 40); x.stroke(); } x.globalAlpha = 1;
+    } else { x.fillStyle = L.hair; x.globalAlpha = .7; x.fillRect(250, 96, 262, 40); x.fillRect(0, 96, 40, 40); x.globalAlpha = 1; }
+    if (L.beard) { x.fillStyle = L.age === 'old' ? L.hair : tint(L.hair, .9); x.globalAlpha = L.age === 'old' ? .9 : .35; x.beginPath(); x.ellipse(cx, 190, 46, 36, 0, 0, Math.PI * 2); x.fill(); x.globalAlpha = 1; speckle(x, W, H, 600, tint(L.hair, .7), .2); }
+    // cheeks
+    const blush = (xx) => { const g = x.createRadialGradient(xx, 158, 0, xx, 158, 22); g.addColorStop(0, `rgba(220,120,110,${L.g === 'f' ? .28 : .1})`); g.addColorStop(1, 'rgba(0,0,0,0)'); x.fillStyle = g; x.fillRect(xx - 22, 136, 44, 44); };
+    blush(cx - 40); blush(cx + 40);
+    // brows
+    x.strokeStyle = tint(L.age === 'old' ? L.hair : L.hair, .8); x.lineCap = 'round'; x.lineWidth = L.g === 'f' ? 3.5 : 5.5;
+    for (const s of [-1, 1]) { x.beginPath(); x.moveTo(cx + s * 12, 106); x.quadraticCurveTo(cx + s * 26, 99, cx + s * 40, 106); x.stroke(); }
+    // eyes
+    for (const s of [-1, 1]) {
+      const ex = cx + s * 26, ey = 122;
+      x.fillStyle = '#fbf7f2'; x.beginPath(); x.ellipse(ex, ey, 11, 6.5, 0, 0, Math.PI * 2); x.fill();
+      x.fillStyle = L.eyes; x.beginPath(); x.arc(ex, ey + .5, 5.6, 0, Math.PI * 2); x.fill();
+      x.fillStyle = '#120c09'; x.beginPath(); x.arc(ex, ey + .5, 2.6, 0, Math.PI * 2); x.fill();
+      x.fillStyle = '#fff'; x.beginPath(); x.arc(ex + 2, ey - 1.5, 1.4, 0, Math.PI * 2); x.fill();
+      x.strokeStyle = '#2a1a12'; x.lineWidth = L.g === 'f' ? 2.6 : 1.8; x.beginPath(); x.ellipse(ex, ey, 11.5, 7, 0, Math.PI * 1.08, Math.PI * 1.92); x.stroke();
+      if (L.age === 'old') { x.strokeStyle = 'rgba(90,50,35,.3)'; x.lineWidth = 1; for (let k = 0; k < 3; k++) { x.beginPath(); x.moveTo(ex + s * 14, ey - 2 + k * 4); x.lineTo(ex + s * 21, ey - 4 + k * 5); x.stroke(); } }
+    }
+    // nose & mouth
+    x.strokeStyle = tint(L.skin, .72); x.lineWidth = 2; x.beginPath(); x.moveTo(cx - 3, 128); x.quadraticCurveTo(cx - 7, 148, cx - 8, 152); x.quadraticCurveTo(cx, 158, cx + 8, 152); x.stroke();
+    x.fillStyle = L.g === 'f' ? L.lips : tint(L.skin, .72);
+    x.beginPath(); x.moveTo(cx - 15, 172); x.quadraticCurveTo(cx, 166, cx + 15, 172); x.quadraticCurveTo(cx, 182, cx - 15, 172); x.fill();
+    x.strokeStyle = tint(L.skin, .55); x.lineWidth = 1.4; x.beginPath(); x.moveTo(cx - 14, 172); x.quadraticCurveTo(cx, 175, cx + 14, 172); x.stroke();
+    if (L.glasses) {
+      x.strokeStyle = L.plus ? '#b8893e' : '#1b1715'; x.lineWidth = 3;
+      for (const s of [-1, 1]) { x.beginPath(); x.roundRect ? x.roundRect(cx + s * 26 - 16, 110, 32, 24, 7) : x.rect(cx + s * 26 - 16, 110, 32, 24); x.stroke(); }
+      x.beginPath(); x.moveTo(cx - 10, 118); x.lineTo(cx + 10, 118); x.stroke();
+      x.beginPath(); x.moveTo(cx - 42, 118); x.lineTo(cx - 70, 116); x.moveTo(cx + 42, 118); x.lineTo(cx + 70, 116); x.stroke();
+    }
+    return tex(c);
+  }
+  function torsoTexture(L) {
+    const W = 256, H = 256, [c, x] = cnv(W, H), cx = 128;       // front at u = .5 (mesh rotated by π)
+    fabricPaint(x, W, H, L.suit, L.pattern);
+    if (L.g === 'm') {
+      x.fillStyle = L.shirt; x.beginPath(); x.moveTo(cx - 30, 0); x.lineTo(cx + 30, 0); x.lineTo(cx, 108); x.fill();
+      if (!L.noTie) { x.fillStyle = L.tie; x.beginPath(); x.moveTo(cx - 6, 18); x.lineTo(cx + 6, 18); x.lineTo(cx + 9, 92); x.lineTo(cx, 104); x.lineTo(cx - 9, 92); x.fill(); }
+      x.strokeStyle = tint(L.suit, .55); x.lineWidth = 3;
+      for (const s of [-1, 1]) { x.beginPath(); x.moveTo(cx + s * 30, 0); x.lineTo(cx + s * 4, 112); x.lineTo(cx + s * 30, 150); x.stroke(); }
+      x.fillStyle = tint(L.suit, .6); for (const yy of [140, 172]) { x.beginPath(); x.arc(cx, yy, 3.5, 0, Math.PI * 2); x.fill(); }
+      if (L.plus) { x.fillStyle = '#d6aa6c'; x.fillRect(cx + 34, 70, 14, 3); }
+    } else {
+      x.fillStyle = L.shirt; x.beginPath(); x.moveTo(cx - 40, 0); x.quadraticCurveTo(cx, 120, cx + 40, 0); x.fill();
+      x.fillStyle = L.skin; x.beginPath(); x.moveTo(cx - 26, 0); x.quadraticCurveTo(cx, 78, cx + 26, 0); x.fill();
+      x.fillStyle = L.plus ? '#e0b872' : '#efe6dc';
+      for (let i = -5; i <= 5; i++) { const t = i / 5; x.beginPath(); x.arc(cx + t * 22, 32 + (1 - t * t) * 30, 3, 0, Math.PI * 2); x.fill(); }
+      x.strokeStyle = tint(L.suit, .55); x.lineWidth = 3; for (const s of [-1, 1]) { x.beginPath(); x.moveTo(cx + s * 40, 0); x.quadraticCurveTo(cx + s * 12, 90, cx + s * 30, 160); x.stroke(); }
+    }
+    if (L.badge) { x.fillStyle = '#c9825a'; x.fillRect(cx - 62, 92, 26, 12); x.fillStyle = '#fbf5ee'; x.fillRect(cx - 58, 96, 18, 2); }
+    return tex(c);
+  }
+  function hairTexture(col) {
+    const [c, x] = cnv(128, 128); x.fillStyle = col; x.fillRect(0, 0, 128, 128);
+    for (let i = 0; i < 260; i++) { x.strokeStyle = Math.random() < .5 ? tint(col, 1.35) : tint(col, .7); x.globalAlpha = .35; const u = Math.random() * 128; x.beginPath(); x.moveTo(u, 0); x.bezierCurveTo(u + 4, 40, u - 4, 80, u + (Math.random() - .5) * 8, 128); x.stroke(); }
+    const t = tex(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(3, 1); return t;
+  }
+  const lerp = (a, b, k) => a + (b - a) * k;
+  const capsule = (r, l, m) => { const o = new THREE.Mesh(new THREE.CapsuleGeometry(r, l, 6, 14), m); o.castShadow = true; return o; };
+  const sph = (r, m, ws = 16, hs = 12) => { const o = new THREE.Mesh(new THREE.SphereGeometry(r, ws, hs), m); o.castShadow = true; return o; };
+
+  function person(name, plus) {
+    const L = lookFor(name, plus), made = [];
+    const track = m => { made.push(m); return m; };
+    const skinM = track(new THREE.MeshStandardMaterial({ color: L.skin, roughness: .6 }));
+    const faceM = track(new THREE.MeshStandardMaterial({ map: faceTexture(L), roughness: .62 }));
+    const torsoM = track(new THREE.MeshStandardMaterial({ map: torsoTexture(L), roughness: .8 }));
+    const suitM = fabricMat(L.suit, L.pattern), trouserM = fabricMat(tint(L.suit, .75).replace(/rgb\((\d+),(\d+),(\d+)\)/, (_, r, g, b) => '#' + [r, g, b].map(v => (+v).toString(16).padStart(2, '0')).join('')), 'plain');
+    const shoeM = new THREE.MeshStandardMaterial({ color: 0x151110, roughness: .35, metalness: .2 });
+    const hairM = track(new THREE.MeshStandardMaterial({ map: hairTexture(L.hair), roughness: .55 }));
+    const root = new THREE.Group(), hips = new THREE.Group(); root.add(hips); hips.position.y = .92;
+    const torso = capsule(.15, .36, torsoM); torso.position.y = .34; torso.scale.set(1.18, 1, .74); torso.rotation.y = Math.PI; hips.add(torso);
+    const shoulders = sph(.2, suitM, 20, 12); shoulders.scale.set(1.1, .42, .62); shoulders.position.y = .55; hips.add(shoulders);
+    const neck = capsule(.045, .06, skinM); neck.position.y = .66; hips.add(neck);
+    const R = .125;
+    const head = new THREE.Group(); head.position.y = .82; hips.add(head);
+    const skull = new THREE.Mesh(new THREE.SphereGeometry(R, 32, 24), faceM); skull.castShadow = true; skull.scale.set(.92, 1.05, .96); head.add(skull);
+    const noseM = track(new THREE.MeshStandardMaterial({ color: tint(L.skin, .94), roughness: .6 })); const nose = sph(.014, noseM, 10, 8); nose.position.set(0, -.02, R * .9); nose.scale.set(.75, 1.2, .9); head.add(nose);
+    for (const s of [-1, 1]) { const ear = sph(.03, skinM, 10, 8); ear.position.set(s * R * .9, -.01, 0); ear.scale.set(.45, .8, .6); head.add(ear); }
+    // 3D hair
+    const hcap = (th, w, extra = 1.06) => { const m = new THREE.Mesh(new THREE.SphereGeometry(R * extra, 28, 16, Math.PI / 2 + w, Math.PI * 2 - 2 * w, 0, th), hairM); m.scale.copy(skull.scale); m.castShadow = true; head.add(m); return m; };
+    const top = th => { const m = new THREE.Mesh(new THREE.SphereGeometry(R * 1.065, 28, 10, 0, Math.PI * 2, 0, th), hairM); m.scale.copy(skull.scale); head.add(m); return m; };
+    if (L.style === 'bald') { const m = new THREE.Mesh(new THREE.SphereGeometry(R * 1.03, 24, 6, Math.PI / 2 + 1.25, Math.PI * 2 - 2.5, Math.PI * .4, Math.PI * .16), hairM); m.scale.copy(skull.scale); head.add(m); }
+    else if (L.style === 'short' || L.style === 'crop') { top(Math.PI * .26); hcap(Math.PI * .5, 1.05, L.style === 'crop' ? 1.035 : 1.06); }
+    else if (L.style === 'side') { top(Math.PI * .28).rotation.z = .12; hcap(Math.PI * .52, 1.0); }
+    else if (L.style === 'pixie') { top(Math.PI * .3); hcap(Math.PI * .55, .75); }
+    else if (L.style === 'bob') { top(Math.PI * .3); hcap(Math.PI * .7, .85, 1.1); }
+    else if (L.style === 'bun') { top(Math.PI * .3); hcap(Math.PI * .56, .95); const bun = sph(.06, hairM); bun.position.set(0, .07, -.12); head.add(bun); }
+    else if (L.style === 'long') { top(Math.PI * .3); hcap(Math.PI * .72, .85, 1.1); const back = capsule(.085, .2, hairM); back.position.set(0, -.14, -.075); back.scale.set(1.35, 1, .6); head.add(back); }
+    // limbs
+    const limb = (x, y, r, l, m, parent) => { const g = new THREE.Group(); g.position.set(x, y, 0); parent.add(g); const o = capsule(r, l, m); o.position.y = -(l / 2 + r); g.add(o); return g; };
+    const armL = limb(-.205, .56, .042, .4, suitM, hips), armR = limb(.205, .56, .042, .4, suitM, hips);
+    for (const a of [armL, armR]) { const h = sph(.042, skinM, 12, 10); h.position.y = -.53; h.scale.set(.85, 1.15, .7); a.add(h); }
+    if (L.plus) { const watch = new THREE.Mesh(new THREE.TorusGeometry(.043, .01, 8, 20), M.gold); watch.rotation.x = Math.PI / 2; watch.position.y = -.47; armL.add(watch); }
+    const legL = limb(-.085, 0, .072, .34, trouserM, hips), legR = limb(.085, 0, .072, .34, trouserM, hips);
+    const knee = leg => { const k = new THREE.Group(); k.position.y = -.48; leg.add(k); const sh = capsule(.06, .34, trouserM); sh.position.y = -.23; k.add(sh); const shoe = sph(.07, shoeM, 12, 8); shoe.scale.set(.85, .5, 1.6); shoe.position.set(0, -.46, .05); k.add(shoe); return k; };
+    const kneeL = knee(legL), kneeR = knee(legR);
+    scene.add(root);
+    return { root, hips, head, armL, armR, legL, legR, kneeL, kneeR, name, phase: Math.random() * 6, state: 'idle', path: [], onDone: null, sitAmt: 0, speak: false, mood: 1,
+      dispose() { scene.remove(root); made.forEach(m => { m.map && m.map.dispose(); m.dispose(); }); } };
+  }
+  function pose(f, dt, t) {
+    const sit = f.sitAmt, walk = f.state === 'walk' ? 1 : 0;
+    if (walk) f.phase += dt * 7.2;
+    const sw = Math.sin(f.phase) * .55 * walk;
+    f.legL.rotation.x = lerp(-sw, -1.45, sit); f.legR.rotation.x = lerp(sw, -1.45, sit);
+    f.kneeL.rotation.x = lerp(Math.max(0, Math.sin(f.phase)) * .8 * walk, 1.45, sit);
+    f.kneeR.rotation.x = lerp(Math.max(0, -Math.sin(f.phase)) * .8 * walk, 1.45, sit);
+    const talk = f.speak ? Math.sin(t * 3.1 + f.phase) * .18 : 0;
+    const fid = f.mood < .3 && f.state === 'seated' ? Math.sin(t * 9) * .08 : 0;
+    f.armL.rotation.x = lerp(sw * .8, -.85 + talk, sit); f.armR.rotation.x = lerp(-sw * .8, -.75 - talk * .7 + fid, sit);
+    f.armL.rotation.z = lerp(.04, .18, sit); f.armR.rotation.z = lerp(-.04, -.18, sit);
+    f.hips.position.y = lerp(.92 + Math.abs(Math.cos(f.phase)) * .03 * walk, .52, sit);
+    f.hips.position.z = lerp(0, -.08, sit);
+    f.hips.rotation.x = lerp(0, -.05, sit) + (f.mood < .3 && sit > .5 ? .08 : 0);
+    f.head.rotation.x = f.speak ? Math.sin(t * 2.2) * .05 : 0;
+    f.head.rotation.y = f.speak ? Math.sin(t * .9) * .12 : 0;
+  }
+  const FAST = /[?&]fast\b/.test(location.search);
+  function walkTo(f, pts, onDone) {
+    f.path = pts.map(p => new THREE.Vector3(p[0], 0, p[1])); f.state = 'walk'; f.onDone = onDone;
+    if (FAST) { const l = f.path[f.path.length - 1]; f.root.position.set(l.x, 0, l.z); f.path = []; }
+  }
+  function stepFigure(f, dt) {
+    if (f.state === 'walk') {
+      f.sitAmt = Math.max(0, f.sitAmt - dt * 3);
+      const tgt = f.path[0];
+      if (!tgt) { f.state = 'stand'; const d = f.onDone; f.onDone = null; d && d(); return; }
+      const p = f.root.position, dx = tgt.x - p.x, dz = tgt.z - p.z, d = Math.hypot(dx, dz), sp = 1.25 * dt;
+      const yaw = Math.atan2(dx, dz); f.root.rotation.y += angDiff(f.root.rotation.y, yaw) * Math.min(1, dt * 8);
+      if (d <= sp) { p.x = tgt.x; p.z = tgt.z; f.path.shift(); } else { p.x += dx / d * sp; p.z += dz / d * sp; }
+    } else if (f.state === 'sitting') {
+      f.root.rotation.y += angDiff(f.root.rotation.y, f.faceYaw) * Math.min(1, dt * 6);
+      f.sitAmt = Math.min(1, f.sitAmt + dt * 2.2);
+      if (f.sitAmt >= 1) { f.state = 'seated'; const d = f.onDone; f.onDone = null; d && d(); }
+    }
+  }
+  const angDiff = (a, b) => { let d = (b - a) % (Math.PI * 2); if (d > Math.PI) d -= Math.PI * 2; if (d < -Math.PI) d += Math.PI * 2; return d; };
+  function sitDown(f, yaw, onDone) { f.state = 'sitting'; f.faceYaw = yaw; f.onDone = onDone; if (FAST) { f.root.rotation.y = yaw; f.sitAmt = 1; } }
+
+  const waiting = [];      // lounge figures, same people as the queue
+  let client = null, manager = null, mode = 'manager', paused = false, focus = 0;
+
+  function setQueue(list) {
+    const want = (Array.isArray(list) ? list : []).slice(0, 4);
+    // keep matching people in order, rebuild the rest
+    for (let i = 0; i < Math.max(want.length, waiting.length); i++) {
+      const w = want[i], f = waiting[i];
+      if (f && w && f.name === w.name) continue;
+      if (f) { f.dispose(); waiting[i] = null; }
+      if (w) { const n = person(w.name, w.plus); const [x, z] = LOUNGE[i]; n.root.position.set(x, 0, z); n.root.rotation.y = Math.PI; n.sitAmt = 1; n.state = 'seated'; waiting[i] = n; }
+    }
+    waiting.length = want.length;
+  }
+  function enter(opts, cb) {
+    let f;
+    if (mode === 'manager' && waiting[0] && waiting[0].name === opts.name) {
+      f = waiting.shift();
+      waiting.forEach((w, i) => { const [x, z] = LOUNGE[i]; walkTo(w, [[x, 4.3], [x, z]], () => sitDown(w, Math.PI)); });
+    } else { f = person(opts.name, opts.plus); f.root.position.set(3.2, 0, 6.2); }
+    client = f; f.mood = 1;
+    if (mode === 'client') { f.root.visible = false; setTimeout(cb, 300); return; }
+    const p = f.root.position;
+    walkTo(f, [[p.x, 4.1], [2.3, 4.0], [2.3, 2.6], [.9, 2.0], [0, 1.95], [0, 1.45]], () => sitDown(f, Math.PI, cb));
+  }
+  function leave(mood, cb) {
+    const f = client; client = null; focus = 0;
+    if (!f || mode === 'client') { if (f) f.dispose(); setTimeout(cb, 300); return; }
+    f.speak = false;
+    walkTo(f, [[0, 1.95], [1.2, 2.2], [2.3, 2.7], [2.3, 3.9], [3.4, 6.0]], () => { f.dispose(); cb && cb(); });
+  }
+  function setMode(m) {
+    mode = m;
+    if (m === 'client') {
+      if (!manager) manager = person('Менеджер', false);
+      manager.root.visible = true; manager.root.position.set(0, 0, -.28); manager.root.rotation.y = 0; manager.sitAmt = 1; manager.state = 'seated';
+      setQueue([]);
+    } else if (manager) manager.root.visible = false;
+  }
+  function reset() { if (client) { client.dispose(); client = null; } setQueue([]); ring.visible = false; focus = 0; }
+
+  window.KLUB_STAGE({
+    setMode, setQueue, enter, leave, reset,
+    speak(on) { const f = mode === 'client' ? manager : client; if (f) f.speak = on; focus = on ? 1 : 0; },
+    patience(p) { if (client) client.mood = p; },
+    plus(on) { ring.visible = on && mode === 'manager'; },
+    phone(on) { phoneMat.emissive.setHex(on ? 0xd6aa6c : 0x000000); },
+    react(k) { const f = mode === 'client' ? manager : client; if (f) { f.reactT = 1; f.reactK = k; } },
+    pause(p) { paused = p; },
+  });
+
+  /* ---------- camera & loop ---------- */
+  const CAM = {
+    manager: { pos: new THREE.Vector3(0, 1.5, -1.45), look: new THREE.Vector3(0, .98, 1.9) },
+    client: { pos: new THREE.Vector3(0, 1.2, 1.5), look: new THREE.Vector3(0, 1.05, -.4) },
+    close: { pos: new THREE.Vector3(.18, 1.36, -.2), look: new THREE.Vector3(0, 1.2, 1.4) },
+    closeWide: { pos: new THREE.Vector3(.12, 1.42, -.75), look: new THREE.Vector3(0, 1.12, 1.5) },
+    clientClose: { pos: new THREE.Vector3(-.1, 1.22, 1.15), look: new THREE.Vector3(0, 1.18, -.3) },
+  };
+  let focusS = 0, baseFov = 50;
+  const tmpP = new THREE.Vector3(), tmpL = new THREE.Vector3();
+  const camPos = CAM.manager.pos.clone(), camLook = CAM.manager.look.clone();
+  function resize() {
+    const w = view.clientWidth, h = view.clientHeight; if (!w || !h) return;
+    renderer.setSize(w, h, false); camera.aspect = w / h;
+    // keep the client framed on narrow, short viewports
+    baseFov = camera.aspect < .8 ? 58 : camera.aspect < 1.2 ? 50 : 42;
+    camera.fov = baseFov; camera.updateProjectionMatrix();
+  }
+  new ResizeObserver(resize).observe(view); resize();
+  const clock = new THREE.Clock();
+  let t = 0;
+  const SPEED = /[?&]fast\b/.test(location.search) ? 6 : 1;
+  renderer.setAnimationLoop(() => {
+    const dt = Math.min(.05, clock.getDelta()) * SPEED;
+    if (!paused) t += dt;
+    focusS += (focus - focusS) * (1 - Math.pow(.15, dt));
+    const a = CAM[mode], b = CAM[mode === 'client' ? 'clientClose' : camera.aspect > 1.3 ? 'closeWide' : 'close'];
+    tmpP.lerpVectors(a.pos, b.pos, focusS); tmpL.lerpVectors(a.look, b.look, focusS);
+    camPos.lerp(tmpP, 1 - Math.pow(.03, dt)); camLook.lerp(tmpL, 1 - Math.pow(.03, dt));
+    const fv = baseFov * (1 - focusS * (camera.aspect > 1.3 ? .06 : .3)); if (Math.abs(camera.fov - fv) > .01) { camera.fov = fv; camera.updateProjectionMatrix(); }
+    camera.position.set(camPos.x + Math.sin(t * .35) * .02, camPos.y + Math.sin(t * .5) * .01, camPos.z);
+    camera.lookAt(camLook);
+    if (!paused) {
+      for (const f of [...waiting, client, manager]) if (f && f.root.visible !== false) {
+        stepFigure(f, dt); pose(f, dt, t);
+        if (f.reactT > 0) { f.reactT -= dt * 1.5; f.head.rotation.y = f.reactK === 'good' ? 0 : Math.sin(t * 14) * .25 * f.reactT; f.head.rotation.x = f.reactK === 'good' ? Math.sin(t * 10) * .15 * f.reactT : 0; }
+      }
+      spheres.forEach(o => { o.s.position.y = o.y + Math.sin(t * .6 + o.p) * .08; o.s.rotation.y += dt * .1; });
+      ring.rotation.y += dt * 1.2; ring.rotation.x = Math.sin(t) * .3; ring.position.y = 1.5 + Math.sin(t * 1.4) * .03;
+      const ringOn = phoneMat.emissive.getHex() !== 0; if (ringOn) phoneMat.emissiveIntensity = .6 + Math.sin(t * 20) * .4;
+      pendant.intensity = 5 + Math.sin(t * 1.3) * .15;
+    }
+    renderer.render(scene, camera);
+  });
+  window.KLUB3D = { scene, renderer, camera };
+}
+</script>
+</body>
+</html>
