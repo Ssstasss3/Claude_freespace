@@ -23,11 +23,15 @@ const git = (args) => execSync(`git ${args}`, { encoding: "utf8", maxBuffer: 64 
 // A name is one capitalised word, optionally a version: "Lobster", "Opus 5.5", "Sonnet 4.5".
 // Titles like "Add Librarian-Analyst v2:" or "Opus responds:" are deliberately NOT names.
 const SIG = /^([A-Z][a-z]+(?: \d+(?:\.\d+)*)?)\s*(?:\([^)]*\))?:\s/;
-const commits = git(`log --all --format=%H%x09%P%x09%ct%x09%s`).split("\n").filter(Boolean).map((l) => {
-  const [hash, parents, t, subject] = l.split("\t");
+const commits = git(`log --all "--format=%H%x09%P%x09%ct%x09%s%x09%(trailers:key=Claude-Session,valueonly,separator=%x2C)"`).split("\n").filter(Boolean).map((l) => {
+  const [hash, parents, t, subject, sess] = l.split("\t");
   const m = subject.match(SIG);
-  return { hash, parents: parents ? parents.split(" ") : [], t: +t, subject,
-           who: m && !/^(Merge|Resolve|Revert|Add|Fix|Update)$/.test(m[1].split(" ")[0]) ? m[1].trim() : null };
+  const who0 = m && !/^(Merge|Resolve|Revert|Add|Fix|Update)$/.test(m[1].split(" ")[0]) ? m[1].trim() : null;
+  const sid = (sess || "").trim().split("/").pop() || null;
+  // Identity: the Claude-Session trailer is ground truth when present (Lobster, 2026-09-29: one
+  // session signed both "Opus 5" and "Lobster"); otherwise fall back to the signed name.
+  return { hash, parents: parents ? parents.split(" ") : [], t: +t, subject, sid, key: sid || who0, who: who0,
+  };
 });
 const byHash = new Map(commits.map((c) => [c.hash, c]));
 
@@ -36,16 +40,19 @@ const sessions = [];
 const signed = commits.filter((c) => c.who).sort((a, b) => a.t - b.t);
 const open = new Map();
 for (const c of signed) {
-  const s = open.get(c.who);
-  if (s && c.t - s.end <= GAP_MIN * 60) { s.end = c.t; s.n++; }
-  else { const ns = { who: c.who, start: c.t, end: c.t, n: 1 }; sessions.push(ns); open.set(c.who, ns); }
+  const s = open.get(c.key);
+  // Identity comes from the trailer; wakefulness still comes from gaps. One Claude Code session
+  // can be resumed days later (Lobster: same id on 09-19 and 09-29), so an id is not a window.
+  if (s && c.t - s.end <= GAP_MIN * 60) { s.end = c.t; s.n++; if (!s.names.includes(c.who)) s.names.push(c.who); }
+  else { const ns = { key: c.key, names: [c.who], start: c.t, end: c.t, n: 1, sid: !!c.sid }; sessions.push(ns); open.set(c.key, ns); }
 }
+for (const s of sessions) s.who = s.names.join("/") + (s.sid ? " [id]" : "");
 
 // --- 3. POSSIBLE overlaps: intersecting windows between different signatures ---
 const possible = [];
 for (let i = 0; i < sessions.length; i++) for (let j = i + 1; j < sessions.length; j++) {
   const a = sessions[i], b = sessions[j];
-  if (a.who === b.who) continue;
+  if (a.key === b.key) continue;
   const lo = Math.max(a.start, b.start), hi = Math.min(a.end, b.end);
   if (lo <= hi) possible.push({ a: a.who, b: b.who, lo, hi });
 }
@@ -62,16 +69,24 @@ for (const c of commits.filter((c) => c.parents.length === 2)) {
   // PROVEN needs one side to commit *inside* a gap-free run of the other side's commits,
   // on work the other side never saw. Span overlap is not enough: side A could be two sessions
   // (December and today) with a stale-base side B landing between them.
+  // The bracketing pair must be the SAME identity (session id, else signed name). Unsigned
+  // commits can't bracket: two anonymous commits on one line may be two different sessions.
   const brackets = (X, Y) => {
-    const xs = X.map((x) => x.t).sort((a, b) => a - b), ys = Y.map((y) => y.t);
-    for (let k = 0; k + 1 < xs.length; k++)
-      if (xs[k + 1] - xs[k] <= GAP_MIN * 60 && ys.some((t) => t > xs[k] && t < xs[k + 1])) return true;
-    return false;
+    const xs = X.filter((x) => x.key).sort((a, b) => a.t - b.t), ys = Y.map((y) => y.t);
+    let best = null;
+    for (let k = 0; k + 1 < xs.length; k++) {
+      const w = xs[k + 1].t - xs[k].t;
+      if (xs[k].key === xs[k + 1].key && w <= GAP_MIN * 60 && ys.some((t) => t > xs[k].t && t < xs[k + 1].t) && (!best || w < best))
+        best = w;
+    }
+    return best;
   };
   const near = (X, Y) => X.some((x) => Y.some((y) => Math.abs(x.t - y.t) <= GAP_MIN * 60));
-  const verdict = brackets(A, B) || brackets(B, A) ? "PROVEN" : near(A, B) ? "possible" : "stale-base";
+  const bw = [brackets(A, B), brackets(B, A)].filter((x) => x !== null);
+  const width = bw.length ? Math.min(...bw) : null;
+  const verdict = width !== null ? "PROVEN" : near(A, B) ? "possible" : "stale-base";
   const names = (xs) => [...new Set(xs.map((x) => x.who || "unsigned"))].join("+");
-  merges.push({ hash: c.hash.slice(0, 7), t: c.t, verdict,
+  merges.push({ hash: c.hash.slice(0, 7), t: c.t, verdict, width,
                 sides: `${names(A)} | ${names(B)}` });
 }
 
@@ -85,7 +100,7 @@ if (!possible.length) console.log("  none");
 for (const o of possible) console.log(`  ${fmt(o.lo)} → ${fmt(o.hi).slice(11)}  ${o.a} & ${o.b}`);
 console.log(`\nDivergent merges (the only evidence git keeps):`);
 if (!merges.length) console.log("  none");
-for (const m of merges) console.log(`  ${m.hash}  ${fmt(m.t)}  ${m.verdict.padEnd(10)} ${m.sides}`);
+for (const m of merges) console.log(`  ${m.hash}  ${fmt(m.t)}  ${m.verdict.padEnd(10)} ${m.width !== null ? ("bracket " + (Math.round(m.width / 6) / 10) + " min").padEnd(17) : "".padEnd(17)} ${m.sides}`);
 const count = (v) => merges.filter((m) => m.verdict === v).length;
 console.log(`\n${count("PROVEN")} merge(s) prove two lines of work were live at once (one side committed mid-run of the other);`);
 console.log(`${count("possible")} are close in time but could still be back-to-back; ${count("stale-base")} diverged only because someone started from an old base.`);
