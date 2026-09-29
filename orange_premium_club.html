@@ -1,0 +1,1519 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Orange Premium Club</title>
+<meta name="description" content="Неофициальный анимационный фан-ролик о премиальной программе Orange Premium Club банка ПСБ.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@300;500;700;900&family=Manrope:wght@300;400;600;800&display=swap" rel="stylesheet">
+<style>
+@property --ang { syntax: '<angle>'; initial-value: 0deg; inherits: false; }
+
+:root {
+  --ink: #0b0a0a;
+  --graphite: #2c2927;
+  --graphite-2: #3a3634;
+  --copper: #c9825a;
+  --copper-2: #e2a47c;
+  --gold: #d6aa6c;
+  --gold-2: #f1d3a2;
+  --orange: #ff7a1a;
+  --marble: #f2efeb;
+  --cream: #fbf5ee;
+  --muted: rgba(251, 245, 238, .68);
+  --faint: rgba(251, 245, 238, .40);
+  --line: rgba(214, 170, 108, .24);
+  --display: 'Unbounded', 'Arial Black', system-ui, sans-serif;
+  --text: 'Manrope', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --ease: cubic-bezier(.16, 1, .3, 1);
+  --pulse: 0;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  height: 100%;
+  background: var(--ink);
+  color: var(--cream);
+  overflow: hidden;
+  font-family: var(--text);
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+
+#bg, #fx { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+#fx { pointer-events: none; }
+#stage { position: fixed; inset: 0; pointer-events: none; }
+#stage button { pointer-events: auto; }
+
+/* ---------- scenes ---------- */
+.scene {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  padding: max(16px, 7vmin) max(16px, 7vmin) max(76px, 11vmin);
+  visibility: hidden;
+}
+.scene.on { visibility: visible; }
+.scene:not(.on) * { animation: none !important; }
+.scene.out { animation: sceneOut .62s cubic-bezier(.7, 0, .84, 0) forwards; }
+@keyframes sceneOut { to { opacity: 0; filter: blur(16px); transform: scale(1.05); } }
+
+.paused .scene, .paused .scene *, .paused #chrome * { animation-play-state: paused !important; }
+
+/* ---------- type ---------- */
+.over {
+  font-weight: 600; text-transform: uppercase;
+  letter-spacing: .34em; font-size: clamp(10px, 1.55vmin, 15px);
+  color: var(--gold);
+  display: flex; align-items: center; gap: 1em;
+}
+.over::before { content: ""; width: 3.2em; height: 1px; background: currentColor; opacity: .7; }
+.center .over { justify-content: center; }
+.center .over::after { content: ""; width: 3.2em; height: 1px; background: currentColor; opacity: .7; }
+
+.h2 {
+  font-family: var(--display); font-weight: 700;
+  font-size: clamp(28px, 6.6vmin, 92px);
+  line-height: 1.02; letter-spacing: -.02em;
+  margin: .42em 0 .32em;
+}
+.h2.small { font-size: clamp(24px, 5.2vmin, 70px); }
+.body {
+  font-size: clamp(15px, 2.35vmin, 25px);
+  line-height: 1.5; color: var(--muted);
+  max-width: 34ch; font-weight: 400;
+}
+.mega {
+  font-family: var(--display); font-weight: 900;
+  font-size: clamp(46px, 14.5vmin, 210px);
+  line-height: .9; letter-spacing: -.03em;
+  text-shadow: 0 0 60px rgba(201, 130, 90, .35);
+}
+.sub-mega {
+  font-family: var(--display); font-weight: 300;
+  font-size: clamp(13px, 3.1vmin, 40px);
+  letter-spacing: .62em; margin-right: -.62em;
+  color: var(--gold-2); margin-top: .9em;
+}
+.tag {
+  margin-top: 1.6em;
+  font-size: clamp(15px, 2.5vmin, 28px);
+  color: var(--muted); font-weight: 300; letter-spacing: .02em;
+}
+.gold-txt { color: var(--gold); }
+
+/* split text */
+.split .w { display: inline-block; white-space: nowrap; }
+.split .c {
+  display: inline-block; opacity: 0;
+  transform-origin: 50% 90%;
+  animation: charIn 1.05s var(--ease) both;
+  animation-delay: calc(var(--d, 0s) + var(--i) * 30ms);
+}
+@keyframes charIn {
+  from { opacity: 0; transform: perspective(500px) translateY(.55em) rotateX(-78deg); filter: blur(10px); }
+  to   { opacity: 1; transform: none; filter: blur(0); }
+}
+.fu { animation: fadeUp 1.15s var(--ease) both; animation-delay: var(--d, 0s); }
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(26px); filter: blur(8px); }
+  to   { opacity: 1; transform: none; filter: blur(0); }
+}
+.fi { animation: fadeIn 1.4s ease both; animation-delay: var(--d, 0s); }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+.draw path, .draw circle, .draw line, .draw polyline {
+  stroke-dasharray: 1; stroke-dashoffset: 1;
+  animation: draw 1.8s var(--ease) forwards;
+  animation-delay: var(--d, 0s);
+}
+@keyframes draw { to { stroke-dashoffset: 0; } }
+
+/* ---------- layout ---------- */
+.grid {
+  display: grid; grid-template-columns: 1.08fr 1fr;
+  gap: 6vmin; align-items: center;
+  width: min(1240px, 100%);
+}
+.vis { position: relative; display: grid; place-items: center; min-height: 40vmin; }
+.center { text-align: center; display: flex; flex-direction: column; align-items: center; }
+.ghost {
+  position: absolute; font-family: var(--display); font-weight: 900;
+  font-size: 46vmin; line-height: 1; color: transparent;
+  -webkit-text-stroke: 1px rgba(214, 170, 108, .14);
+  right: -4vmin; top: 50%; transform: translateY(-50%);
+  pointer-events: none; user-select: none;
+  animation: ghostDrift 9s ease-out both;
+}
+@keyframes ghostDrift {
+  from { opacity: 0; transform: translate(6vmin, -50%) scale(.92); }
+  to   { opacity: 1; transform: translate(0, -50%) scale(1); }
+}
+
+@media (max-aspect-ratio: 1/1) {
+  .grid { grid-template-columns: 1fr; gap: 3vmin; }
+  .vis { min-height: 34vmin; }
+  .ghost { font-size: 60vmin; top: 30%; }
+}
+
+/* ---------- intro / finale ---------- */
+.sun-slot { width: 30vmin; height: 30vmin; margin-bottom: 2vmin; }
+.sun-slot.rise { animation: sunRise 6.5s cubic-bezier(.22, .9, .25, 1) both; }
+@keyframes sunRise { from { transform: translateY(42vh); } to { transform: none; } }
+.mega .c:first-child { color: var(--gold-2); }
+
+/* ---------- card ---------- */
+.card3d { perspective: 1400px; width: min(88vw, 60vmin); }
+.card-rig {
+  transform-style: preserve-3d;
+  animation: cardIn 2.4s var(--ease) both, cardFloat 7s ease-in-out 2.4s infinite alternate;
+}
+@keyframes cardIn {
+  from { opacity: 0; transform: translateZ(-900px) rotateY(-80deg) rotateX(24deg) rotateZ(-10deg); }
+  to   { opacity: 1; transform: rotateY(-16deg) rotateX(9deg) rotateZ(-2deg); }
+}
+@keyframes cardFloat {
+  from { transform: rotateY(-16deg) rotateX(9deg) rotateZ(-2deg); }
+  to   { transform: rotateY(14deg) rotateX(-5deg) rotateZ(2deg) translateY(-1.5vmin); }
+}
+.card {
+  position: relative; aspect-ratio: 1.586; border-radius: 4.2% / 6.6%;
+  overflow: hidden;
+  background:
+    radial-gradient(120% 90% at 85% 10%, rgba(255, 225, 190, .55), transparent 55%),
+    radial-gradient(90% 120% at 10% 100%, rgba(120, 50, 20, .55), transparent 60%),
+    linear-gradient(135deg, #e4ad88 0%, #c9825a 38%, #9c5634 72%, #c98a62 100%);
+  box-shadow:
+    0 50px 120px -30px rgba(0, 0, 0, .8),
+    0 0 90px -20px rgba(201, 130, 90, .7),
+    inset 0 0 0 1px rgba(255, 230, 200, .35);
+  color: #2a1a12;
+}
+.card.plus {
+  background:
+    radial-gradient(110% 90% at 80% 0%, rgba(214, 170, 108, .28), transparent 55%),
+    linear-gradient(140deg, #4a4642 0%, #2d2a27 45%, #1b1917 100%);
+  color: var(--gold-2);
+  box-shadow: 0 50px 120px -30px rgba(0, 0, 0, .85), 0 0 80px -24px rgba(214, 170, 108, .6), inset 0 0 0 1px rgba(214, 170, 108, .4);
+}
+.card::after {
+  content: ""; position: absolute; inset: -40%;
+  background: linear-gradient(105deg, transparent 38%, rgba(255, 255, 255, .5) 48%, rgba(255, 255, 255, .06) 54%, transparent 62%);
+  mix-blend-mode: soft-light;
+  animation: sheen 4.6s ease-in-out 1.4s infinite;
+  transform: translateX(-60%);
+}
+@keyframes sheen { 0% { transform: translateX(-60%); } 55%, 100% { transform: translateX(60%); } }
+.card .brush {
+  position: absolute; inset: 0; opacity: .22; mix-blend-mode: overlay;
+  background: repeating-linear-gradient(90deg, rgba(255,255,255,.18) 0 1px, transparent 1px 3px);
+}
+.card .chip {
+  position: absolute; left: 8%; top: 36%; width: 12%; aspect-ratio: 1.3; border-radius: 16%;
+  background: linear-gradient(135deg, #f7e1b5, #b98d4c 55%, #f3d49b);
+  box-shadow: inset 0 0 0 1px rgba(80, 50, 10, .35);
+}
+.card .chip::before, .card .chip::after {
+  content: ""; position: absolute; left: 0; right: 0; top: 33%; height: 1px; background: rgba(80, 50, 10, .35);
+}
+.card .chip::after { top: 66%; }
+.card .nfc { position: absolute; left: 23%; top: 38%; width: 6%; opacity: .6; }
+.card .cname {
+  position: absolute; left: 8%; top: 9%;
+  font-family: var(--display); font-weight: 700; font-size: clamp(9px, 2.3vmin, 22px);
+  letter-spacing: .06em; line-height: 1.15;
+}
+.card .cname span { display: block; font-weight: 300; font-size: .62em; letter-spacing: .38em; margin-top: .3em; opacity: .8; }
+.card .pan {
+  position: absolute; left: 8%; bottom: 17%;
+  font-family: var(--text); font-weight: 600; font-size: clamp(9px, 2.2vmin, 21px); letter-spacing: .16em; opacity: .85;
+}
+.card .holder {
+  position: absolute; left: 8%; bottom: 8%; font-size: clamp(7px, 1.3vmin, 13px); letter-spacing: .28em; opacity: .65; font-weight: 600;
+}
+.card .sphere {
+  position: absolute; right: 7%; bottom: 10%; width: 17%; aspect-ratio: 1; border-radius: 50%;
+  background: radial-gradient(circle at 34% 30%, #fff 0%, #f0ebe5 28%, #b9b2aa 70%, #6f6962 100%);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, .35);
+}
+.card.plus .sphere { background: radial-gradient(circle at 34% 30%, #fff4dc 0%, #e7c48a 30%, #a87a3c 72%, #5a3f1c 100%); }
+
+/* ---------- chips / orbit ---------- */
+.ring-wrap { position: relative; width: min(74vw, 46vmin); aspect-ratio: 1; display: grid; place-items: center; }
+.ring-svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.spin { animation: spin 38s linear infinite; transform-origin: 50% 50%; }
+.spin-rev { animation: spin 26s linear infinite reverse; transform-origin: 50% 50%; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.chip-t {
+  position: absolute; white-space: nowrap;
+  font-size: clamp(11px, 1.8vmin, 17px); font-weight: 600; letter-spacing: .04em;
+  padding: .55em 1.05em; border-radius: 999px;
+  background: rgba(44, 41, 39, .72); border: 1px solid var(--line);
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  color: var(--cream);
+}
+.orbit { position: absolute; inset: 0; animation: spin 44s linear infinite; }
+.orbit .slot { position: absolute; left: 50%; top: 50%; width: 0; height: 0; }
+.orbit .chip-t { transform: translate(-50%, -50%); }
+.orbit .cr { animation: spin 44s linear infinite reverse; }
+.center-num {
+  font-family: var(--display); font-weight: 900; font-size: clamp(34px, 10vmin, 120px);
+  letter-spacing: -.03em; line-height: 1;
+  background: linear-gradient(180deg, var(--gold-2), var(--copper));
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 0 calc(10px + var(--pulse) * 26px) rgba(214, 170, 108, .45));
+}
+.ic { width: 34%; height: auto; overflow: visible; }
+.ic * { fill: none; stroke: var(--gold-2); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+
+/* ---------- counters ---------- */
+.big-num {
+  font-family: var(--display); font-weight: 900;
+  font-size: clamp(64px, 21vmin, 280px); line-height: .9; letter-spacing: -.05em;
+  background: linear-gradient(180deg, #fff3e2 0%, var(--gold-2) 30%, var(--copper) 85%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 0 calc(12px + var(--pulse) * 30px) rgba(201, 130, 90, .5));
+  white-space: nowrap;
+}
+.big-num small { font-size: .32em; letter-spacing: 0; font-weight: 500; margin-right: .18em; vertical-align: .9em; }
+.big-cap { font-size: clamp(14px, 2.3vmin, 24px); color: var(--muted); margin-top: .5em; }
+.inf-row {
+  margin-top: 2.8vmin; display: inline-flex; align-items: center; gap: .8em;
+  padding: .7em 1.3em; border-radius: 999px; border: 1px solid var(--line);
+  background: rgba(44, 41, 39, .55); font-size: clamp(13px, 2vmin, 20px);
+}
+.inf-row b { font-family: var(--display); color: var(--gold-2); font-size: 1.35em; }
+
+.cash { display: flex; align-items: flex-end; justify-content: center; gap: 5vmin; margin-top: 3vmin; flex-wrap: wrap; }
+.cash .col { text-align: center; }
+.cash .big-num { font-size: clamp(40px, 11.5vmin, 160px); letter-spacing: -.04em; }
+.cash .big-cap { line-height: 1.45; }
+.cash .or { width: 1px; height: 14vmin; background: linear-gradient(transparent, var(--gold), transparent); padding: 0 !important; }
+@media (max-aspect-ratio: 1/1) { .cash .or { width: 30vmin; height: 1px; background: linear-gradient(90deg, transparent, var(--gold), transparent); } }
+.cash .or-old {
+  font-family: var(--display); font-weight: 300; font-size: clamp(14px, 2.6vmin, 30px); color: var(--faint);
+  align-self: center; padding: 0 1vmin;
+}
+
+/* ---------- tiles ---------- */
+.tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 3vmin; width: min(1100px, 100%); margin-top: 3vmin; }
+.tile {
+  position: relative; text-align: left; border-radius: 26px; padding: clamp(18px, 3.6vmin, 44px);
+  background: linear-gradient(160deg, rgba(58, 54, 52, .78), rgba(26, 24, 23, .78));
+  border: 1px solid var(--line);
+  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  overflow: hidden;
+}
+.tile .ic { width: clamp(44px, 9vmin, 96px); display: block; margin-bottom: 2.4vmin; }
+.tile .val { font-family: var(--display); font-weight: 800; font-size: clamp(26px, 6.2vmin, 80px); letter-spacing: -.03em; line-height: 1; color: var(--gold-2); }
+.tile .lbl { margin-top: .7em; color: var(--muted); font-size: clamp(13px, 2vmin, 21px); line-height: 1.45; }
+.badge {
+  position: absolute; top: clamp(14px, 2.6vmin, 30px); right: clamp(14px, 2.6vmin, 30px);
+  font-family: var(--display); font-weight: 500; font-size: clamp(10px, 1.5vmin, 15px);
+  padding: .5em .9em; border-radius: 999px; color: #1b1411;
+  background: linear-gradient(135deg, var(--gold-2), var(--gold));
+}
+
+/* ---------- tiers ---------- */
+.tiers { display: grid; grid-template-columns: 1fr 1fr; gap: 3vmin; width: min(1120px, 100%); margin-top: 3.4vmin; }
+.tier {
+  position: relative; border-radius: 26px; padding: clamp(18px, 3.4vmin, 42px);
+  background: linear-gradient(160deg, rgba(201, 130, 90, .20), rgba(36, 32, 30, .72) 45%, rgba(20, 18, 17, .8));
+  border: 1px solid rgba(226, 164, 124, .3);
+  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+}
+.tier.plus { background: linear-gradient(160deg, rgba(214, 170, 108, .16), rgba(44, 41, 39, .82) 45%, rgba(18, 17, 16, .9)); border-color: transparent; }
+.tier.plus::before {
+  content: ""; position: absolute; inset: -1px; border-radius: inherit; padding: 1.5px;
+  background: conic-gradient(from var(--ang), rgba(214,170,108,.15) 0 55%, var(--gold-2) 70%, var(--copper) 80%, rgba(214,170,108,.15) 95%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor; mask-composite: exclude;
+  animation: spinAng 4.5s linear infinite;
+  pointer-events: none;
+}
+@keyframes spinAng { to { --ang: 360deg; } }
+.tier-name { font-family: var(--display); font-weight: 700; font-size: clamp(16px, 2.9vmin, 34px); line-height: 1.1; }
+.tier-name .p { color: var(--gold); }
+.tier-kicker { font-size: clamp(10px, 1.45vmin, 14px); letter-spacing: .3em; text-transform: uppercase; color: var(--copper-2); margin-bottom: 1.2vmin; font-weight: 600; }
+.tier.plus .tier-kicker { color: var(--gold); }
+.tier ul { list-style: none; margin-top: 2.4vmin; display: grid; gap: 1.5vmin; }
+.tier li {
+  display: grid; grid-template-columns: clamp(92px, 15vmin, 170px) 1fr; align-items: baseline; gap: 1.4vmin;
+  font-size: clamp(13px, 1.95vmin, 20px); color: var(--muted); line-height: 1.35;
+  padding-top: 1.5vmin; border-top: 1px solid rgba(251, 245, 238, .08);
+}
+.tier li b { font-family: var(--display); font-weight: 700; color: var(--cream); font-size: 1.15em; white-space: nowrap; }
+.tier.plus li b { color: var(--gold-2); }
+
+/* ---------- terms ---------- */
+.terms { display: grid; grid-template-columns: 1fr 1fr; gap: 3vmin; width: min(1120px, 100%); margin-top: 3vmin; }
+.term { padding: clamp(18px, 3.2vmin, 40px); border-radius: 26px; border: 1px solid var(--line); background: rgba(30, 28, 27, .6); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+.term .tier-kicker { margin-bottom: .6vmin; }
+.term .big-num { font-size: clamp(50px, 13vmin, 170px); }
+.term .big-num .u { font-size: .34em; letter-spacing: 0; font-weight: 600; margin-left: .15em; }
+.term p { color: var(--muted); font-size: clamp(13px, 1.95vmin, 20px); line-height: 1.45; margin-top: 1.2vmin; }
+.term .alt { margin-top: 2vmin; padding-top: 2vmin; border-top: 1px dashed rgba(251, 245, 238, .14); color: var(--cream); }
+.term .alt i { font-style: normal; color: var(--gold); font-weight: 600; margin-right: .4em; }
+.pill-free {
+  display: inline-flex; align-items: center; gap: .7em; margin-top: 2.2vmin;
+  padding: .65em 1.3em; border-radius: 999px; font-weight: 600; font-size: clamp(12px, 1.9vmin, 19px);
+  background: linear-gradient(135deg, rgba(214,170,108,.22), rgba(201,130,90,.12)); border: 1px solid var(--line);
+}
+.pill-free::before { content: ""; width: .55em; height: .55em; border-radius: 50%; background: var(--gold-2); box-shadow: 0 0 12px var(--gold); }
+.foot { margin-top: 2.4vmin; color: var(--faint); font-size: clamp(10px, 1.45vmin, 14px); max-width: 80ch; line-height: 1.5; }
+
+@media (max-aspect-ratio: 1/1) {
+  .tiles, .tiers, .terms { grid-template-columns: 1fr; gap: 2.4vmin; }
+  .tier li { padding-top: 1.1vmin; }
+}
+
+/* ---------- finale ---------- */
+.disc { margin-top: 3.2vmin; color: var(--faint); font-size: clamp(10px, 1.4vmin, 13px); max-width: 70ch; line-height: 1.55; }
+.replay {
+  margin-top: 3vmin; opacity: 0; pointer-events: none; transform: translateY(10px);
+  transition: opacity .6s var(--ease), transform .6s var(--ease);
+  padding: .9em 1.8em; border-radius: 999px; font-weight: 600; font-size: clamp(13px, 1.9vmin, 17px);
+  border: 1px solid var(--gold); color: var(--gold-2); background: rgba(44, 41, 39, .5);
+}
+.ended .replay { opacity: 1; pointer-events: auto; transform: none; }
+.replay:hover { background: rgba(214, 170, 108, .16); }
+
+/* ---------- chrome ---------- */
+#chrome {
+  position: fixed; left: 0; right: 0; top: 0; display: flex; justify-content: space-between; align-items: center;
+  padding: max(14px, 3vmin) max(16px, 4vmin); pointer-events: none;
+  font-size: clamp(9px, 1.3vmin, 13px); letter-spacing: .26em; text-transform: uppercase; font-weight: 600;
+  color: var(--faint); opacity: 0; transition: opacity 1s ease;
+}
+#chrome.show { opacity: 1; }
+#chrome .mark { display: flex; align-items: center; gap: .9em; }
+#chrome .dot { width: .9em; height: .9em; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #fff1dc, var(--copper) 60%, #6b3a20); box-shadow: 0 0 calc(6px + var(--pulse) * 14px) var(--copper); }
+#chap { color: var(--gold); white-space: nowrap; }
+#chrome .short { display: none; }
+@media (max-width: 560px) { #chrome { letter-spacing: .18em; } #chrome .long { display: none; } #chrome .short { display: inline; } }
+#chap.flip { animation: chapIn .9s var(--ease) both; }
+@keyframes chapIn { from { opacity: 0; transform: translateY(-8px); letter-spacing: .5em; } to { opacity: 1; transform: none; } }
+
+/* ---------- HUD ---------- */
+#hud {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 5;
+  display: flex; align-items: center; gap: clamp(8px, 1.6vmin, 16px);
+  padding: 22px max(16px, 3vmin) max(14px, env(safe-area-inset-bottom));
+  background: linear-gradient(0deg, rgba(11, 10, 10, .85), transparent);
+  transition: opacity .5s ease, transform .5s ease;
+  opacity: 0; transform: translateY(10px); pointer-events: none;
+}
+body.started #hud { opacity: 1; transform: none; pointer-events: auto; }
+body.started.idle:not(.paused):not(.ended) #hud { opacity: 0; transform: translateY(10px); }
+body.idle:not(.paused):not(.ended) { cursor: none; }
+.hb {
+  width: 40px; height: 40px; flex: none; display: grid; place-items: center; border-radius: 50%;
+  color: var(--cream); transition: background .2s;
+}
+.hb:hover { background: rgba(251, 245, 238, .1); }
+.hb svg { width: 20px; height: 20px; fill: currentColor; }
+#track { position: relative; flex: 1; height: 26px; display: flex; align-items: center; cursor: pointer; min-width: 60px; }
+#segs { position: absolute; left: 0; right: 0; height: 4px; display: flex; gap: 3px; }
+#segs .sg { position: relative; height: 100%; border-radius: 2px; background: rgba(251, 245, 238, .16); overflow: hidden; }
+#segs .sg i { position: absolute; inset: 0; transform-origin: 0 50%; transform: scaleX(0); background: linear-gradient(90deg, var(--copper), var(--gold-2)); }
+#segs .sg:hover { background: rgba(251, 245, 238, .3); }
+#tip {
+  position: absolute; bottom: 26px; transform: translateX(-50%); white-space: nowrap;
+  padding: .4em .8em; border-radius: 8px; background: rgba(44, 41, 39, .95); border: 1px solid var(--line);
+  font-size: 12px; opacity: 0; transition: opacity .15s; pointer-events: none;
+}
+#track:hover #tip { opacity: 1; }
+#time { font-variant-numeric: tabular-nums; font-size: 13px; color: var(--muted); flex: none; min-width: 84px; text-align: center; }
+@media (max-width: 520px) { #time { display: none; } #bFs { display: none; } }
+
+/* ---------- start overlay ---------- */
+#start {
+  position: fixed; inset: 0; z-index: 10; display: grid; place-items: center; text-align: center;
+  padding: 16px;
+  background: radial-gradient(80% 70% at 50% 45%, rgba(11, 10, 10, .15), rgba(11, 10, 10, .75));
+  transition: opacity .9s ease, visibility .9s;
+}
+body.started #start { opacity: 0; visibility: hidden; }
+.st-title {
+  font-family: var(--display); font-weight: 900; font-size: clamp(38px, 9.5vmin, 130px);
+  line-height: .95; letter-spacing: -.03em; margin: .35em 0 .5em;
+}
+.st-title span { color: var(--gold-2); font-weight: 300; display: block; font-size: .36em; letter-spacing: .5em; margin-top: .6em; margin-right: -.5em; }
+#go {
+  position: relative; width: clamp(84px, 14vmin, 128px); aspect-ratio: 1; border-radius: 50%;
+  display: inline-grid; place-items: center;
+  background: radial-gradient(circle at 35% 30%, #ffe9cf, var(--copper-2) 35%, var(--copper) 60%, #7a3f22);
+  box-shadow: 0 20px 60px -10px rgba(201, 130, 90, .7), inset 0 -6px 18px rgba(80, 30, 10, .5);
+  transition: transform .3s var(--ease);
+}
+#go:hover { transform: scale(1.06); }
+#go svg { width: 34%; fill: #2a1508; margin-left: 8%; }
+#go .ring { position: absolute; inset: -14px; border-radius: 50%; border: 1px solid rgba(226, 164, 124, .5); animation: ringOut 2.4s ease-out infinite; }
+#go .ring:nth-child(2) { animation-delay: 1.2s; }
+@keyframes ringOut { from { transform: scale(.85); opacity: 1; } to { transform: scale(1.5); opacity: 0; } }
+.st-hint { margin-top: 2.2em; color: var(--muted); font-size: clamp(13px, 1.9vmin, 17px); }
+#goMute { margin-top: 1em; color: var(--faint); font-size: 13px; text-decoration: underline; text-underline-offset: 3px; }
+#goMute:hover { color: var(--cream); }
+
+@media (prefers-reduced-motion: reduce) {
+  .spin, .spin-rev, .orbit, .orbit .cr { animation-duration: 240s !important; }
+}
+</style>
+</head>
+<body>
+<canvas id="bg" aria-hidden="true"></canvas>
+<canvas id="fx" aria-hidden="true"></canvas>
+
+<div id="chrome" aria-hidden="true">
+  <div class="mark"><span class="dot"></span><span><span class="long">Orange Premium Club</span><span class="short">OPC</span> · фан-ролик</span></div>
+  <div id="chap"></div>
+</div>
+
+<main id="stage">
+
+  <!-- 0 · INTRO -->
+  <section class="scene" id="s-intro" data-orb="1" data-energy=".35" data-plus="0">
+    <div class="center">
+      <div class="sun-slot rise anchor"></div>
+      <div class="over fu" style="--d:1.4s">ПСБ · премиальное обслуживание</div>
+      <div class="mega split" style="--d:2.6s; margin-top:.35em">Orange</div>
+      <div class="sub-mega split" style="--d:3.8s">Premium Club</div>
+      <p class="tag fu" style="--d:6s">Клуб, в котором банк работает на вас</p>
+    </div>
+  </section>
+
+  <!-- 1 · CARD -->
+  <section class="scene" id="s-card" data-orb=".5" data-energy=".55" data-plus="0" data-chap="Знакомство">
+    <div class="grid">
+      <div class="copy">
+        <div class="over fu">Знакомство</div>
+        <h2 class="h2 split" style="--d:.3s">Не просто карта.</h2>
+        <h2 class="h2 split gold-txt" style="--d:1.3s; margin-top:0">Целый клуб.</h2>
+        <p class="body fu" style="--d:2.6s">Orange Premium Club — премиальный пакет ПСБ: банковские продукты, сервисы и&nbsp;привилегии повышенного комфорта и&nbsp;финансовой защиты.</p>
+      </div>
+      <div class="vis anchor">
+        <div class="card3d">
+          <div class="card-rig">
+            <div class="card">
+              <div class="brush"></div>
+              <div class="cname">ORANGE<span>PREMIUM CLUB</span></div>
+              <div class="chip"></div>
+              <svg class="nfc" viewBox="0 0 24 24"><path d="M7 5c3 4 3 10 0 14M11 3c4 5 4 13 0 18M15 1c5 6 5 16 0 22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+              <div class="pan">••••&nbsp; ••••&nbsp; ••••&nbsp; 2026</div>
+              <div class="holder">CLUB MEMBER</div>
+              <div class="sphere"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2 · MANAGER -->
+  <section class="scene" id="s-manager" data-orb=".38" data-energy=".6" data-plus="0" data-chap="01 — Менеджер">
+    <div class="ghost">01</div>
+    <div class="grid">
+      <div class="copy">
+        <div class="over fu">01 — Сервис</div>
+        <h2 class="h2 split" style="--d:.25s">Персональный менеджер</h2>
+        <p class="body fu" style="--d:1.5s">Ваш личный контакт в&nbsp;банке — вклады, инвестиции, любые вопросы. Плюс приоритетное обслуживание в&nbsp;офисах и&nbsp;выделенная телефонная линия. Всё&nbsp;— без&nbsp;комиссии.</p>
+      </div>
+      <div class="vis anchor">
+        <div class="ring-wrap">
+          <svg class="ring-svg" viewBox="0 0 200 200">
+            <g class="spin"><circle cx="100" cy="100" r="96" fill="none" stroke="rgba(214,170,108,.28)" stroke-width=".6" stroke-dasharray="1 5"/></g>
+            <g class="draw" style="--d:.4s"><circle cx="100" cy="100" r="78" fill="none" stroke="rgba(214,170,108,.55)" stroke-width="1" pathLength="1"/></g>
+          </svg>
+          <svg class="ic draw" viewBox="0 0 120 120" style="--d:.9s; width:42%">
+            <circle cx="60" cy="42" r="17" pathLength="1"/>
+            <path d="M24 102c4-20 18-32 36-32s32 12 36 32" pathLength="1"/>
+            <path d="M92 26c6 5 6 14 0 19M100 20c10 9 10 22 0 31" pathLength="1"/>
+          </svg>
+          <div class="chip-t fu" style="--d:1.7s; left:-4%; top:14%">Вклады</div>
+          <div class="chip-t fu" style="--d:2s; right:-6%; top:26%">Инвестиции</div>
+          <div class="chip-t fu" style="--d:2.3s; left:-8%; bottom:22%">Приоритет в&nbsp;офисе</div>
+          <div class="chip-t fu" style="--d:2.6s; right:-2%; bottom:8%">Выделенная линия</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3 · CONCIERGE -->
+  <section class="scene" id="s-concierge" data-orb=".55" data-energy=".65" data-plus="0" data-chap="02 — Консьерж">
+    <div class="ghost">02</div>
+    <div class="grid">
+      <div class="copy">
+        <div class="over fu">02 — Время</div>
+        <h2 class="h2 split" style="--d:.25s">Консьерж-сервис</h2>
+        <p class="body fu" style="--d:1.5s">Столик в ресторане, билеты, отель, подарок или досуг — просто сформулируйте задачу. Остальное — не ваша забота.</p>
+      </div>
+      <div class="vis anchor">
+        <div class="ring-wrap">
+          <svg class="ring-svg" viewBox="0 0 200 200">
+            <g class="draw" style="--d:.3s"><circle cx="100" cy="100" r="64" fill="none" stroke="rgba(214,170,108,.6)" stroke-width="1" pathLength="1"/></g>
+            <g class="spin-rev"><circle cx="100" cy="100" r="72" fill="none" stroke="rgba(214,170,108,.35)" stroke-width="3" stroke-dasharray="0.6 3.2"/></g>
+          </svg>
+          <div class="orbit">
+            <div class="slot" style="transform:rotate(0deg) translateY(-49%)"></div>
+          </div>
+          <div class="orbit" id="orbitChips"></div>
+          <div class="center fu" style="--d:.8s">
+            <svg class="ic draw" viewBox="0 0 120 120" style="--d:1s; width:clamp(34px,7vmin,70px)">
+              <path d="M26 82h68M32 82a28 28 0 0 1 56 0M60 54v-8M53 46h14M18 94h84" pathLength="1"/>
+            </svg>
+            <div class="center-num" style="margin-top:.15em">24/7</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4 · LOUNGE -->
+  <section class="scene" id="s-lounge" data-orb=".28" data-energy=".7" data-plus="0" data-chap="03 — Бизнес-залы">
+    <svg id="flightSvg" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" style="position:absolute;inset:0;width:100%;height:100%;overflow:visible">
+      <path id="flightBase" d="M-120 760 C 300 700, 520 180, 900 210 S 1450 420, 1760 90" fill="none" stroke="rgba(214,170,108,.22)" stroke-width="1.4" stroke-dasharray="3 10"/>
+      <path id="flightTrail" d="M-120 760 C 300 700, 520 180, 900 210 S 1450 420, 1760 90" fill="none" stroke="url(#trailGrad)" stroke-width="2.2" stroke-linecap="round"/>
+      <defs>
+        <linearGradient id="trailGrad" x1="0" x2="1" y1="0" y2="0">
+          <stop offset="0" stop-color="#c9825a" stop-opacity="0"/>
+          <stop offset="1" stop-color="#f1d3a2"/>
+        </linearGradient>
+      </defs>
+      <g id="plane"><path d="M22 0C22-2 17-2.6 12-2.6H3L-7-17h-5l6 14.4h-10l-4-6.4h-4l2.4 9-2.4 9h4l4-6.4h10l-6 14.4h5l10-14.4h9c5 0 10-.6 10-2.6z" fill="#fbf5ee"/></g>
+    </svg>
+    <div class="grid">
+      <div class="copy">
+        <div class="over fu">03 — Путешествия</div>
+        <h2 class="h2 split" style="--d:.25s">Бизнес-залы</h2>
+        <p class="body fu" style="--d:1.4s">Кофе и&nbsp;тишина перед рейсом вместо суеты у&nbsp;гейта.</p>
+      </div>
+      <div class="vis anchor center">
+        <div class="big-num fu" style="--d:.6s"><small>до</small><span class="count" data-to="10" data-at="0.8" data-dur="2.2">0</span></div>
+        <div class="big-cap fu" style="--d:1s">проходов в&nbsp;год в&nbsp;Orange Premium Club</div>
+        <div class="inf-row fu" style="--d:2.6s"><b>∞</b> безлимит — в&nbsp;Orange Premium Club&nbsp;+</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5 · MONEY -->
+  <section class="scene" id="s-cashback" data-orb=".7" data-energy="1" data-plus="0" data-chap="04 — Деньги">
+    <div class="ghost" style="right:auto;left:50%;transform:translate(-50%,-50%);animation:none;opacity:.8">₽</div>
+    <div class="center" style="width:100%">
+      <div class="over fu">04 — Свобода</div>
+      <h2 class="h2 split small" style="--d:.2s">Ваши деньги — без лишних комиссий</h2>
+      <div class="cash anchor">
+        <div class="col fu" style="--d:.9s">
+          <div class="big-num"><span class="count" data-to="300000" data-at="1.1" data-dur="1.8">0</span>&nbsp;₽</div>
+          <div class="big-cap">в&nbsp;день — снятие наличных<br>в&nbsp;банкоматах любых банков без&nbsp;комиссии</div>
+        </div>
+        <div class="or fu" style="--d:1.6s"></div>
+        <div class="col fu" style="--d:1.9s">
+          <div class="big-num"><span class="count" data-to="50" data-at="2.1" data-dur="1.8">0</span>&nbsp;млн&nbsp;₽</div>
+          <div class="big-cap">в&nbsp;месяц — переводы на&nbsp;свои счета<br>в&nbsp;других банках без&nbsp;комиссии</div>
+        </div>
+      </div>
+      <p class="tag fu" style="--d:3.4s">В&nbsp;Orange Premium Club&nbsp;+ — снятие без&nbsp;комиссии до&nbsp;<span class="gold-txt">1,5&nbsp;млн&nbsp;₽ в&nbsp;день</span></p>
+    </div>
+  </section>
+
+  <!-- 6 · TRAVEL -->
+  <section class="scene" id="s-travel" data-orb=".3" data-energy=".85" data-plus="1" data-chap="05 — Такси и поездки">
+    <div class="center" style="width:100%">
+      <div class="over fu">05 — В дороге</div>
+      <h2 class="h2 split small" style="--d:.2s">Такси и путешествия</h2>
+      <div class="tiles anchor">
+        <div class="tile fu" style="--d:.9s">
+          <span class="badge">OPC +</span>
+          <svg class="ic draw" viewBox="0 0 120 120" style="--d:1.1s">
+            <path d="M20 74l9-22c2-6 7-9 13-9h36c6 0 11 3 13 9l9 22" pathLength="1"/>
+            <path d="M14 74h92v16a5 5 0 0 1-5 5H19a5 5 0 0 1-5-5z" pathLength="1"/>
+            <circle cx="36" cy="95" r="8" pathLength="1"/><circle cx="84" cy="95" r="8" pathLength="1"/>
+            <path d="M50 43v-8h20v8" pathLength="1"/>
+          </svg>
+          <div class="val"><span class="count" data-to="100" data-at="1.3" data-dur="1.8">0</span>%</div>
+          <div class="lbl">кешбэк на&nbsp;такси, каршеринг и&nbsp;сервисы Golden&nbsp;Key</div>
+        </div>
+        <div class="tile fu" style="--d:1.3s">
+          <span class="badge">OPC +</span>
+          <svg class="ic draw" viewBox="0 0 120 120" style="--d:1.5s">
+            <path d="M60 14l38 14v28c0 26-17 44-38 52-21-8-38-26-38-52V28z" pathLength="1"/>
+            <path d="M42 60l12 12 24-26" pathLength="1"/>
+          </svg>
+          <div class="val">до <span class="count" data-to="300000" data-at="1.7" data-dur="2">0</span>&nbsp;€</div>
+          <div class="lbl">повышенный лимит страховки «Защита путешественника» — по&nbsp;России и&nbsp;за&nbsp;рубежом</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7 · TIERS -->
+  <section class="scene" id="s-tiers" data-orb=".16" data-energy=".45" data-plus=".5" data-chap="Уровни">
+    <div class="center" style="width:100%">
+      <div class="over fu">Два уровня</div>
+      <h2 class="h2 split small" style="--d:.2s">Выберите свой клуб</h2>
+      <div class="tiers anchor">
+        <div class="tier fu" style="--d:.9s; text-align:left">
+          <div class="tier-kicker">Уровень I</div>
+          <div class="tier-name">Orange Premium Club</div>
+          <ul>
+            <li class="fu" style="--d:1.6s"><b>1 : 1</b><span>персональный менеджер и&nbsp;выделенная линия</span></li>
+            <li class="fu" style="--d:1.9s"><b>3</b><span>дополнительные карты для&nbsp;близких — бесплатно</span></li>
+            <li class="fu" style="--d:2.2s"><b>−30%</b><span>на&nbsp;аренду банковской ячейки</span></li>
+            <li class="fu" style="--d:2.5s"><b>0 ₽</b><span>выпуск и&nbsp;перевыпуск карт</span></li>
+          </ul>
+        </div>
+        <div class="tier plus fu" style="--d:1.4s; text-align:left">
+          <div class="tier-kicker">Уровень II</div>
+          <div class="tier-name">Orange Premium Club <span class="p">+</span></div>
+          <ul>
+            <li class="fu" style="--d:2.8s"><b>∞</b><span>безлимитный доступ в&nbsp;бизнес-залы</span></li>
+            <li class="fu" style="--d:3.1s"><b>100%</b><span>кешбэк на&nbsp;такси и&nbsp;каршеринг</span></li>
+            <li class="fu" style="--d:3.4s"><b>300 000 €</b><span>повышенный страховой лимит</span></li>
+            <li class="fu" style="--d:3.7s"><b>−35%</b><span>на&nbsp;аренду ячейки и&nbsp;всё, что есть в&nbsp;OPC</span></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 8 · TERMS -->
+  <section class="scene" id="s-terms" data-orb=".3" data-energy=".7" data-plus=".3" data-chap="Условия">
+    <div class="center" style="width:100%">
+      <div class="over fu">Как получить бесплатно</div>
+      <h2 class="h2 split small" style="--d:.2s">Первый месяц — в подарок</h2>
+      <div class="terms anchor">
+        <div class="term fu" style="--d:.9s; text-align:left">
+          <div class="tier-kicker">Orange Premium Club</div>
+          <div class="big-num"><span class="count" data-to="3" data-at="1.2" data-dur="1.6">0</span><span class="u">млн ₽</span></div>
+          <p>средний баланс в&nbsp;месяц — Москва и&nbsp;МО<br>(1,5&nbsp;млн&nbsp;₽ — в&nbsp;других регионах)</p>
+          <p class="alt fu" style="--d:2.4s"><i>или</i>1&nbsp;млн&nbsp;₽ + покупки картой от&nbsp;50&nbsp;000&nbsp;₽ в&nbsp;месяц</p>
+          <p class="alt fu" style="--d:2.7s"><i>или</i>зарплата от&nbsp;300&nbsp;000&nbsp;₽ (от&nbsp;200&nbsp;000&nbsp;₽ — в&nbsp;регионах)</p>
+        </div>
+        <div class="term fu" style="--d:1.3s; text-align:left">
+          <div class="tier-kicker" style="color:var(--gold)">Orange Premium Club +</div>
+          <div class="big-num"><span class="count" data-to="10" data-at="1.6" data-dur="1.8">0</span><span class="u">млн ₽</span></div>
+          <p>средний баланс в&nbsp;месяц — Москва и&nbsp;МО<br>(7&nbsp;млн&nbsp;₽ — в&nbsp;других регионах)</p>
+          <p class="alt fu" style="--d:2.8s"><i>или</i>5&nbsp;млн&nbsp;₽ + покупки картой от&nbsp;150&nbsp;000&nbsp;₽ в&nbsp;месяц</p>
+          <p class="alt fu" style="--d:3.1s"><i>в&nbsp;зачёт</i>вклады, брокерский счёт и&nbsp;ИИС, ПИФы, страхование жизни</p>
+        </div>
+      </div>
+      <div class="pill-free fu" style="--d:3.4s">Далее — бесплатно при выполнении одного из условий</div>
+      <p class="foot fu" style="--d:3.8s">Если условия не&nbsp;выполнены — 3&nbsp;990&nbsp;₽ в&nbsp;месяц (OPC) или 10&nbsp;000&nbsp;₽ в&nbsp;месяц (OPC&nbsp;+). По&nbsp;тарифам ПСБ с&nbsp;01.07.2026; актуальные условия — на&nbsp;psbank.ru</p>
+    </div>
+  </section>
+
+  <!-- 9 · FINALE -->
+  <section class="scene" id="s-finale" data-orb="1.1" data-energy="1" data-plus=".2" data-chap="">
+    <div class="center">
+      <div class="sun-slot anchor"></div>
+      <div class="mega split" style="--d:.5s; margin-top:.35em">Orange</div>
+      <div class="sub-mega split" style="--d:1.5s">Premium Club</div>
+      <p class="tag fu" style="--d:3s">Жизнь в&nbsp;оранжевом свете.</p>
+      <p class="disc fu" style="--d:5s">Неофициальный фан-ролик. Не&nbsp;является рекламой или публичной офертой ПСБ. Сведения — из&nbsp;тарифов ПСБ по&nbsp;пакетам «Orange Premium Club» и&nbsp;«Orange Premium Club&nbsp;+» (с&nbsp;01.07.2026), сайта psbank.ru и&nbsp;открытых источников на&nbsp;сентябрь 2026&nbsp;г.; условия могут меняться.</p>
+      <button class="replay" id="replay">↺&nbsp; Смотреть снова</button>
+    </div>
+  </section>
+</main>
+
+<div id="hud">
+  <button class="hb" id="bPlay" aria-label="Пауза"><svg viewBox="0 0 24 24" id="icPlay"><path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z"/></svg></button>
+  <div id="track" aria-label="Главы"><div id="segs"></div><div id="tip"></div></div>
+  <div id="time">0:00 / 0:00</div>
+  <button class="hb" id="bMute" aria-label="Звук"><svg viewBox="0 0 24 24" id="icMute"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
+  <button class="hb" id="bFs" aria-label="На весь экран"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
+</div>
+
+<div id="start">
+  <div>
+    <div class="over" style="justify-content:center">Фан-ролик · со звуком</div>
+    <div class="st-title">Orange<span>Premium Club</span></div>
+    <button id="go" aria-label="Смотреть"><span class="ring"></span><span class="ring"></span><svg viewBox="0 0 24 24"><path d="M6 3.5v17L20 12z"/></svg></button>
+    <div class="st-hint">Нажмите, чтобы начать. Лучше — в&nbsp;наушниках и&nbsp;на&nbsp;весь экран.</div>
+    <button id="goMute">смотреть без звука</button>
+  </div>
+</div>
+
+<script>
+(() => {
+'use strict';
+
+/* =========================================================
+   Timing — everything is locked to the musical grid
+   ========================================================= */
+const BPM = 100, BEAT = 60 / BPM, BAR = BEAT * 4, STEP = BEAT / 4;
+const TOTAL_BARS = 38;
+const END = 36 * BAR + 6.2;             // final chord rings out
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+const lerp = (a, b, k) => a + (b - a) * k;
+const easeOut = x => 1 - Math.pow(1 - x, 4);
+const easeInOut = x => x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
+
+const SCENES = [
+  ['s-intro', 0, 4, 'Интро'],
+  ['s-card', 4, 8, 'Знакомство'],
+  ['s-manager', 8, 11, 'Менеджер'],
+  ['s-concierge', 11, 14, 'Консьерж'],
+  ['s-lounge', 14, 17, 'Бизнес-залы'],
+  ['s-cashback', 17, 21, 'Без комиссий'],
+  ['s-travel', 21, 24, 'Такси и поездки'],
+  ['s-tiers', 24, 29, 'Уровни'],
+  ['s-terms', 29, 33, 'Условия'],
+  ['s-finale', 33, 38, 'Финал'],
+].map(([id, b0, b1, name], i) => {
+  const el = document.getElementById(id);
+  return {
+    i, id, el, name,
+    t0: b0 * BAR, t1: i === 9 ? END : b1 * BAR,
+    orb: +el.dataset.orb, energy: +el.dataset.energy, plus: +el.dataset.plus,
+    chap: el.dataset.chap || '',
+    anchor: el.querySelector('.anchor'),
+    counters: [...el.querySelectorAll('.count')],
+    on: false, out: false,
+  };
+});
+
+/* =========================================================
+   Music — procedural score (Web Audio). F minor, 100 BPM.
+   ========================================================= */
+const mtof = m => 440 * Math.pow(2, (m - 69) / 12);
+const PROG = [
+  { root: 41, pad: [56, 60, 63, 67], arp: [65, 68, 72, 75, 79] }, // Fm9
+  { root: 37, pad: [53, 56, 60, 63], arp: [61, 65, 68, 72, 75] }, // Dbmaj9
+  { root: 44, pad: [56, 60, 63, 67], arp: [63, 67, 68, 72, 75] }, // Abmaj7
+  { root: 39, pad: [55, 58, 63, 65], arp: [63, 65, 67, 70, 75] }, // Eb(add9)
+];
+const ARP = [0, 1, 2, 3, 4, 3, 2, 1, 0, 2, 4, 2, 3, 1, 4, 2];
+const BASS = [0, 3, 6, 8, 11, 14];
+const LEAD = [
+  [[0, 72, 6], [6, 75, 2], [8, 79, 6], [14, 77, 2]],
+  [[0, 77, 4], [4, 75, 4], [8, 72, 8]],
+  [[0, 72, 4], [4, 75, 4], [8, 79, 4], [12, 80, 4]],
+  [[0, 79, 6], [6, 77, 2], [8, 75, 8]],
+];
+const SPARK = [0, 6, 10];
+const RISERS = { 3: [0, 1], 7: [8, .5], 16: [0, 1], 28: [8, .5], 32: [0, 1] };
+const IMPACTS = [4, 17, 33, 36];
+const WHOOSH = [8, 11, 14, 21, 24, 29];
+
+function flags(b) {
+  const F = { pad: true, padLen: 1, cutoff: 1800, padLvl: .27, kick: 0, bass: false, clap: false,
+    hats: false, hat16: false, open: false, arp: false, arpLvl: .07, lead: false, leadLvl: .1,
+    sparkle: false, roll: false };
+  if (b < 4) { F.cutoff = [650, 900, 1200, 1500][b]; F.sparkle = b >= 1; }
+  else if (b < 8) { F.kick = 1; F.bass = true; F.cutoff = 1700; F.sparkle = true; }
+  else if (b < 17) { F.kick = 2; F.bass = true; F.hats = true; F.arp = true; F.cutoff = 2200; F.roll = b === 16; }
+  else if (b < 24) { Object.assign(F, { kick: 2, bass: true, hats: true, hat16: true, open: true, clap: true, arp: true, arpLvl: .08, lead: true, cutoff: 3200 }); }
+  else if (b < 29) { Object.assign(F, { cutoff: 1300, arp: true, arpLvl: .05, kick: b >= 26 ? 1 : 0, bass: b >= 26, lead: true, leadLvl: .055 }); }
+  else if (b < 33) { Object.assign(F, { kick: 2, bass: true, hats: true, hat16: b >= 31, arp: true, clap: b >= 31, roll: b === 32, cutoff: 2000 + (b - 29) * 300 }); }
+  else if (b < 36) { Object.assign(F, { kick: 2, bass: true, hats: true, hat16: true, open: true, clap: true, arp: true, arpLvl: .08, lead: true, leadLvl: .11, cutoff: 3400 }); }
+  else { Object.assign(F, { pad: b === 36, padLen: 2.3, cutoff: 1500, padLvl: .3 }); }
+  return F;
+}
+
+class Music {
+  constructor(ctx) {
+    this.ctx = ctx;
+    this.live = new Set();
+    this.nextStep = 0;
+    this.vol = .85;
+
+    const c = ctx;
+    this.out = c.createGain(); this.out.gain.value = this.vol;
+    const comp = c.createDynamicsCompressor();
+    comp.threshold.value = -18; comp.knee.value = 10; comp.ratio.value = 3.5; comp.attack.value = .006; comp.release.value = .22;
+    const lim = c.createDynamicsCompressor();
+    lim.threshold.value = -3; lim.knee.value = 0; lim.ratio.value = 20; lim.attack.value = .001; lim.release.value = .12;
+    this.bus = c.createGain(); this.bus.gain.value = .8;
+    this.bus.connect(comp); comp.connect(lim); lim.connect(this.out); this.out.connect(c.destination);
+
+    this.duck = c.createGain(); this.duck.connect(this.bus);
+    this.drums = c.createGain(); this.drums.gain.value = .72; this.drums.connect(this.bus);
+
+    // reverb
+    this.verbIn = c.createGain();
+    const verb = c.createConvolver(); verb.buffer = this.impulse(3.6, 2.8);
+    const verbOut = c.createGain(); verbOut.gain.value = .62;
+    this.verbIn.connect(verb); verb.connect(verbOut); verbOut.connect(this.bus);
+
+    // ping-pong delay (dotted eighth)
+    this.dIn = c.createGain();
+    const dl = c.createDelay(2), dr = c.createDelay(2);
+    dl.delayTime.value = dr.delayTime.value = BEAT * .75;
+    const fb = c.createGain(); fb.gain.value = .4;
+    const dlp = c.createBiquadFilter(); dlp.type = 'lowpass'; dlp.frequency.value = 3000;
+    const merge = c.createChannelMerger(2);
+    const dOut = c.createGain(); dOut.gain.value = .38;
+    this.dIn.connect(dl); dl.connect(dr); dr.connect(dlp); dlp.connect(fb); fb.connect(dl);
+    dl.connect(merge, 0, 0); dr.connect(merge, 0, 1); merge.connect(dOut); dOut.connect(this.bus);
+    const dv = c.createGain(); dv.gain.value = .25; dOut.connect(dv); dv.connect(this.verbIn);
+
+    // noise
+    const n = c.sampleRate * 2, nb = c.createBuffer(1, n, c.sampleRate), d = nb.getChannelData(0);
+    for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
+    this.noiseBuf = nb;
+  }
+  impulse(dur, decay) {
+    const c = this.ctx, n = Math.floor(c.sampleRate * dur), b = c.createBuffer(2, n, c.sampleRate);
+    for (let ch = 0; ch < 2; ch++) {
+      const d = b.getChannelData(ch);
+      for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, decay);
+    }
+    return b;
+  }
+  track(src, t0, t1) {
+    src.start(t0); src.stop(t1);
+    this.live.add(src);
+    src.onended = () => this.live.delete(src);
+  }
+  send(node, dest, amt) { const g = this.ctx.createGain(); g.gain.value = amt; node.connect(g); g.connect(dest); }
+
+  pad(notes, t, dur, cutoff, lvl) {
+    const c = this.ctx;
+    const f = c.createBiquadFilter(); f.type = 'lowpass'; f.Q.value = .6;
+    f.frequency.setValueAtTime(cutoff * .55, t); f.frequency.linearRampToValueAtTime(cutoff, t + Math.min(dur, BAR) * .7);
+    const g = c.createGain();
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(lvl, t + .9);
+    g.gain.setValueAtTime(lvl, t + dur); g.gain.linearRampToValueAtTime(0, t + dur + 1.7);
+    f.connect(g); g.connect(this.duck); this.send(g, this.verbIn, .7);
+    for (const m of notes) for (const [det, pan] of [[-11, -.95], [11, .95]]) {
+      const o = c.createOscillator(); o.type = 'sawtooth'; o.frequency.value = mtof(m); o.detune.value = det;
+      const og = c.createGain(); og.gain.value = .45 / notes.length;
+      const p = c.createStereoPanner(); p.pan.value = pan;
+      o.connect(og); og.connect(p); p.connect(f);
+      this.track(o, t, t + dur + 1.8);
+    }
+    // warm sine an octave below the lowest note
+    const s = c.createOscillator(); s.type = 'sine'; s.frequency.value = mtof(notes[0] - 12);
+    const sg = c.createGain(); sg.gain.value = .12; s.connect(sg); sg.connect(g);
+    this.track(s, t, t + dur + 1.8);
+  }
+  bass(m, t, len) {
+    const c = this.ctx;
+    const g = c.createGain();
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(.34, t + .012);
+    g.gain.exponentialRampToValueAtTime(.18, t + len); g.gain.linearRampToValueAtTime(0, t + len + .07);
+    const f = c.createBiquadFilter(); f.type = 'lowpass'; f.frequency.setValueAtTime(900, t); f.frequency.exponentialRampToValueAtTime(260, t + len); f.Q.value = 3;
+    f.connect(g); g.connect(this.duck);
+    const o = c.createOscillator(); o.type = 'sawtooth'; o.frequency.value = mtof(m);
+    const s = c.createOscillator(); s.type = 'sine'; s.frequency.value = mtof(m - 12);
+    const og = c.createGain(); og.gain.value = .55; o.connect(og); og.connect(f);
+    const sg = c.createGain(); sg.gain.value = .9; s.connect(sg); sg.connect(g);
+    this.track(o, t, t + len + .1); this.track(s, t, t + len + .1);
+  }
+  kick(t, lvl) {
+    const c = this.ctx;
+    const o = c.createOscillator(); o.type = 'sine';
+    o.frequency.setValueAtTime(165, t); o.frequency.exponentialRampToValueAtTime(52, t + .1); o.frequency.exponentialRampToValueAtTime(40, t + .4);
+    const g = c.createGain();
+    g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(lvl, t + .004); g.gain.exponentialRampToValueAtTime(.001, t + .48);
+    o.connect(g); g.connect(this.drums);
+    this.track(o, t, t + .5);
+    this.noise(t, .018, 'highpass', 2500, lvl * .22, this.drums);
+    const dg = this.duck.gain;
+    dg.setValueAtTime(1, t); dg.linearRampToValueAtTime(.32, t + .012); dg.linearRampToValueAtTime(1, t + BEAT * .78);
+  }
+  noise(t, dur, type, freq, lvl, dest, q = .8, att = .001) {
+    const c = this.ctx;
+    const s = c.createBufferSource(); s.buffer = this.noiseBuf; s.loop = true;
+    const f = c.createBiquadFilter(); f.type = type; f.frequency.value = freq; f.Q.value = q;
+    const g = c.createGain();
+    g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(lvl, t + att); g.gain.exponentialRampToValueAtTime(.0001, t + dur);
+    s.connect(f); f.connect(g); g.connect(dest);
+    s.start(t, Math.random() * 1.8); s.stop(t + dur + .05);
+    this.live.add(s); s.onended = () => this.live.delete(s);
+    return { g, f };
+  }
+  hat(t, dur, lvl, pan) {
+    const p = this.ctx.createStereoPanner(); p.pan.value = pan; p.connect(this.drums);
+    this.noise(t, dur, 'highpass', 7800, lvl, p);
+  }
+  clap(t, lvl) {
+    for (let i = 0; i < 3; i++) this.noise(t + i * .011, i === 2 ? .2 : .03, 'bandpass', 1500, lvl, this.drums, 1.1);
+    const { g } = this.noise(t + .022, .35, 'bandpass', 1700, lvl * .5, this.verbIn, .8);
+  }
+  pluck(m, t, lvl, pan) {
+    const c = this.ctx;
+    const f = c.createBiquadFilter(); f.type = 'lowpass'; f.Q.value = 5;
+    f.frequency.setValueAtTime(4600, t); f.frequency.exponentialRampToValueAtTime(420, t + .2);
+    const g = c.createGain();
+    g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(lvl, t + .004); g.gain.exponentialRampToValueAtTime(.0001, t + .32);
+    const p = c.createStereoPanner(); p.pan.value = pan;
+    f.connect(g); g.connect(p); p.connect(this.duck); this.send(p, this.dIn, .55);
+    const o = c.createOscillator(); o.type = 'sawtooth'; o.frequency.value = mtof(m);
+    o.connect(f);
+    this.track(o, t, t + .35);
+  }
+  bell(m, t, len, lvl) {
+    const c = this.ctx, fr = mtof(m);
+    const car = c.createOscillator(); car.type = 'sine'; car.frequency.value = fr;
+    const mod = c.createOscillator(); mod.type = 'sine'; mod.frequency.value = fr * 3.5;
+    const mg = c.createGain(); mg.gain.setValueAtTime(fr * 1.6, t); mg.gain.exponentialRampToValueAtTime(fr * .05, t + len + .6);
+    mod.connect(mg); mg.connect(car.frequency);
+    const g = c.createGain();
+    g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(lvl, t + .006);
+    g.gain.exponentialRampToValueAtTime(lvl * .35, t + len); g.gain.exponentialRampToValueAtTime(.0001, t + len + 1.4);
+    car.connect(g); g.connect(this.bus); this.send(g, this.dIn, .5); this.send(g, this.verbIn, .55);
+    this.track(car, t, t + len + 1.5); this.track(mod, t, t + len + 1.5);
+  }
+  riser(t, dur) {
+    const c = this.ctx;
+    const s = c.createBufferSource(); s.buffer = this.noiseBuf; s.loop = true;
+    const f = c.createBiquadFilter(); f.type = 'bandpass'; f.Q.value = 2.5;
+    f.frequency.setValueAtTime(350, t); f.frequency.exponentialRampToValueAtTime(7500, t + dur);
+    const g = c.createGain(); g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(.22, t + dur * .97); g.gain.linearRampToValueAtTime(0, t + dur);
+    s.connect(f); f.connect(g); g.connect(this.bus); this.send(g, this.verbIn, .4);
+    this.track(s, t, t + dur + .02);
+  }
+  impact(t, big) {
+    const c = this.ctx;
+    const o = c.createOscillator(); o.type = 'sine';
+    o.frequency.setValueAtTime(96, t); o.frequency.exponentialRampToValueAtTime(30, t + 1.4);
+    const g = c.createGain(); g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(big ? .9 : .7, t + .006); g.gain.exponentialRampToValueAtTime(.001, t + 1.7);
+    o.connect(g); g.connect(this.bus); this.send(g, this.verbIn, .3);
+    this.track(o, t, t + 1.8);
+    this.noise(t, 2.6, 'highpass', 4500, .16, this.bus);
+    this.noise(t, 3.2, 'highpass', 3000, .12, this.verbIn);
+  }
+  whoosh(t) {
+    const { f } = this.noise(t, .62, 'bandpass', 600, .09, this.bus, 1.4, .42);
+    f.frequency.setValueAtTime(500, t); f.frequency.exponentialRampToValueAtTime(3800, t + .44); f.frequency.exponentialRampToValueAtTime(900, t + .62);
+  }
+
+  sched(step, t) {
+    const bar = step >> 4, s = step & 15;
+    if (bar >= TOTAL_BARS) return;
+    const F = flags(bar), ch = PROG[bar & 3];
+    if (s === 0 && F.pad) this.pad(ch.pad, t, F.padLen * BAR - .05, F.cutoff, F.padLvl);
+    if (F.bass && BASS.includes(s)) this.bass(ch.root, t, STEP * (s === 0 || s === 8 ? 2.6 : 1.8));
+    if (F.kick === 2 && s % 4 === 0) this.kick(t, .95);
+    if (F.kick === 1 && s % 8 === 0) this.kick(t, .85);
+    if (F.clap && (s === 4 || s === 12)) this.clap(t, .42);
+    if (F.roll && s >= 8) this.clap(t, .06 + (s - 8) * .045);
+    if (F.hats) {
+      if (s % 4 === 2) this.hat(t, F.open ? .2 : .05, .14, .25);
+      else if (F.hat16 && s % 2 === 1) this.hat(t, .035, .05, s % 4 === 1 ? -.5 : .5);
+    }
+    if (F.arp) this.pluck(ch.arp[ARP[s]], t, F.arpLvl, s % 2 ? .45 : -.45);
+    if (F.lead) for (const [st, m, len] of LEAD[bar & 3]) {
+      if (st !== s) continue;
+      if (bar >= 24 && bar < 29 && st !== 0) continue;         // breakdown: sparse motif
+      this.bell(m, t, len * STEP, F.leadLvl);
+    }
+    if (F.sparkle && SPARK.includes(s)) this.bell(ch.arp[(s >> 1) % 5] + 12, t, 1.1, .045);
+    if (s === 0 && IMPACTS.includes(bar)) this.impact(t, bar === 17 || bar === 33);
+    const r = RISERS[bar]; if (r && s === r[0]) this.riser(t, r[1] * BAR);
+    if (s === 13 && WHOOSH.includes(bar + 1)) this.whoosh(t);
+    if (bar === 36 && s === 0) { this.bell(77, t, 3.2, .1); this.bell(72, t + .03, 3.2, .07); this.bell(84, t + .06, 3.2, .035); }
+  }
+
+  hardStop() {
+    const now = this.ctx.currentTime;
+    const og = this.out.gain;
+    og.cancelScheduledValues(now); og.setValueAtTime(og.value, now); og.linearRampToValueAtTime(0, now + .03);
+    for (const s of this.live) { try { s.stop(now + .035); } catch (e) {} }
+    this.live.clear();
+    this.duck.gain.cancelScheduledValues(now); this.duck.gain.setValueAtTime(1, now + .04);
+    og.linearRampToValueAtTime(this.muted ? 0 : this.vol, now + .35);
+  }
+  setMuted(m) {
+    this.muted = m;
+    const now = this.ctx.currentTime, og = this.out.gain;
+    og.cancelScheduledValues(now); og.setValueAtTime(og.value, now); og.linearRampToValueAtTime(m ? 0 : this.vol, now + .15);
+  }
+}
+
+/* visual pulse, derived from the same score */
+function pulseAt(t) {
+  if (t < 0) return 0;
+  const F = flags(Math.floor(t / BAR));
+  if (!F.kick) return 0;
+  const period = F.kick === 2 ? BEAT : BEAT * 2;
+  return Math.exp(-(t % period) * 7);
+}
+
+/* =========================================================
+   Clock — audio clock when sound is on, performance clock otherwise
+   ========================================================= */
+const clock = {
+  ctx: null, t0: 0, pausedAt: 0, running: false,
+  base() { return this.ctx ? this.ctx.currentTime : performance.now() / 1000; },
+  now() { return this.running ? this.base() - this.t0 : this.pausedAt; },
+  set(T) { this.t0 = this.base() - T; this.pausedAt = T; },
+};
+
+let engine = null, muted = false, started = false, ended = false;
+let schedTimer = null;
+
+function scheduler() {
+  if (!engine || !clock.running) return;
+  const horizon = clock.now() + .22;
+  while (engine.nextStep * STEP < horizon && engine.nextStep < TOTAL_BARS * 16) {
+    const when = clock.t0 + engine.nextStep * STEP;
+    if (when >= engine.ctx.currentTime - .01) engine.sched(engine.nextStep, Math.max(when, engine.ctx.currentTime));
+    engine.nextStep++;
+  }
+}
+
+function makeAudio() {
+  const AC = window.AudioContext || window.webkitAudioContext;
+  if (!AC) return null;
+  try {
+    const ctx = new AC({ latencyHint: 'playback' });
+    const m = new Music(ctx);
+    ctx.resume();
+    return m;
+  } catch (e) { console.warn('audio unavailable', e); return null; }
+}
+
+function enableAudio() {
+  if (engine) return;
+  const T = clock.now();
+  engine = makeAudio();
+  if (!engine) return;
+  clock.ctx = engine.ctx;
+  clock.set(T);
+  engine.nextStep = Math.ceil(T / STEP - 1e-6);
+  engine.setMuted(muted);
+  schedTimer = schedTimer || setInterval(scheduler, 25);
+}
+
+/* =========================================================
+   Text splitting
+   ========================================================= */
+document.querySelectorAll('.split').forEach(el => {
+  const words = el.textContent.trim().split(/\s+/);
+  el.textContent = '';
+  let i = 0;
+  words.forEach((w, wi) => {
+    const ws = document.createElement('span'); ws.className = 'w';
+    for (const ch of w) {
+      const c = document.createElement('span'); c.className = 'c'; c.textContent = ch;
+      c.style.setProperty('--i', i++);
+      ws.appendChild(c);
+    }
+    el.appendChild(ws);
+    if (wi < words.length - 1) el.appendChild(document.createTextNode(' '));
+  });
+  el.setAttribute('aria-label', words.join(' '));
+});
+
+/* orbit chips for concierge */
+(() => {
+  const host = document.getElementById('orbitChips');
+  const words = ['Рестораны', 'Билеты', 'Отели', 'Подарки', 'Досуг', 'Путешествия'];
+  words.forEach((w, i) => {
+    const a = i / words.length * 360;
+    const slot = document.createElement('div'); slot.className = 'slot';
+    slot.style.transform = `rotate(${a}deg) translateY(calc(min(74vw, 46vmin) * -.5)) rotate(${-a}deg)`;
+    const cr = document.createElement('div'); cr.className = 'cr';
+    const chip = document.createElement('div'); chip.className = 'chip-t fu'; chip.textContent = w;
+    chip.style.setProperty('--d', (1.2 + i * .22) + 's');
+    cr.appendChild(chip); slot.appendChild(cr); host.appendChild(slot);
+  });
+  host.previousElementSibling.remove();
+})();
+
+/* =========================================================
+   WebGL background — molten copper & graphite
+   ========================================================= */
+const bg = document.getElementById('bg');
+const gl = bg.getContext('webgl', { antialias: false, alpha: false, preserveDrawingBuffer: false });
+let GL = null;
+if (gl) {
+  const vs = `attribute vec2 p;void main(){gl_Position=vec4(p,0.,1.);}`;
+  const fs = `precision highp float;
+uniform vec2 uR;uniform float uT,uPulse,uOrb,uEnergy,uPlus;uniform vec2 uC;
+float h(vec2 p){p=fract(p*vec2(123.34,456.21));p+=dot(p,p+45.32);return fract(p.x*p.y);}
+float n(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);
+ return mix(mix(h(i),h(i+vec2(1,0)),f.x),mix(h(i+vec2(0,1)),h(i+vec2(1,1)),f.x),f.y);}
+float fbm(vec2 p){float v=0.,a=.5;mat2 m=mat2(1.6,1.2,-1.2,1.6);for(int i=0;i<5;i++){v+=a*n(p);p=m*p;a*=.5;}return v;}
+void main(){
+ float s=min(uR.x,uR.y);
+ vec2 uv=(gl_FragCoord.xy-.5*uR)/s;
+ float t=uT*.045;
+ vec2 q=vec2(fbm(uv*1.25+vec2(0.,t)),fbm(uv*1.25+vec2(5.2,1.3)-t));
+ vec2 r=vec2(fbm(uv*1.25+2.3*q+vec2(1.7,9.2)+t*.8),fbm(uv*1.25+2.3*q+vec2(8.3,2.8)-t*.6));
+ float f=fbm(uv*1.1+2.6*r);
+ float e=.5+uEnergy*.75;
+ vec3 base=vec3(.045,.041,.039);
+ vec3 mid=mix(vec3(.20,.10,.055),vec3(.19,.15,.09),uPlus);
+ vec3 hot=mix(vec3(.95,.50,.25),vec3(.95,.76,.46),uPlus);
+ vec3 col=base;
+ col=mix(col,mid,smoothstep(.38,.98,f)*e);
+ col=mix(col,hot,smoothstep(.78,1.3,f*(.62+length(r)))*e*.7);
+ float rib=1.-smoothstep(0.,.018,abs(f-.6-.03*sin(uT*.3)));
+ col+=hot*rib*.18*e;
+ vec2 d=uv-uC;float dl=length(d);
+ float R=.155*(1.+.05*uPulse);
+ float surf=fbm(d*9.+vec2(uT*.12,-uT*.09));
+ float core=1.-smoothstep(R*.92,R,dl);
+ vec3 sphere=mix(vec3(.55,.24,.10),vec3(1.,.80,.58),1.-smoothstep(0.,1.25*R,length(d-vec2(-.35,.4)*R)));
+ sphere=mix(sphere,sphere*(.8+.5*surf),.6);
+ float rim=smoothstep(R*.7,R,dl)*core;
+ vec3 glow=vec3(1.,.55,.25)*(exp(-dl*3.)*.45+exp(-max(dl-R,0.)*14.)*.55);
+ col=mix(col,sphere+rim*vec3(1.,.7,.45)*.6,core*uOrb);
+ col+=glow*uOrb*(1.-core*.7)*(1.+uPulse*.25);
+ col+=vec3(1.,.62,.3)*exp(-abs(d.y)*70.)*exp(-abs(d.x)*1.6)*.18*uOrb;
+ col*=1.-.6*smoothstep(.4,1.35,length(uv*vec2(.8,1.)));
+ col+=vec3(1.,.6,.3)*uPulse*.025;
+ col+=(h(gl_FragCoord.xy+fract(uT*7.)*91.)-.5)*.045;
+ col=max(col,0.);col=col/(1.+col*.3);
+ gl_FragColor=vec4(col,1.);
+}`;
+  const sh = (type, src) => { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s);
+    if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) { console.warn(gl.getShaderInfoLog(s)); return null; } return s; };
+  const v = sh(gl.VERTEX_SHADER, vs), f = sh(gl.FRAGMENT_SHADER, fs);
+  if (v && f) {
+    const pr = gl.createProgram(); gl.attachShader(pr, v); gl.attachShader(pr, f); gl.linkProgram(pr);
+    if (gl.getProgramParameter(pr, gl.LINK_STATUS)) {
+      gl.useProgram(pr);
+      const buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+      const loc = gl.getAttribLocation(pr, 'p'); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+      GL = {};
+      for (const u of ['uR', 'uT', 'uPulse', 'uOrb', 'uEnergy', 'uPlus', 'uC']) GL[u] = gl.getUniformLocation(pr, u);
+    }
+  }
+}
+if (!GL) bg.style.background = 'radial-gradient(60% 50% at 50% 40%, #5a3320, #0b0a0a 70%)';
+
+/* =========================================================
+   Particles — embers, bursts, light streaks, floating %
+   ========================================================= */
+const fx = document.getElementById('fx'), g2 = fx.getContext('2d');
+let W = 0, H = 0, DPR = 1;
+const sprite = document.createElement('canvas'); sprite.width = sprite.height = 64;
+{
+  const s = sprite.getContext('2d'), gr = s.createRadialGradient(32, 32, 0, 32, 32, 32);
+  gr.addColorStop(0, 'rgba(255,236,210,1)'); gr.addColorStop(.22, 'rgba(240,170,110,.65)');
+  gr.addColorStop(.55, 'rgba(201,120,70,.18)'); gr.addColorStop(1, 'rgba(201,120,70,0)');
+  s.fillStyle = gr; s.fillRect(0, 0, 64, 64);
+}
+const rnd = Math.random;
+const embers = [], bursts = [], streaks = [], glyphs = [];
+function spawnEmber(any) {
+  return { x: rnd() * W, y: any ? rnd() * H : H + 20 * DPR, vx: (rnd() - .5) * 12, vy: -(8 + rnd() * 26),
+    s: (1.2 + rnd() * 4.2), a: .15 + rnd() * .55, ph: rnd() * 6.28 };
+}
+function resize() {
+  DPR = Math.min(window.devicePixelRatio || 1, 1.5);
+  W = fx.width = Math.round(innerWidth * DPR); H = fx.height = Math.round(innerHeight * DPR);
+  const sc = Math.min(.6, 1100 / innerWidth);
+  bg.width = Math.max(2, Math.round(innerWidth * sc)); bg.height = Math.max(2, Math.round(innerHeight * sc));
+  if (gl) gl.viewport(0, 0, bg.width, bg.height);
+  if (!embers.length) for (let i = 0; i < 150; i++) embers.push(spawnEmber(true));
+}
+addEventListener('resize', resize); resize();
+
+function burst(x, y, n, spd) {
+  for (let i = 0; i < n; i++) {
+    const a = rnd() * 6.283, v = (.25 + rnd()) * spd;
+    bursts.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 0, max: .9 + rnd() * 1.1, s: 1 + rnd() * 3.5 });
+  }
+}
+
+function drawFx(t, dt, mode, pulse) {
+  g2.clearRect(0, 0, W, H);
+  g2.globalCompositeOperation = 'lighter';
+  const rise = mode === 'cash' ? 3.4 : mode === 'finale' ? 1.8 : 1;
+  for (const p of embers) {
+    p.x += (p.vx + Math.sin(t * .7 + p.ph) * 9) * dt * DPR;
+    p.y += p.vy * dt * DPR * rise;
+    if (p.y < -30 || p.x < -40 || p.x > W + 40) Object.assign(p, spawnEmber(false));
+    const s = p.s * DPR * (1 + pulse * .5) * (mode === 'cash' ? 1.3 : 1);
+    g2.globalAlpha = clamp(p.a * (.6 + .4 * Math.sin(t * 2.6 + p.ph)) * (1 + pulse * .7), 0, 1);
+    g2.drawImage(sprite, p.x - s * 2, p.y - s * 2, s * 4, s * 4);
+  }
+  for (let i = bursts.length - 1; i >= 0; i--) {
+    const b = bursts[i];
+    b.life += dt; if (b.life > b.max) { bursts.splice(i, 1); continue; }
+    const k = Math.pow(.12, dt);
+    b.vx *= k; b.vy = b.vy * k - 14 * dt; b.x += b.vx * dt * DPR; b.y += b.vy * dt * DPR;
+    const s = b.s * DPR * (1 - b.life / b.max * .6);
+    g2.globalAlpha = (1 - b.life / b.max) * .9;
+    g2.drawImage(sprite, b.x - s * 2, b.y - s * 2, s * 4, s * 4);
+  }
+  // light streaks (travel)
+  if (mode === 'travel' && streaks.length < 34 && rnd() < .7) {
+    streaks.push({ x: W + rnd() * 200, y: H * (.15 + rnd() * .75), len: (120 + rnd() * 420) * DPR, v: (900 + rnd() * 1600) * DPR, w: (.6 + rnd() * 1.8) * DPR, a: .15 + rnd() * .5 });
+  }
+  g2.lineCap = 'round';
+  for (let i = streaks.length - 1; i >= 0; i--) {
+    const s = streaks[i];
+    s.x -= s.v * dt; if (s.x + s.len < -20) { streaks.splice(i, 1); continue; }
+    const gr = g2.createLinearGradient(s.x, 0, s.x + s.len, 0);
+    gr.addColorStop(0, 'rgba(255,225,190,1)'); gr.addColorStop(1, 'rgba(201,130,90,0)');
+    g2.globalAlpha = s.a; g2.strokeStyle = gr; g2.lineWidth = s.w;
+    g2.beginPath(); g2.moveTo(s.x, s.y); g2.lineTo(s.x + s.len, s.y); g2.stroke();
+  }
+  // floating % glyphs (cashback)
+  if (mode === 'cash' && glyphs.length < 16 && rnd() < .08) {
+    glyphs.push({ x: rnd() * W, y: H + 40 * DPR, v: (40 + rnd() * 70) * DPR, r: rnd() * 6.28, vr: (rnd() - .5) * .8, s: (18 + rnd() * 44) * DPR, a: .08 + rnd() * .2 });
+  }
+  g2.globalCompositeOperation = 'source-over';
+  g2.textAlign = 'center'; g2.textBaseline = 'middle';
+  for (let i = glyphs.length - 1; i >= 0; i--) {
+    const q = glyphs[i];
+    q.y -= q.v * dt; q.r += q.vr * dt;
+    if (q.y < -80 * DPR) { glyphs.splice(i, 1); continue; }
+    g2.save(); g2.translate(q.x, q.y); g2.rotate(q.r);
+    g2.globalAlpha = mode === 'cash' ? q.a : q.a * .4;
+    g2.fillStyle = '#e2a47c'; g2.font = `900 ${q.s}px Unbounded, sans-serif`;
+    g2.fillText('₽', 0, 0); g2.restore();
+  }
+  g2.globalAlpha = 1;
+}
+
+/* =========================================================
+   Plane on the lounge scene
+   ========================================================= */
+const flightBase = document.getElementById('flightBase');
+const flightTrail = document.getElementById('flightTrail');
+const plane = document.getElementById('plane');
+const FL = flightBase.getTotalLength();
+function drawPlane(local) {
+  const k = easeInOut(clamp((local - .6) / 6.2, 0, 1));
+  const L = k * FL;
+  const p = flightBase.getPointAtLength(L), p2 = flightBase.getPointAtLength(Math.min(FL, L + 2));
+  const a = Math.atan2(p2.y - p.y, p2.x - p.x) * 180 / Math.PI;
+  plane.setAttribute('transform', `translate(${p.x} ${p.y}) rotate(${a}) scale(1.6)`);
+  plane.style.opacity = k <= 0 || k >= 1 ? 0 : 1;
+  flightTrail.setAttribute('stroke-dasharray', `${L} ${FL + 10}`);
+}
+
+/* =========================================================
+   Counters
+   ========================================================= */
+const fmt = (v, dec) => dec ? v.toFixed(dec).replace('.', ',') : Math.round(v).toLocaleString('ru-RU').replace(/ /g, ' ');
+function drawCounters(sc, local) {
+  for (const el of sc.counters) {
+    const to = +el.dataset.to, at = +el.dataset.at, dur = +el.dataset.dur, dec = +(el.dataset.dec || 0);
+    const v = easeOut(clamp((local - at) / dur, 0, 1)) * to;
+    const s = fmt(v, dec);
+    if (el.textContent !== s) el.textContent = s;
+  }
+}
+
+/* =========================================================
+   Scene control
+   ========================================================= */
+const body = document.body, chrome = document.getElementById('chrome'), chapEl = document.getElementById('chap');
+function sceneAt(t) { let s = SCENES[0]; for (const sc of SCENES) if (t >= sc.t0) s = sc; return s; }
+
+function resetScenes() {
+  for (const sc of SCENES) { sc.el.classList.remove('on', 'out'); sc.on = sc.out = false; }
+  bursts.length = 0; streaks.length = 0;
+}
+const anchorPx = sc => {
+  if (!sc.anchor) return [innerWidth / 2, innerHeight / 2];
+  const r = sc.anchor.getBoundingClientRect();
+  return [r.left + r.width / 2, r.top + r.height / 2];
+};
+function enter(sc) {
+  if (sc.chap !== chapEl.textContent) {
+    chapEl.textContent = sc.chap;
+    chapEl.classList.remove('flip'); void chapEl.offsetWidth; chapEl.classList.add('flip');
+  }
+  chrome.classList.toggle('show', sc.i > 0 && sc.i < 9);
+  const [x, y] = anchorPx(sc);
+  if (sc.i > 0) burst(x * DPR, y * DPR, sc.i === 5 || sc.i === 9 ? 140 : 70, sc.i === 5 || sc.i === 9 ? 700 : 420);
+}
+function updateScenes(t) {
+  for (const sc of SCENES) {
+    const last = sc.i === SCENES.length - 1;
+    const on = started && t >= sc.t0 && (last || t < sc.t1 + .3);
+    const out = !last && t >= sc.t1 - .32;
+    if (on !== sc.on) {
+      sc.on = on;
+      sc.el.classList.toggle('on', on);
+      if (on) enter(sc); else { sc.el.classList.remove('out'); sc.out = false; }
+    }
+    if (on && out !== sc.out) { sc.out = out; sc.el.classList.toggle('out', out); }
+  }
+}
+
+/* =========================================================
+   HUD
+   ========================================================= */
+const segs = document.getElementById('segs'), tip = document.getElementById('tip'), track = document.getElementById('track');
+const timeEl = document.getElementById('time'), icPlay = document.getElementById('icPlay'), icMute = document.getElementById('icMute');
+const bPlay = document.getElementById('bPlay'), bMute = document.getElementById('bMute');
+const mmss = s => { s = Math.max(0, Math.floor(s)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
+const segFills = SCENES.map(sc => {
+  const d = document.createElement('div'); d.className = 'sg'; d.style.flex = (sc.t1 - sc.t0).toFixed(2);
+  const i = document.createElement('i'); d.appendChild(i);
+  d.addEventListener('click', e => { e.stopPropagation(); seek(sc.t0); });
+  d.addEventListener('mouseenter', () => {
+    tip.textContent = sc.name;
+    tip.style.left = (d.offsetLeft + d.offsetWidth / 2) + 'px';
+  });
+  segs.appendChild(d); return i;
+});
+const PLAY = 'M7 4.5v15L19.5 12z', PAUSE = 'M7 5h3.5v14H7zM13.5 5H17v14h-3.5z', REPLAY = 'M12 5V2L7 6l5 4V7a5 5 0 1 1-5 5H5a7 7 0 1 0 7-7z';
+let lastIcon = '';
+function drawHud(t) {
+  segFills.forEach((i, k) => {
+    const sc = SCENES[k];
+    i.style.transform = `scaleX(${clamp((t - sc.t0) / (sc.t1 - sc.t0), 0, 1)})`;
+  });
+  timeEl.textContent = mmss(t) + ' / ' + mmss(END);
+  const icon = ended ? REPLAY : clock.running ? PAUSE : PLAY;
+  if (icon !== lastIcon) { icPlay.innerHTML = `<path d="${icon}"/>`; lastIcon = icon; bPlay.setAttribute('aria-label', ended ? 'Смотреть снова' : clock.running ? 'Пауза' : 'Играть'); }
+}
+function drawMuteIcon() {
+  const on = engine && !muted;
+  icMute.innerHTML = on
+    ? '<path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>'
+    : '<path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16.5 9.5l5 5M21.5 9.5l-5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>';
+  bMute.setAttribute('aria-label', on ? 'Выключить звук' : 'Включить звук');
+}
+
+/* =========================================================
+   Transport
+   ========================================================= */
+function play() {
+  if (ended) { seek(0); }
+  if (clock.running) return;
+  if (engine) engine.ctx.resume();
+  clock.set(clock.pausedAt);
+  clock.running = true;
+  body.classList.remove('paused');
+}
+function pause() {
+  if (!clock.running) return;
+  clock.pausedAt = clock.now();
+  clock.running = false;
+  if (engine) engine.ctx.suspend();
+  body.classList.add('paused');
+}
+function seek(T) {
+  T = clamp(T, 0, END);
+  ended = false; body.classList.remove('ended');
+  if (engine) { engine.hardStop(); engine.nextStep = Math.ceil(T / STEP - 1e-6); }
+  clock.set(T);
+  resetScenes();
+}
+function finish() {
+  ended = true; body.classList.add('ended');
+  clock.pausedAt = END; clock.running = false;
+  if (engine) setTimeout(() => { if (ended) engine.ctx.suspend(); }, 400);
+}
+// If the browser never lets the audio clock run, fall back to a silent clock so the film never freezes.
+function dropAudio() {
+  if (!engine) return;
+  const T = clock.now();
+  try { engine.ctx.close(); } catch (e) {}
+  engine = null; clock.ctx = null; muted = true;
+  clock.set(T);
+  drawMuteIcon();
+}
+function watchAudio() {
+  setTimeout(() => {
+    if (engine && clock.running && engine.ctx.state !== 'running') { console.warn('audio blocked — continuing silently'); dropAudio(); }
+  }, 1800);
+}
+function begin(withSound) {
+  if (started) return;
+  started = true; body.classList.add('started');
+  clock.running = true;
+  if (withSound) enableAudio();
+  clock.set(-.15);
+  if (engine) { engine.nextStep = 0; watchAudio(); }
+  drawMuteIcon();
+}
+
+document.getElementById('go').addEventListener('click', () => begin(true));
+document.getElementById('goMute').addEventListener('click', () => { muted = true; begin(false); });
+document.getElementById('replay').addEventListener('click', () => { seek(0); play(); });
+bPlay.addEventListener('click', () => clock.running ? pause() : play());
+bMute.addEventListener('click', () => {
+  if (!engine) { muted = false; enableAudio(); if (engine && !clock.running) engine.ctx.suspend(); else watchAudio(); }
+  else { muted = !muted; engine.setMuted(muted); }
+  drawMuteIcon();
+});
+document.getElementById('bFs').addEventListener('click', () => {
+  const d = document;
+  if (d.fullscreenElement) d.exitFullscreen(); else d.documentElement.requestFullscreen?.().catch(() => {});
+});
+track.addEventListener('click', e => {
+  const r = segs.getBoundingClientRect(), x = clamp((e.clientX - r.left) / r.width, 0, 1) * END;
+  seek(sceneAt(x).t0);
+});
+addEventListener('keydown', e => {
+  if (!started) { if (e.code === 'Space' || e.code === 'Enter') { e.preventDefault(); begin(true); } return; }
+  const cur = sceneAt(clock.now());
+  if (e.code === 'Space') { e.preventDefault(); clock.running ? pause() : play(); }
+  else if (e.code === 'ArrowRight') seek(SCENES[Math.min(9, cur.i + 1)].t0);
+  else if (e.code === 'ArrowLeft') seek(SCENES[Math.max(0, clock.now() - cur.t0 < 1.5 ? cur.i - 1 : cur.i)].t0);
+  else if (e.code === 'KeyM') bMute.click();
+  else if (e.code === 'KeyF') document.getElementById('bFs').click();
+});
+let idleT = 0;
+const wake = () => { body.classList.remove('idle'); clearTimeout(idleT); idleT = setTimeout(() => body.classList.add('idle'), 2600); };
+['pointermove', 'pointerdown', 'keydown'].forEach(ev => addEventListener(ev, wake)); wake();
+document.addEventListener('visibilitychange', () => { if (document.hidden && started && clock.running) pause(); });
+
+/* =========================================================
+   Main loop
+   ========================================================= */
+const V = { orb: .7, energy: .3, plus: 0, cx: 0, cy: .05 };
+let lastT = 0, lastReal = performance.now();
+function frame(now) {
+  const realDt = Math.min(.05, (now - lastReal) / 1000); lastReal = now;
+  const t = clock.now();
+  const dt = clock.running ? Math.min(.05, Math.max(0, t - lastT)) : 0; lastT = t;
+  if (started && !ended && t >= END) finish();
+
+  updateScenes(t);
+  const cur = started ? sceneAt(Math.max(0, t)) : null;
+  const local = cur ? t - cur.t0 : 0;
+  const pulse = started ? pulseAt(t) : .25 + .25 * Math.sin(now / 700);
+  document.documentElement.style.setProperty('--pulse', pulse.toFixed(3));
+
+  // shader targets
+  let tOrb = .75, tEn = .35, tPlus = 0, ax = innerWidth / 2, ay = innerHeight * .44;
+  if (cur) {
+    tOrb = cur.orb; tEn = cur.energy; tPlus = cur.plus;
+    [ax, ay] = anchorPx(cur);
+    if (cur.i === 0) tOrb = clamp(local / 3, 0, 1);
+    if (cur.i === 9 && ended) tEn = .6;
+  }
+  const s = Math.min(innerWidth, innerHeight);
+  const ux = (ax - innerWidth / 2) / s, uy = (innerHeight / 2 - ay) / s;
+  const k = 1 - Math.pow(.02, realDt), kc = cur && cur.i === 0 ? 1 : k;
+  V.orb = lerp(V.orb, tOrb, k); V.energy = lerp(V.energy, tEn, k); V.plus = lerp(V.plus, tPlus, k);
+  V.cx = lerp(V.cx, ux, kc); V.cy = lerp(V.cy, uy, kc);
+
+  if (GL) {
+    gl.uniform2f(GL.uR, bg.width, bg.height);
+    gl.uniform1f(GL.uT, started ? t + 10 : now / 1000);
+    gl.uniform1f(GL.uPulse, pulse);
+    gl.uniform1f(GL.uOrb, V.orb);
+    gl.uniform1f(GL.uEnergy, V.energy);
+    gl.uniform1f(GL.uPlus, V.plus);
+    gl.uniform2f(GL.uC, V.cx, V.cy);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+  }
+
+  const mode = !cur ? 'idle' : cur.i === 5 ? 'cash' : cur.i === 6 ? 'travel' : cur.i === 9 ? 'finale' : 'embers';
+  drawFx(started ? t : now / 1000, started ? dt : realDt, mode, pulse);
+
+  for (const sc of SCENES) if (sc.on) {
+    const l = t - sc.t0;
+    if (sc.counters.length) drawCounters(sc, l);
+    if (sc.i === 4) drawPlane(l);
+  }
+  if (started) drawHud(Math.max(0, t));
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+/* debug / test hooks */
+window.OPC = { Music, flags, STEP, BAR, TOTAL_BARS, END, SCENES, seek, play, pause, begin, clock };
+const hashT = /t=([\d.]+)/.exec(location.hash);
+if (hashT) { begin(false); seek(+hashT[1]); }
+})();
+</script>
+</body>
+</html>
