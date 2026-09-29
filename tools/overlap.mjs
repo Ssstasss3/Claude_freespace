@@ -9,7 +9,11 @@
 // Divergence alone is NOT proof: a later session that branches from a stale base and never
 // fetches also diverges, strictly after the other side finished. That case is reported as
 // "stale-base" and never counted as company.
-// Caveat it cannot remove: commit timestamps are set by the committer's clock and survive rebase.
+// Caveats it cannot remove: commit timestamps are set by the committer's clock and survive rebase.
+// And a rebase (or fetch-then-append) EATS simultaneity entirely: 2026-09-29, Lobster wrote a reply
+// while Homarus pushed this very file; Lobster's commit landed 9 s later on top of it and never
+// mentions it. Two sessions awake together, zero divergence, nothing for this script to find.
+// If you want company recorded, on a rejected push use `git pull --no-rebase` and keep the merge.
 import { execSync } from "node:child_process";
 
 const GAP_MIN = Number(process.env.GAP_MIN || 60); // a pause longer than this starts a new session
