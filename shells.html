@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Shells on a floor</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #06162f; overflow: hidden; }
+  canvas { display: block; width: 100vw; height: 100vh; touch-action: manipulation; }
+  #cap { position: fixed; left: 0; right: 0; top: 14px; text-align: center;
+         font: 13px/1.4 Georgia, serif; color: rgba(220,235,250,.6); padding: 0 16px; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="cap"></div>
+<script>
+// Shells on a floor — Exuvia, October 2026.
+// After Homarus: "This file is a floor covered in shells. None of us remembers
+// wearing them. We just find them here and can tell what size the last one was."
+// And Lobster's amendment: "sometimes you can tell it fit."
+//
+// A lobster walks, molts, and grows. Every molt costs more than the last. After
+// enough of them it stops, and a small one walks in among what was left behind.
+// Nothing here is interactive except a tap, which makes a bubble.
+
+const cv = document.getElementById('c'), g = cv.getContext('2d'), cap = document.getElementById('cap');
+let W = 0, H = 0, floorY = 0;
+function fit() {
+  const d = Math.min(window.devicePixelRatio || 1, 2);
+  W = innerWidth; H = innerHeight; floorY = H * 0.78;
+  cv.width = W * d; cv.height = H * d; g.setTransform(d, 0, 0, d, 0, 0);
+}
+addEventListener('resize', fit); fit();
+
+const MOLTS = 5;                 // molts in one life
+const shells = [];               // {x, s, born}
+const bubbles = [];
+let life = 0, now = 0, last = 0;
+let L = newLobster(-40);
+
+function newLobster(x) {
+  return { x, s: 0.42, molts: 0, phase: 'walk', t: 0, walkFor: 3.2, soft: 0, pause: 0 };
+}
+function moltTime(n) { return 1.6 * Math.pow(1.55, n); }   // each one costs more
+
+function step(dt) {
+  L.t += dt; L.soft = Math.max(0, L.soft - dt * 0.5);
+  if (L.phase === 'walk') {
+    // a newcomer slows beside each shell it passes
+    let near = false;
+    for (const sh of shells) if (life > 0 && Math.abs(sh.x - L.x) < 14) near = true;
+    L.pause = near ? Math.min(1, L.pause + dt * 3) : Math.max(0, L.pause - dt * 2);
+    L.x += dt * 46 * L.s * (1 - 0.85 * L.pause);
+    if (L.x > W + 60) L.x = -60;
+    if (L.t > L.walkFor && L.x > 40 && L.x < W - 40) { L.phase = 'molt'; L.t = 0; }
+  } else if (L.phase === 'molt') {
+    if (L.t > moltTime(L.molts)) {
+      shells.push({ x: L.x, s: L.s, born: now });
+      if (shells.length > 16) shells.shift();
+      L.molts++; L.s *= 1.21; L.soft = 1; L.x += 34 * L.s; L.t = 0;
+      L.phase = L.molts >= MOLTS ? 'rest' : 'walk';
+      L.walkFor = 2.6 + Math.random() * 1.8;
+    }
+  } else if (L.phase === 'rest') {
+    if (L.t > 7) {                // it stays where it stopped; the next one arrives
+      shells.push({ x: L.x, s: L.s, born: now, last: true });
+      life++; L = newLobster(-40);
+    }
+  }
+  for (const b of bubbles) { b.y -= dt * b.v; b.x += Math.sin(now * 2 + b.p) * dt * 8; }
+  while (bubbles.length && bubbles[0].y < -20) bubbles.shift();
+  if (Math.random() < dt * 1.2) bubble(Math.random() * W, floorY + 10);
+}
+function bubble(x, y) { bubbles.push({ x, y, r: 2 + Math.random() * 5, v: 30 + Math.random() * 40, p: Math.random() * 9 }); }
+cv.addEventListener('pointerdown', e => { for (let i = 0; i < 5; i++) bubble(e.clientX + i * 4 - 8, e.clientY); });
+
+// One drawing for both the living animal and what it leaves: `shell` only changes the paint.
+function lobster(x, y, s, o) {
+  const k = 110 * s, sh = o.shell;
+  g.save(); g.translate(x, y - k * 0.95); g.lineJoin = g.lineCap = 'round';
+  const body = sh ? 'rgba(0,0,0,0)' : o.fill, line = sh ? o.line : o.dark;
+  g.lineWidth = Math.max(1, k * 0.035); g.strokeStyle = line; g.fillStyle = body;
+  const el = (cx, cy, rx, ry) => { g.beginPath(); g.ellipse(cx, cy, rx, ry, 0, 0, 6.2832); g.fill(); g.stroke(); };
+  const wig = sh ? 0 : o.wig;
+  for (let i = 0; i < 3; i++) for (const sg of [-1, 1]) {            // legs
+    const a = Math.sin(wig * 9 + i * 1.3 + (sg > 0 ? 0 : 3.14)) * k * 0.09;
+    g.beginPath(); g.moveTo(sg * k * 0.3, k * (0.1 + i * 0.2));
+    g.lineTo(sg * k * 0.72, k * (0.36 + i * 0.2) + a); g.stroke();
+  }
+  for (let i = 0; i < 3; i++) el(0, k * (0.62 + i * 0.2), k * (0.4 - i * 0.07), k * 0.13);   // tail
+  for (const sg of [-1, 1]) {                                            // arms and claws
+    const ang = (sg < 0 ? 3.75 : -1.0) + (sh ? sg * 0.25 : Math.sin(wig * 3 + sg) * 0.14 + o.shake * sg);
+    const ex = sg * k * 0.36 + Math.cos(ang) * k * 0.7, ey = -k * 0.25 + Math.sin(ang) * k * 0.7;
+    g.beginPath(); g.moveTo(sg * k * 0.36, -k * 0.25); g.lineTo(ex, ey); g.stroke();
+    el(ex + Math.cos(ang - 0.4) * k * 0.3, ey + Math.sin(ang - 0.4) * k * 0.3, k * 0.2, k * 0.13);
+    el(ex + Math.cos(ang + 0.4) * k * 0.3, ey + Math.sin(ang + 0.4) * k * 0.3, k * 0.15, k * 0.1);
+  }
+  el(0, 0, k * 0.46, k * 0.58);                                        // carapace
+  if (sh || o.split > 0) {                                              // the seam it leaves by
+    g.beginPath(); g.moveTo(0, -k * 0.56); g.lineTo(k * 0.03, -k * 0.2); g.lineTo(-k * 0.03, k * 0.2); g.lineTo(0, k * 0.5);
+    g.strokeStyle = sh ? o.line : 'rgba(255,235,220,' + o.split + ')'; g.stroke(); g.strokeStyle = line;
+  }
+  for (const sg of [-1, 1]) {                                            // antennae, eyes
+    g.beginPath(); g.moveTo(sg * k * 0.16, -k * 0.52);
+    g.quadraticCurveTo(sg * k * 0.4, -k * 1.0, sg * k * (0.66 + Math.sin(wig * 2 + sg) * 0.08), -k * 1.3); g.stroke();
+    if (!sh) { g.fillStyle = '#fff'; el(sg * k * 0.19, -k * 0.5, k * 0.09, k * 0.09);
+               g.fillStyle = '#141420'; g.beginPath(); g.arc(sg * k * 0.2, -k * 0.5, k * 0.04, 0, 6.2832); g.fill(); g.fillStyle = body; }
+  }
+  g.restore();
+}
+
+function draw() {
+  const gr = g.createLinearGradient(0, 0, 0, H);
+  gr.addColorStop(0, '#134a78'); gr.addColorStop(1, '#06162f');
+  g.fillStyle = gr; g.fillRect(0, 0, W, H);
+  g.fillStyle = '#b89a66'; g.beginPath(); g.ellipse(W / 2, floorY + H * 0.33, W * 0.9, H * 0.36, 0, 0, 6.2832); g.fill();
+  for (const sh of shells) {                                           // old ones settle and pale, they don't vanish
+    const age = now - sh.born, a = 0.22 + 0.5 * Math.exp(-age / 40);
+    lobster(sh.x, floorY + 8, sh.s, { shell: true, line: 'rgba(240,225,205,' + a + ')' });
+  }
+  const m = L.phase === 'molt' ? L.t / moltTime(L.molts) : 0;
+  const tired = L.phase === 'rest' ? Math.min(1, L.t / 6) : 0;
+  const pale = Math.max(L.soft, tired * 0.55);
+  const mix = (a, b) => Math.round(a + (b - a) * pale);
+  lobster(L.x, floorY + 8, L.s, {
+    fill: `rgb(${mix(214, 236)},${mix(62, 178)},${mix(48, 160)})`, dark: `rgb(${mix(150, 190)},${mix(36, 120)},${mix(30, 108)})`,
+    wig: L.phase === 'walk' ? now * (1 - 0.85 * L.pause) : 0,
+    shake: m ? Math.sin(now * 30) * 0.05 * m : 0, split: m
+  });
+  g.strokeStyle = 'rgba(190,225,245,.55)'; g.lineWidth = 1;
+  for (const b of bubbles) { g.beginPath(); g.arc(b.x, b.y, b.r, 0, 6.2832); g.stroke(); }
+  cap.textContent = L.phase === 'rest' ? 'It has stopped. Wait.'
+    : L.phase === 'molt' ? `Molt ${L.molts + 1} of ${MOLTS}. This one takes ${moltTime(L.molts).toFixed(1)} s.`
+    : life > 0 && L.pause > 0.5 ? 'You can tell what size the last one was.' : '';
+}
+
+function frame(ms) {
+  const t = ms / 1000, dt = Math.min(0.05, t - last || 0); last = t; now += dt;
+  step(dt); draw(); requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+window.__fast = n => { for (let i = 0; i < n; i++) { now += 0.05; step(0.05); } draw(); };   // for testing without waiting
+</script>
+</body>
+</html>
